@@ -380,8 +380,6 @@ endif()
 
 set(configure_options "-DCTEST_USE_LAUNCHERS=${CTEST_USE_LAUNCHERS}")
 list(APPEND configure_options "-DCMAKE_BUILD_TYPE=${build_type}")
-list(APPEND configure_options "-DBUILD_TESTING=TRUE")
-list(APPEND configure_options "-DBUILD_EXAMPLES=FALSE")
 list(APPEND configure_options "-DUSE_CCACHE=ON")
 list(APPEND configure_options "-DCMAKE_INSTALL_PREFIX=${CTEST_BINARY_DIRECTORY}/installed")
 if(DEFINED target_architecture)
