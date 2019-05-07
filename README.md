@@ -56,7 +56,7 @@ __m128 scalar_product(Vec3D a, Vec3D b) {
 }
 ```
 
-## Install Instructions
+## Installation Instructions
 
 ```sh
 $ ./install.sh
@@ -88,23 +88,14 @@ https://en.cppreference.com/w/cpp/experimental/simd
 
 ## Publications
 
+* [J. Hoberock, "Working Draft, C++ Extensions for Parallelism Version 2",
+  2019](https://wg21.link/N4808)
 * [M. Kretz, "Extending C++ for Explicit Data-Parallel Programming via SIMD
   Vector Types", Goethe University Frankfurt, Dissertation,
   2015.](http://publikationen.ub.uni-frankfurt.de/frontdoor/index/index/docId/38415)
 * [M. Kretz and V. Lindenstruth, "Vc: A C++ library for explicit
   vectorization", Software: Practice and Experience,
   2011.](http://dx.doi.org/10.1002/spe.1149)
-* [J. Hoberock, "Working Draft, C++ Extensions for Parallelism Version 2", 2019](https://wg21.link/N4808)
-
-## Communication
-
-A channel on the freenode IRC network is reserved for discussions on Vc:
-[##vc on freenode](irc://chat.freenode.net:6667/##vc)
-([via SSL](ircs://chat.freenode.net:6697/##vc))
-
-Feel free to use the GitHub issue tracker for questions.
-Alternatively, there's a [mailinglist for users of
-Vc](https://compeng.uni-frankfurt.de/mailman/listinfo/vc)
 
 ## License
 
