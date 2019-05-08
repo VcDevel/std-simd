@@ -21,7 +21,15 @@ with older GCC versions.
 * In any case, a fallback to correct execution via builtin arthmetic types is
   available for all targets.
 
-## Examples
+## Installation Instructions
+
+```sh
+$ ./install.sh
+```
+
+Use `--help` to learn about the available options.
+
+## Example
 
 ### Scalar Product
 
@@ -56,14 +64,6 @@ __m128 scalar_product(Vec3D a, Vec3D b) {
 }
 ```
 
-## Installation Instructions
-
-```sh
-$ ./install.sh
-```
-
-Use `--help` to learn about the available options.
-
 ## Build Requirements
 
 none. It's header-only.
@@ -93,9 +93,16 @@ https://en.cppreference.com/w/cpp/experimental/simd
 * [M. Kretz, "Extending C++ for Explicit Data-Parallel Programming via SIMD
   Vector Types", Goethe University Frankfurt, Dissertation,
   2015.](http://publikationen.ub.uni-frankfurt.de/frontdoor/index/index/docId/38415)
+* [P. Esterie, M. Gaunard, J. Falcou and J. Lapresté, "Exploiting Multimedia Extensions
+  in C++: A Portable Approach," in Computing in Science & Engineering, vol. 14, no. 5,
+  pp. 72-77, Sept.-Oct. 2012.](https://dx.doi.org/10.1109/MCSE.2012.96)
 * [M. Kretz and V. Lindenstruth, "Vc: A C++ library for explicit
   vectorization", Software: Practice and Experience,
   2011.](http://dx.doi.org/10.1002/spe.1149)
+* [J. Falcou and J. Serot, "E.V.E., An Object Oriented SIMD Library.",
+  Scalable Computing: Practice and Experience, vol. 6, no. 4, pp. 72-77,
+  2005.](https://www.scpe.org/index.php/scpe/article/view/345/0)
+
 
 ## License
 
