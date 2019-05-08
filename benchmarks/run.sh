@@ -57,7 +57,13 @@ while (($# > 0)); do
 done
 test -z "$arch_list" && arch_list="native westmere k8"
 
-test -r ${name}.cpp
+if ! test -r ${name}.cpp; then
+  name=${name%.cpp}
+  test -r ${name}.cpp || exit 1
+fi
+
+CCACHE=`which ccache 2>/dev/null` || CCACHE=
+
 turn_on
 for arch in ${arch_list}; do
   CXXFLAGS="-g0 -O2 -std=gnu++17 -march=$arch"
