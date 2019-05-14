@@ -5,7 +5,7 @@ tmp := "case $$(readlink -f $(build_dir)) in *icecc) which $${ICECC_CXX:-g++};; 
 build_dir := $(shell sh -c $(tmp))
 build_dir := $(realpath $(build_dir))
 build_dir := build-$(subst /,-,$(build_dir:/%=%))
-cols := $(shell sh -c 'stty size|cut -d" " -f2')
+cols := $(shell sh -c '{ stty size 2>/dev/null || echo 0 80; }|cut -d" " -f2')
 
 test: $(build_dir)/CMakeCache.txt
 	$(MAKE) --no-print-directory -C "$(build_dir)" all test 2>&1|sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
