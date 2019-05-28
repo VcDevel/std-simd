@@ -336,7 +336,7 @@ template <class _Tp, class _Abi> struct simd_size;
 #endif
 
 // bad codegen for 8 Byte memcpy to __vector_type_t<char, 16>
-#define _GLIBCXX_SIMD_WORKAROUND_XXX_2 1
+#define _GLIBCXX_SIMD_WORKAROUND_PR90424 1
 
 // bad codegen for zero-extend using simple concat(__x, 0)
 #if _GLIBCXX_SIMD_X86INTRIN

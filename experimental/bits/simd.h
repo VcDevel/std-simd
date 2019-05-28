@@ -1146,15 +1146,18 @@ _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _N>
 template <typename _Tp, size_t _N, size_t _M = _N * sizeof(_Tp), typename _F>
 __vector_type_t<_Tp, _N> __vector_load(const void* __p, _F)
 {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_XXX_2
-  using _U = std::conditional_t<
-    (std::is_integral_v<_Tp> || _M < 4), long long,
-    std::conditional_t<(std::is_same_v<_Tp, double> || _M < 8), float, _Tp>>;
+  static_assert(_M % sizeof(_Tp) == 0);
+#ifdef _GLIBCXX_SIMD_WORKAROUND_PR90424
+  using _U = conditional_t<
+    is_integral_v<_Tp>,
+    conditional_t<_M % 4 == 0, conditional_t<_M % 8 == 0, long long, int>,
+		  conditional_t<_M % 2 == 0, short, signed char>>,
+    conditional_t<(_M < 8 || _N % 2 == 1), float, double>>;
   using _V = __vector_type_t<_U, _N * sizeof(_Tp) / sizeof(_U)>;
-#else  // _GLIBCXX_SIMD_WORKAROUND_XXX_2
+#else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
   using _V                                     = __vector_type_t<_Tp, _N>;
-#endif // _GLIBCXX_SIMD_WORKAROUND_XXX_2
-  _V __r;
+#endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
+  _V __r{};
   static_assert(_M <= sizeof(_V));
   if constexpr (std::is_same_v<_F, element_aligned_tag>) {}
   else if constexpr (std::is_same_v<_F, vector_aligned_tag>)
@@ -1185,15 +1188,15 @@ void __vector_store(const _B __v, void* __p, _F)
   constexpr size_t _N     = _BVT::_S_width;
   constexpr size_t _Bytes = _M == 0 ? _N * sizeof(_Tp) : _M;
   static_assert(_Bytes <= sizeof(__v));
-#ifdef _GLIBCXX_SIMD_WORKAROUND_XXX_2
+#ifdef _GLIBCXX_SIMD_WORKAROUND_PR90424
   using _U = std::conditional_t<
     (std::is_integral_v<_Tp> || _Bytes < 4), long long,
     std::conditional_t<(std::is_same_v<_Tp, double> || _Bytes < 8), float,
 		       _Tp>>;
   const auto __vv = __vector_bitcast<_U>(__v);
-#else  // _GLIBCXX_SIMD_WORKAROUND_XXX_2
+#else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
   const __vector_type_t<_Tp, _N> __vv          = __v;
-#endif // _GLIBCXX_SIMD_WORKAROUND_XXX_2
+#endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
   if constexpr (std::is_same_v<_F, vector_aligned_tag>)
     __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _N>));
   else if constexpr (!std::is_same_v<_F, element_aligned_tag>)
