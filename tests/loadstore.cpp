@@ -166,52 +166,58 @@ TEST_TYPES(VU, load_store, outer_product<all_test_types, MemTypes>)
     COMPARE(x == 0, alternating_mask);
 
     // stores {{{2
-    memset(mem, 0, sizeof(mem));
+    auto&& init_mem = [&mem](U init) {
+      for (auto i = mem_size; i; --i)
+	{
+	  mem[i - 1] = init;
+	}
+    };
+    init_mem(-1);
     x = indexes_from_1;
     x.copy_to(&mem[V::size()], stride_aligned);
     std::size_t i = 0;
     for (; i < V::size(); ++i) {
-        COMPARE(mem[i], U(0)) << "i: " << i;
+        COMPARE(mem[i], U(-1)) << "i: " << i;
     }
     for (; i < 2 * V::size(); ++i) {
         COMPARE(mem[i], U(i - V::size() + 1)) << "i: " << i;
     }
     for (; i < 3 * V::size(); ++i) {
-        COMPARE(mem[i], U(0)) << "i: " << i;
+        COMPARE(mem[i], U(-1)) << "i: " << i;
     }
 
-    memset(mem, 0, sizeof(mem));
+    init_mem(-1);
     x.copy_to(&mem[1], element_aligned);
-    COMPARE(mem[0], U(0));
+    COMPARE(mem[0], U(-1));
     for (i = 1; i <= V::size(); ++i) {
         COMPARE(mem[i], U(i));
     }
     for (; i < 3 * V::size(); ++i) {
-        COMPARE(mem[i], U(0));
+        COMPARE(mem[i], U(-1));
     }
 
-    memset(mem, 0, sizeof(mem));
+    init_mem(-1);
     x.copy_to(mem, vector_aligned);
     for (i = 0; i < V::size(); ++i) {
         COMPARE(mem[i], U(i + 1));
     }
     for (; i < 3 * V::size(); ++i) {
-        COMPARE(mem[i], U(0));
+        COMPARE(mem[i], U(-1));
     }
 
-    memset(mem, 0, sizeof(mem));
+    init_mem(-1);
     where(alternating_mask, indexes_from_0).copy_to(&mem[V::size()], stride_aligned);
     for (i = 0; i < V::size() + 1; ++i) {
-        COMPARE(mem[i], U(0));
+        COMPARE(mem[i], U(-1));
     }
     for (; i < 2 * V::size(); i += 2) {
         COMPARE(mem[i], U(i - V::size()));
     }
     for (i = V::size() + 2; i < 2 * V::size(); i += 2) {
-        COMPARE(mem[i], U(0));
+        COMPARE(mem[i], U(-1));
     }
     for (; i < 3 * V::size(); ++i) {
-        COMPARE(mem[i], U(0));
+        COMPARE(mem[i], U(-1));
     }
 }
 
