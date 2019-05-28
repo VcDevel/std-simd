@@ -2302,17 +2302,41 @@ _Tp __vector_shuffle(_Tp __x, _Tp __y)
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr bool __is_zero(_Tp __a)
 {
-    const auto __b = __vector_bitcast<_LLong>(__a);
-    if constexpr (sizeof(__b) / sizeof(_LLong) == 2) {
-        return __b[0] == 0 && __b[1] == 0;
-    } else if constexpr (sizeof(__b) / sizeof(_LLong) == 4) {
-        return __b[0] == 0 && __b[1] == 0 && __b[2] == 0 && __b[3] == 0;
-    } else if constexpr (sizeof(__b) / sizeof(_LLong) == 8) {
-        return __b[0] == 0 && __b[1] == 0 && __b[2] == 0 && __b[3] == 0 && __b[4] == 0 &&
-               __b[5] == 0 && __b[6] == 0 && __b[7] == 0;
-    } else {
-        __assert_unreachable<_Tp>();
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	    return _mm256_testz_ps(__a, __a);
+	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	    return _mm256_testz_pd(__a, __a);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__a));
+	  else if constexpr (_TVT::template __is<float, 4>)
+	    return _mm_testz_ps(__a, __a);
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testz_pd(__a, __a);
+	  else
+	    return _mm_testz_si128(__to_intrin(__a), __to_intrin(__a));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testz_si128(__vector_bitcast<_LLong>(__a),
+			       __vector_bitcast<_LLong>(__a));
     }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  const auto __b = __vector_bitcast<_LLong>(__a);
+  static_assert(sizeof(_LLong) == 8);
+  if constexpr (sizeof(__b) == 8)
+    return __b[0] == 0;
+  else if constexpr (sizeof(__b) == 16)
+    return (__b[0] | __b[1]) == 0;
+  else if constexpr (sizeof(__b) == 32)
+    return __is_zero(__lo128(__b) | __hi128(__b));
+  else if constexpr (sizeof(__b) == 64)
+    return __is_zero(__lo256(__b) | __hi256(__b));
+  else
+    __assert_unreachable<_Tp>();
 }
 // }}}
 // ^^^ ---- builtin vector types [[gnu::vector_size(N)]] and operations ---- ^^^
