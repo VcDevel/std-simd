@@ -2341,75 +2341,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr bool __is_zero(_Tp __a)
 // }}}
 // ^^^ ---- builtin vector types [[gnu::vector_size(N)]] and operations ---- ^^^
 
-// __testz{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST int __testz(_Tp __a, _Tp __b)
-{
-    if constexpr (__have_avx) {
-        if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>) {
-            return _mm256_testz_ps(__a, __b);
-        } else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>) {
-            return _mm256_testz_pd(__a, __b);
-        } else if constexpr (sizeof(_Tp) == 32) {
-            return _mm256_testz_si256(__vector_bitcast<_LLong>(__a),
-                                      __vector_bitcast<_LLong>(__b));
-        } else if constexpr(_TVT::template __is<float, 4>) {
-            return _mm_testz_ps(__a, __b);
-        } else if constexpr(_TVT::template __is<double, 2>) {
-            return _mm_testz_pd(__a, __b);
-        } else {
-            static_assert(sizeof(_Tp) == 16);
-            return _mm_testz_si128(__vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b));
-        }
-    } else if constexpr (__have_sse4_1) {
-        return _mm_testz_si128(__vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b));
-    } else if constexpr (__have_sse && _TVT::template __is<float, 4>) {
-        return _mm_movemask_ps(__and(__a, __b)) == 0;
-    } else if constexpr (__have_sse2 && _TVT::template __is<double, 2>) {
-        return _mm_movemask_pd(__and(__a, __b)) == 0;
-    } else if constexpr (__have_sse2) {
-        return _mm_movemask_epi8(__a & __b) == 0;
-    } else {
-        return __is_zero(__and(__a, __b));
-    }
-}
-
-// }}}
-// __testnzc{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST int __testnzc(_Tp __a, _Tp __b)
-{
-    if constexpr (__have_avx) {
-        if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>) {
-            return _mm256_testnzc_ps(__a, __b);
-        } else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>) {
-            return _mm256_testnzc_pd(__a, __b);
-        } else if constexpr (sizeof(_Tp) == 32) {
-            return _mm256_testnzc_si256(__vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b));
-        } else if constexpr(_TVT::template __is<float, 4>) {
-            return _mm_testnzc_ps(__a, __b);
-        } else if constexpr(_TVT::template __is<double, 2>) {
-            return _mm_testnzc_pd(__a, __b);
-        } else {
-            static_assert(sizeof(_Tp) == 16);
-            return _mm_testnzc_si128(__vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b));
-        }
-    } else if constexpr (__have_sse4_1) {
-        return _mm_testnzc_si128(__vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b));
-    } else if constexpr (__have_sse && _TVT::template __is<float, 4>) {
-        return _mm_movemask_ps(__and(__a, __b)) == 0 && _mm_movemask_ps(__andnot(__a, __b)) == 0;
-    } else if constexpr (__have_sse2 && _TVT::template __is<double, 2>) {
-        return _mm_movemask_pd(__and(__a, __b)) == 0 && _mm_movemask_pd(__andnot(__a, __b)) == 0;
-    } else if constexpr (__have_sse2) {
-        return _mm_movemask_epi8(__and(__a, __b)) == 0 &&
-               _mm_movemask_epi8(__andnot(__a, __b)) == 0;
-    } else {
-        return !(__is_zero(__vector_bitcast<_LLong>(__and(__a, __b))) ||
-                 __is_zero(__vector_bitcast<_LLong>(__andnot(__a, __b))));
-    }
-}
-
-// }}}
 // __movemask{{{
 #if _GLIBCXX_SIMD_X86INTRIN
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
@@ -2448,6 +2379,108 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST int movemask_epi16(_Tp __a)
     }
 }
 #endif // _GLIBCXX_SIMD_X86INTRIN
+
+// }}}
+// __testz{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
+			__testz(_Tp __a, _Tp __b)
+{
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	    return _mm256_testz_ps(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	    return _mm256_testz_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float, 4>)
+	    return _mm_testz_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testz_pd(__a, __b);
+	  else
+	    return _mm_testz_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testz_si128(__vector_bitcast<_LLong>(__a),
+			       __vector_bitcast<_LLong>(__b));
+      else
+	return __movemask(0 == __and(__a, __b)) != 0;
+    }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  return __is_zero(__and(__a, __b));
+}
+
+// }}}
+// __testc{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
+			__testc(_Tp __a, _Tp __b)
+{
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	    return _mm256_testc_ps(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	    return _mm256_testc_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testc_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float, 4>)
+	    return _mm_testc_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testc_pd(__a, __b);
+	  else
+	    return _mm_testc_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testc_si128(__vector_bitcast<_LLong>(__a),
+			       __vector_bitcast<_LLong>(__b));
+      else
+	return __movemask(0 == __andnot(__a, __b)) != 0;
+    }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  return __is_zero(__andnot(__a, __b));
+}
+
+// }}}
+// __testnzc{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int __testnzc(_Tp __a, _Tp __b)
+{
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	    return _mm256_testnzc_ps(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	    return _mm256_testnzc_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testnzc_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float, 4>)
+	    return _mm_testnzc_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testnzc_pd(__a, __b);
+	  else
+	    return _mm_testnzc_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testnzc_si128(__vector_bitcast<_LLong>(__a),
+				 __vector_bitcast<_LLong>(__b));
+      else
+	return __movemask(0 == __and(__a, __b)) == 0 &&
+	       __movemask(0 == __andnot(__a, __b)) == 0;
+    }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  return !(__is_zero(__and(__a, __b)) || __is_zero(__andnot(__a, __b)));
+}
 
 // }}}
 #if _GLIBCXX_SIMD_HAVE_SSE_ABI
