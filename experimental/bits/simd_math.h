@@ -1244,7 +1244,22 @@ enable_if_t<std::is_floating_point_v<_Tp>, _R> isnan(
           _Abi::_SimdImpl::__isnan(std::experimental::__data(__x))};
 }
 _GLIBCXX_SIMD_MATH_CALL_(isnormal)
-_GLIBCXX_SIMD_MATH_CALL_(signbit)
+
+template <class..., class _Tp, class _Abi>
+std::experimental::simd_mask<_Tp, _Abi>
+  signbit(std::experimental::simd<_Tp, _Abi> __x)
+{
+  if constexpr (std::is_integral_v<_Tp>)
+    {
+      if constexpr (std::is_unsigned_v<_Tp>)
+	return std::experimental::simd_mask<_Tp, _Abi>{}; // false
+      else
+	return __x < 0;
+    }
+  else
+    return {std::experimental::__private_init,
+	    _Abi::_SimdImpl::__signbit(std::experimental::__data(__x))};
+}
 
 _GLIBCXX_SIMD_MATH_CALL2_(isgreater, _Tp)
 _GLIBCXX_SIMD_MATH_CALL2_(isgreaterequal, _Tp)
