@@ -1501,10 +1501,8 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 	}
       else if constexpr (sizeof(_FromT) == 1 && sizeof(_ToT) == 4)
 	{
-	  const auto __shorts =
-	    __convert_all<__vector_type16_t<conditional_t<
-			    is_signed_v<_FromT>, short, unsigned short>>,
-			  (_N + 1) / 2>(__v);
+	  const auto __shorts = __convert_all<__vector_type16_t<
+	    conditional_t<is_signed_v<_FromT>, short, unsigned short>>>(__v);
 	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
 	    return __convert_all<_To>(__shorts[__i / 2])[__i % 2];
 	  });
@@ -1530,11 +1528,9 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 	}
       else if constexpr (sizeof(_FromT) <= 2 && sizeof(_ToT) == 8)
 	{
-	  const auto __ints =
-	    __convert_all<__vector_type16_t<conditional_t<
-			    is_signed_v<_FromT> || is_floating_point_v<_ToT>,
-			    int, unsigned int>>,
-			  (_N + 1) / 2>(__v);
+	  const auto __ints = __convert_all<__vector_type16_t<
+	    conditional_t<is_signed_v<_FromT> || is_floating_point_v<_ToT>, int,
+			  unsigned int>>>(__v);
 	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
 	    return __convert_all<_To>(__ints[__i / 2])[__i % 2];
 	  });
