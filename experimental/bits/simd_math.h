@@ -678,11 +678,6 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
         const auto __e =
             __to_intrin(__blend(__isnonzero, __vector_type_t<int, NI>(),
                                 1 + __convert<_SimdWrapper<int, NI>>(__getexp(__v))._M_data));
-        _GLIBCXX_SIMD_DEBUG(_Frexp)
-        (std::hex, _GLIBCXX_SIMD_PRETTY_PRINT(int(__isnonzero)), std::dec,
-         _GLIBCXX_SIMD_PRETTY_PRINT(__e), _GLIBCXX_SIMD_PRETTY_PRINT(__getexp(__v)),
-         _GLIBCXX_SIMD_PRETTY_PRINT(
-             __to_intrin(1 + __convert<_SimdWrapper<int, NI>>(__getexp(__v))._M_data)));
         __vector_store<_N * sizeof(int)>(__e, __exp, overaligned<alignof(_IV)>);
         return {__private_init, __blend(__isnonzero, __v, __getmant_avx512(__v))};
 #endif // _GLIBCXX_SIMD_X86INTRIN
@@ -833,8 +828,6 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 	// (not too big for sp and large enough for dp)
 	const _V __scaled = abs_x * _Tp(0x1p112);
 	_V __scaled_exp   = static_simd_cast<_V>(__exponent(__scaled) - 112);
-	_GLIBCXX_SIMD_DEBUG(_Logarithm)
-	(__x, __scaled)(__is_normal)(__r, __scaled_exp);
 	where(__is_normal, __scaled_exp) = __r;
 	return __scaled_exp;
       }

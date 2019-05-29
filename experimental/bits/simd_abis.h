@@ -337,7 +337,6 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC _SimdTuple
 			  __apply_wrapped(_F&& __fun, const _More&... __more) const
   {
-    _GLIBCXX_SIMD_DEBUG(_SIMD_TUPLE);
     auto&& __first= __fun(__make_meta<_Offset>(*this), first, __more.first...);
     if constexpr (_S_tuple_size == 1)
       return { __first };
@@ -453,8 +452,6 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple
     __apply_per_chunk(_F&& __fun, _More&&... __more) const
   {
-    _GLIBCXX_SIMD_DEBUG(_SIMD_TUPLE);
-    //_GLIBCXX_SIMD_DEBUG_DEFERRED("__more = ", __more...);
     static_assert(
       (... && ((_S_first_size % __remove_cvref_t<_More>::_S_first_size == 0) ||
 	       (__remove_cvref_t<_More>::_S_first_size % _S_first_size == 0))));
@@ -501,7 +498,6 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC auto
     __apply_r(_F&& __fun, const _More&... __more) const
   {
-    _GLIBCXX_SIMD_DEBUG(_SIMD_TUPLE);
     auto&& __first =
       __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), first, __more.first...);
     if constexpr (_S_tuple_size == 1)
