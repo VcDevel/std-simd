@@ -1298,48 +1298,222 @@ _GLIBCXX_SIMD_TO_STORAGE(__mmask64);
 template <class _To, class _From, class... _More>
 _GLIBCXX_SIMD_INTRINSIC auto __convert(_From __v0, _More... __vs)
 {
-    static_assert((true && ... && is_same_v<_From, _More>));
-    if constexpr (__is_vectorizable_v<_From>) {
-        if constexpr (__is_vector_type_v<_To>) {
-            return __make_vector(__v0, __vs...);
-        } else {
-            using _Tp = typename _To::value_type;
-            return __make_wrapper<_Tp>(__v0, __vs...);
-        }
-    } else if constexpr (!__is_vector_type_v<_From>) {
-        return __convert<_To>(__v0._M_data, __vs._M_data...);
-    } else if constexpr (!__is_vector_type_v<_To>) {
-        return _To(__convert<typename _To::_BuiltinType>(__v0, __vs...));
-    } else if constexpr (__is_vectorizable_v<_To>) {
-        return __convert<__vector_type_t<_To, (_VectorTraits<_From>::_S_width *
-                                            (1 + sizeof...(_More)))>>(__v0, __vs...)
-            ._M_data;
-    } else {
-        static_assert(sizeof...(_More) == 0 ||
-                          _VectorTraits<_To>::_S_width >=
-                              (1 + sizeof...(_More)) * _VectorTraits<_From>::_S_width,
-                      "__convert(...) requires the input to fit into the output");
-        return __vector_convert<_To>(__v0, __vs...);
+  static_assert((true && ... && is_same_v<_From, _More>));
+  if constexpr (__is_vectorizable_v<_From>)
+    {
+      using _V = typename _VectorTraits<_To>::type;
+      using _Tp = typename _VectorTraits<_To>::value_type;
+      return _V{static_cast<_Tp>(__v0), static_cast<_Tp>(__vs)...};
+    }
+  else if constexpr (!__is_vector_type_v<_From>)
+    return __convert<_To>(__v0._M_data, __vs._M_data...);
+  else if constexpr (__is_vectorizable_v<_To>)
+    return __convert<__vector_type_t<_To, (_VectorTraits<_From>::_S_width *
+					   (1 + sizeof...(_More)))>>(__v0,
+								     __vs...);
+  else if constexpr (!__is_vector_type_v<_To>)
+    return _To(__convert<typename _To::_BuiltinType>(__v0, __vs...));
+  else
+    {
+      static_assert(sizeof...(_More) == 0 ||
+		      _VectorTraits<_To>::_S_width >=
+			(1 + sizeof...(_More)) * _VectorTraits<_From>::_S_width,
+		    "__convert(...) requires the input to fit into the output");
+      return __vector_convert<_To>(__v0, __vs...);
     }
 }
 
 // }}}
 // __convert_all{{{
-template <typename _To, typename _From, typename _FromVT = _VectorTraits<_From>>
+template <typename _To,
+	  size_t _NParts = 0, // allows to convert fewer than all
+	  typename _From,
+	  typename _FromVT = _VectorTraits<_From>>
 _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 {
-    static_assert(__is_vector_type_v<_To>);
-    if constexpr (!__is_vector_type_v<_From>) {
-        return __convert_all<_To>(__v._M_data);
-    } else if constexpr (_FromVT::_S_width > _VectorTraits<_To>::_S_width) {
-        constexpr size_t _N = _FromVT::_S_width / _VectorTraits<_To>::_S_width;
-        return __generate_from_n_evaluations<_N, std::array<_To, _N>>([&](auto __i) constexpr {
-            auto __part = __extract_part<decltype(__i)::value, _N>(__v);
-            return __vector_convert<_To>(__part);
-        });
-    } else {
-        return __vector_convert<_To>(__v);
+  static_assert(__is_vector_type_v<_To>);
+  using _ToVT = _VectorTraits<_To>;
+  if constexpr (!__is_vector_type_v<_From>)
+    return __convert_all<_To, _NParts>(__v._M_data);
+  else if constexpr(_NParts == 1)
+    {
+      constexpr size_t _NTotal = _FromVT::_S_width / _ToVT::_S_width;
+      return __vector_convert<_To>(__extract_part<0, _NTotal>(__v));
     }
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  else if constexpr (!__have_sse4_1 &&
+		     !(sizeof(typename _FromVT::value_type) == 4 &&
+		       is_same_v<typename _ToVT::value_type, double>))
+    {
+      using _ToT   = typename _ToVT::value_type;
+      using _FromT = typename _FromVT::value_type;
+      constexpr size_t _N =
+	_NParts == 0 ? (_FromVT::_S_width / _ToVT::_S_width) : _NParts;
+      using _R = std::array<_To, _N>;
+      if constexpr (sizeof(_FromT) == 1 && sizeof(_ToT) == 2)
+	{
+	  static_assert(std::is_integral_v<_FromT>);
+	  static_assert(std::is_integral_v<_ToT>);
+	  if constexpr (is_unsigned_v<_FromT>)
+	    {
+	      return _R{reinterpret_cast<_To>(
+			  _mm_unpacklo_epi8(__to_intrin(__v), __m128i())),
+			reinterpret_cast<_To>(
+			  _mm_unpackhi_epi8(__to_intrin(__v), __m128i()))};
+	    }
+	  else
+	    {
+	      return _R{
+		reinterpret_cast<_To>(_mm_srai_epi16(
+		  _mm_unpacklo_epi8(__to_intrin(__v), __to_intrin(__v)), 8)),
+		reinterpret_cast<_To>(_mm_srai_epi16(
+		  _mm_unpackhi_epi8(__to_intrin(__v), __to_intrin(__v)), 8))};
+	    }
+	}
+      else if constexpr (sizeof(_FromT) == 2 && sizeof(_ToT) == 4)
+	{
+	  static_assert(std::is_integral_v<_FromT>);
+	  if constexpr (is_floating_point_v<_ToT>)
+	    {
+	      const auto __ints =
+		__convert_all<__vector_type16_t<int>, _N>(__v);
+	      return __generate_from_n_evaluations<_N, _R>(
+		[&](auto __i) { return __vector_convert<_To>(__ints[__i]); });
+	    }
+	  else if constexpr (is_unsigned_v<_FromT>)
+	    return _R{__vector_bitcast<_ToT>(
+			_mm_unpacklo_epi16(__to_intrin(__v), __m128i())),
+		      __vector_bitcast<_ToT>(
+			_mm_unpackhi_epi16(__to_intrin(__v), __m128i()))};
+	  else
+	    return _R{
+	      __vector_bitcast<_ToT>(_mm_srai_epi32(
+		_mm_unpacklo_epi16(__to_intrin(__v), __to_intrin(__v)), 16)),
+	      __vector_bitcast<_ToT>(_mm_srai_epi32(
+		_mm_unpackhi_epi16(__to_intrin(__v), __to_intrin(__v)), 16))};
+	}
+      else if constexpr (sizeof(_FromT) == 4 && sizeof(_ToT) == 8 &&
+			 is_integral_v<_FromT> && is_integral_v<_ToT>)
+	{
+	  if constexpr (is_unsigned_v<_FromT>)
+	    return _R{__vector_bitcast<_ToT>(
+			_mm_unpacklo_epi32(__to_intrin(__v), __m128i())),
+		      __vector_bitcast<_ToT>(
+			_mm_unpackhi_epi32(__to_intrin(__v), __m128i()))};
+	  else
+	    return _R{
+	      __vector_bitcast<_ToT>(_mm_unpacklo_epi32(
+		__to_intrin(__v), _mm_srai_epi32(__to_intrin(__v), 31))),
+	      __vector_bitcast<_ToT>(_mm_unpackhi_epi32(
+		__to_intrin(__v), _mm_srai_epi32(__to_intrin(__v), 31)))};
+	}
+      else if constexpr (sizeof(_FromT) == 4 && sizeof(_ToT) == 8 &&
+			 is_integral_v<_FromT> && is_integral_v<_ToT>)
+	{
+	  if constexpr (is_unsigned_v<_FromT>)
+	    return _R{__vector_bitcast<_ToT>(
+			_mm_unpacklo_epi32(__to_intrin(__v), __m128i())),
+		      __vector_bitcast<_ToT>(
+			_mm_unpackhi_epi32(__to_intrin(__v), __m128i()))};
+	  else
+	    return _R{
+	      __vector_bitcast<_ToT>(_mm_unpacklo_epi32(
+		__to_intrin(__v), _mm_srai_epi32(__to_intrin(__v), 31))),
+	      __vector_bitcast<_ToT>(_mm_unpackhi_epi32(
+		__to_intrin(__v), _mm_srai_epi32(__to_intrin(__v), 31)))};
+	}
+      else if constexpr (sizeof(_FromT) == 1 && sizeof(_ToT) >= 4 && is_signed_v<_FromT>)
+	{
+	  const __m128i __vv[2] = {
+	    _mm_unpacklo_epi8(__to_intrin(__v), __to_intrin(__v)),
+	    _mm_unpackhi_epi8(__to_intrin(__v), __to_intrin(__v))
+	  };
+	  const __vector_type16_t<int> __vvvv[4] = {
+	    __vector_bitcast<int>(_mm_unpacklo_epi16(__vv[0], __vv[0])),
+	    __vector_bitcast<int>(_mm_unpackhi_epi16(__vv[0], __vv[0])),
+	    __vector_bitcast<int>(_mm_unpacklo_epi16(__vv[1], __vv[1])),
+	    __vector_bitcast<int>(_mm_unpackhi_epi16(__vv[1], __vv[1]))
+	  };
+	  if constexpr (sizeof(_ToT) == 4)
+	    return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
+	      return __vector_convert<_To>(__vvvv[__i] >> 24);
+	    });
+	  else if constexpr(is_integral_v<_ToT>)
+	    return __generate_from_n_evaluations<_N, _R>(
+	      [&](auto __i) {
+		const auto __signbits = __to_intrin(__vvvv[__i / 2] >> 31);
+		const auto __sx32     = __to_intrin(__vvvv[__i / 2] >> 24);
+		return __vector_bitcast<_ToT>(
+		  __i % 2 == 0 ? _mm_unpacklo_epi32(__sx32, __signbits)
+			       : _mm_unpackhi_epi32(__sx32, __signbits));
+	      });
+	  else
+	    return __generate_from_n_evaluations<_N, _R>(
+	      [&](auto __i) {
+		const auto __int4 = __vvvv[__i / 2] >> 24;
+		return __vector_convert<_To>(
+		  __i % 2 == 0 ? __int4
+			       : __vector_bitcast<int>(_mm_unpackhi_epi64(
+				   __to_intrin(__int4), __to_intrin(__int4))));
+	      });
+	}
+      else if constexpr (sizeof(_FromT) == 1 && sizeof(_ToT) == 4)
+	{
+	  const auto __shorts =
+	    __convert_all<__vector_type16_t<conditional_t<
+			    is_signed_v<_FromT>, short, unsigned short>>,
+			  (_N + 1) / 2>(__v);
+	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
+	    return __convert_all<_To>(__shorts[__i / 2])[__i % 2];
+	  });
+	}
+      else if constexpr (sizeof(_FromT) == 2 && sizeof(_ToT) == 8 &&
+			 is_signed_v<_FromT> && is_integral_v<_ToT>)
+	{
+	  const __m128i __vv[2] = {
+	    _mm_unpacklo_epi16(__to_intrin(__v), __to_intrin(__v)),
+	    _mm_unpackhi_epi16(__to_intrin(__v), __to_intrin(__v))};
+	  const __vector_type16_t<int> __vvvv[4] = {
+	    __vector_bitcast<int>(_mm_unpacklo_epi32(
+	      _mm_srai_epi32(__vv[0], 24), _mm_srai_epi32(__vv[0], 31))),
+	    __vector_bitcast<int>(_mm_unpackhi_epi32(
+	      _mm_srai_epi32(__vv[0], 24), _mm_srai_epi32(__vv[0], 31))),
+	    __vector_bitcast<int>(_mm_unpacklo_epi32(
+	      _mm_srai_epi32(__vv[1], 24), _mm_srai_epi32(__vv[1], 31))),
+	    __vector_bitcast<int>(_mm_unpackhi_epi32(
+	      _mm_srai_epi32(__vv[1], 24), _mm_srai_epi32(__vv[1], 31)))};
+	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
+	    return __vector_bitcast<_ToT>(__vvvv[__i]);
+	  });
+	}
+      else if constexpr (sizeof(_FromT) <= 2 && sizeof(_ToT) == 8)
+	{
+	  const auto __ints =
+	    __convert_all<__vector_type16_t<conditional_t<
+			    is_signed_v<_FromT> || is_floating_point_v<_ToT>,
+			    int, unsigned int>>,
+			  (_N + 1) / 2>(__v);
+	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
+	    return __convert_all<_To>(__ints[__i / 2])[__i % 2];
+	  });
+	}
+      else
+	__assert_unreachable<_To>();
+    }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  else if constexpr (_FromVT::_S_width > _ToVT::_S_width)
+    {
+      constexpr size_t _NTotal = _FromVT::_S_width / _ToVT::_S_width;
+      constexpr size_t _N = _NParts == 0 ? _NTotal : _NParts;
+      static_assert(_N <= _NTotal);
+      return __generate_from_n_evaluations<_N, std::array<_To, _N>>([&](
+	auto __i) constexpr {
+	auto __part = __extract_part<decltype(__i)::value, _NTotal>(__v);
+	return __vector_convert<_To>(__part);
+      });
+    }
+  else
+    return __vector_convert<_To>(__v);
 }
 
 // }}}
