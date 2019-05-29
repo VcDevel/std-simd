@@ -3421,8 +3421,8 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     //}}}2
 };
 
-// __generic_mask_impl {{{1
-template <class _Abi> struct __generic_mask_impl {
+// _MaskImplBuiltin {{{1
+template <class _Abi> struct _MaskImplBuiltin {
     // member types {{{2
     template <class _Tp> using _TypeTag = _Tp *;
     template <class _Tp>
@@ -4566,31 +4566,38 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
 
     // __less {{{3
     template <class _Tp, size_t _N>
-    _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __less(_SimdWrapper<_Tp, _N> __x,
-                                                           _SimdWrapper<_Tp, _N> __y)
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+      __less(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
-      if constexpr (sizeof(__x) == 64) {  // AVX512
-	[[maybe_unused]] const auto __xi = __to_intrin(__x);
-	[[maybe_unused]] const auto __yi = __to_intrin(__y);
-	if constexpr (std::is_floating_point_v<_Tp>) {
-	  if constexpr (sizeof(_Tp) == 8) { return _mm512_cmp_pd_mask(__xi, __yi, _CMP_LT_OS);
-	  } else if constexpr (sizeof(_Tp) == 4) { return _mm512_cmp_ps_mask(__xi, __yi, _CMP_LT_OS);
-	  } else { __assert_unreachable<_Tp>(); }
-	} else if constexpr (std::is_signed_v<_Tp>) {
-	  if constexpr (sizeof(_Tp) == 8) { return _mm512_cmplt_epi64_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 4) { return _mm512_cmplt_epi32_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 2) { return _mm512_cmplt_epi16_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 1) { return _mm512_cmplt_epi8_mask(__xi, __yi);
-	  } else { __assert_unreachable<_Tp>(); }
-	} else {
-	  static_assert(std::is_unsigned_v<_Tp>);
-	  if constexpr (sizeof(_Tp) == 8) { return _mm512_cmplt_epu64_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 4) { return _mm512_cmplt_epu32_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 2) { return _mm512_cmplt_epu16_mask(__xi, __yi);
-	  } else if constexpr (sizeof(_Tp) == 1) { return _mm512_cmplt_epu8_mask(__xi, __yi);
-	  } else { __assert_unreachable<_Tp>(); }
+      if constexpr (sizeof(__x) == 64)
+	{ // AVX512
+	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
+	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
+	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
+	  if constexpr (std::is_same_v<_Tp, float>)
+	    return _mm512_mask_cmp_ps_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	  else if constexpr (std::is_same_v<_Tp, double>)
+	    return _mm512_mask_cmp_pd_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 1)
+	    return _mm512_mask_cmplt_epi8_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 2)
+	    return _mm512_mask_cmplt_epi16_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 4)
+	    return _mm512_mask_cmplt_epi32_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 8)
+	    return _mm512_mask_cmplt_epi64_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 1)
+	    return _mm512_mask_cmplt_epu8_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 2)
+	    return _mm512_mask_cmplt_epu16_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 4)
+	    return _mm512_mask_cmplt_epu32_mask(__k1, __xi, __yi);
+	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 8)
+	    return _mm512_mask_cmplt_epu64_mask(__k1, __xi, __yi);
+	  else
+	    __assert_unreachable<_Tp>();
 	}
-      } else
+      else
 	return _Base::__less(__x, __y);
     }
 
@@ -5044,9 +5051,9 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
 
 // __x86_mask_impl {{{1
 template <class _Abi>
-struct __x86_mask_impl : __generic_mask_impl<_Abi>
+struct __x86_mask_impl : _MaskImplBuiltin<_Abi>
 {
-  using _Base = __generic_mask_impl<_Abi>;
+  using _Base = _MaskImplBuiltin<_Abi>;
 
   // __masked_load {{{2
   template <class _Tp, size_t _N, class _F>
@@ -5551,7 +5558,7 @@ struct _SimdImplNeon : _SimdImplBuiltin<simd_abi::_NeonAbi<_Bytes>>
 }; // }}}
 // _MaskImplNeon {{{
 template <int _Bytes>
-struct _MaskImplNeon : __generic_mask_impl<simd_abi::_NeonAbi<_Bytes>>
+struct _MaskImplNeon : _MaskImplBuiltin<simd_abi::_NeonAbi<_Bytes>>
 {
 }; // }}}
 #endif // _GLIBCXX_SIMD_HAVE_NEON }}}
