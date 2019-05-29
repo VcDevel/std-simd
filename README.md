@@ -41,7 +41,8 @@ float scalar_product(Vec3D a, Vec3D b) {
 }
 ```
 
-Using `simd`, we can easily vectorize the code using the `native_simd<float>` type:
+Using `simd`, we can easily vectorize the code using the `native_simd<float>` 
+type ([Compiler Explorer](https://godbolt.org/z/AXAe8K)):
 ```cpp
 using std::experimental::native_simd;
 using Vec3D = std::array<native_simd<float>, 3>;
