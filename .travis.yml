@@ -1,0 +1,39 @@
+language: cpp
+
+cache: ccache
+
+os:
+    - linux
+
+compiler:
+    - gcc
+
+matrix:
+    exclude:
+        - env: arch=aarch64
+          os: osx
+
+dist: xenial
+
+addons:
+  apt:
+    sources:
+      - ppa:ubuntu-toolchain-r/test
+    packages:
+      - g++-9
+
+env:
+  - CC=gcc-9 CXX=g++-9 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2
+
+script:
+  - ctest -V -S scripts/test.cmake
+
+notifications:
+  email: false
+  irc:
+    channels:
+      - "chat.freenode.net##Vc"
+    on_success: change # [always|never|change] # default: always
+    on_failure: always # [always|never|change] # default: always
+    use_notice: true
+    skip_join: true
