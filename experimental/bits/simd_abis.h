@@ -1515,13 +1515,13 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 	    _mm_unpackhi_epi16(__to_intrin(__v), __to_intrin(__v))};
 	  const __vector_type16_t<int> __vvvv[4] = {
 	    __vector_bitcast<int>(_mm_unpacklo_epi32(
-	      _mm_srai_epi32(__vv[0], 24), _mm_srai_epi32(__vv[0], 31))),
+	      _mm_srai_epi32(__vv[0], 16), _mm_srai_epi32(__vv[0], 31))),
 	    __vector_bitcast<int>(_mm_unpackhi_epi32(
-	      _mm_srai_epi32(__vv[0], 24), _mm_srai_epi32(__vv[0], 31))),
+	      _mm_srai_epi32(__vv[0], 16), _mm_srai_epi32(__vv[0], 31))),
 	    __vector_bitcast<int>(_mm_unpacklo_epi32(
-	      _mm_srai_epi32(__vv[1], 24), _mm_srai_epi32(__vv[1], 31))),
+	      _mm_srai_epi32(__vv[1], 16), _mm_srai_epi32(__vv[1], 31))),
 	    __vector_bitcast<int>(_mm_unpackhi_epi32(
-	      _mm_srai_epi32(__vv[1], 24), _mm_srai_epi32(__vv[1], 31)))};
+	      _mm_srai_epi32(__vv[1], 16), _mm_srai_epi32(__vv[1], 31)))};
 	  return __generate_from_n_evaluations<_N, _R>([&](auto __i) {
 	    return __vector_bitcast<_ToT>(__vvvv[__i]);
 	  });
