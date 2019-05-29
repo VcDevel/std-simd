@@ -2851,7 +2851,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	  constexpr size_t __vsize = __max_store_size / sizeof(_U);
 	  // round up to convert the last partial vector as well:
 	  constexpr size_t __stores = (_N + __vsize - 1) / __vsize;
-	  constexpr size_t __full_stores = (_N + __vsize - 1) / __vsize;
+	  constexpr size_t __full_stores = _N / __vsize;
 	  using _V = __vector_type_t<_U, __vsize>;
 	  const std::array<_V, __stores> __converted =
 	    __convert_all<_V, __stores>(__v);
