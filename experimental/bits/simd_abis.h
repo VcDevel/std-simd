@@ -1384,6 +1384,9 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
     }
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
   else if constexpr (!__have_sse4_1 &&
+		     is_integral_v<typename _FromVT::value_type> &&
+		     sizeof(typename _FromVT::value_type) <
+		       sizeof(typename _ToVT::value_type) &&
 		     !(sizeof(typename _FromVT::value_type) == 4 &&
 		       is_same_v<typename _ToVT::value_type, double>))
     {
