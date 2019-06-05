@@ -4770,6 +4770,7 @@ public:
 struct _ScalarAbi {
     template <class _Tp> static constexpr size_t size = 1;
     template <class _Tp> static constexpr size_t _S_full_size = 1;
+    static constexpr bool                        _S_is_partial = false;
     struct _IsValidAbiTag : true_type {};
     template <class _Tp> struct _IsValidSizeFor : true_type {};
     template <class _Tp> struct _IsValid : __is_vectorizable<_Tp> {};
