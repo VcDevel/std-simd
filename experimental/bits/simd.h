@@ -4061,104 +4061,114 @@ enable_if_t<(is_simd_mask_v<_V> &&
 
 // }}}
 // split<_Sizes...>(simd) {{{
-template <size_t... _Sizes, class _Tp, class _A,
-          class = enable_if_t<((_Sizes + ...) == simd<_Tp, _A>::size())>>
-_GLIBCXX_SIMD_ALWAYS_INLINE std::tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...> split(
-    const simd<_Tp, _A> &__x)
+template <size_t... _Sizes,
+	  class _Tp,
+	  class _A,
+	  class = enable_if_t<((_Sizes + ...) == simd<_Tp, _A>::size())>>
+_GLIBCXX_SIMD_ALWAYS_INLINE
+  std::tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...>
+  split(const simd<_Tp, _A>& __x)
 {
-    using _SL = _SizeList<_Sizes...>;
-    using _Tuple = std::tuple<__deduced_simd<_Tp, _Sizes>...>;
-    constexpr size_t _N = simd_size_v<_Tp, _A>;
-    constexpr size_t _N0 = _SL::template __at<0>();
-    using _V = __deduced_simd<_Tp, _N0>;
+  using _SL            = _SizeList<_Sizes...>;
+  using _Tuple         = std::tuple<__deduced_simd<_Tp, _Sizes>...>;
+  constexpr size_t _N  = simd_size_v<_Tp, _A>;
+  constexpr size_t _N0 = _SL::template __at<0>();
+  using _V             = __deduced_simd<_Tp, _N0>;
 
-    if constexpr (_N == _N0) {
-        static_assert(sizeof...(_Sizes) == 1);
-        return {simd_cast<_V>(__x)};
-    } else if constexpr (__is_fixed_size_abi_v<_A> &&
-                         __fixed_size_storage_t<_Tp, _N>::_S_first_size == _N0) {
-        // if the first part of the _SimdTuple input matches the first output vector
-        // in the std::tuple, extract it and recurse
-        static_assert(!__is_fixed_size_abi_v<typename _V::abi_type>,
-                      "How can <_Tp, _N> be __a single _SimdTuple entry but __a fixed_size_simd "
-                      "when deduced?");
-        const __fixed_size_storage_t<_Tp, _N> &__xx = __data(__x);
-        return std::tuple_cat(
-            std::make_tuple(_V(__private_init, __xx.first)),
-            __split_wrapper(_SL::template __pop_front<1>(), __xx.second));
-    } else if constexpr ((!std::is_same_v<simd_abi::scalar,
-                                          simd_abi::deduce_t<_Tp, _Sizes>> &&
-                          ...) &&
-                         (!__is_fixed_size_abi_v<simd_abi::deduce_t<_Tp, _Sizes>> &&
-                          ...)) {
-        if constexpr (((_Sizes * 2 == _N)&&...)) {
-            return {{__private_init, __extract_part<0, 2>(__data(__x))},
-                    {__private_init, __extract_part<1, 2>(__data(__x))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<_N / 3, _N / 3, _N / 3>>) {
-            return {{__private_init, __extract_part<0, 3>(__data(__x))},
-                    {__private_init, __extract_part<1, 3>(__data(__x))},
-                    {__private_init, __extract_part<2, 3>(__data(__x))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<2 * _N / 3, _N / 3>>) {
-            return {{__private_init,
-                     __concat(__extract_part<0, 3>(__data(__x)),
-                                    __extract_part<1, 3>(__data(__x)))},
-                    {__private_init, __extract_part<2, 3>(__data(__x))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<_N / 3, 2 * _N / 3>>) {
-            return {{__private_init, __extract_part<0, 3>(__data(__x))},
-                    {__private_init,
-                     __concat(__extract_part<1, 3>(__data(__x)),
-                                    __extract_part<2, 3>(__data(__x)))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<_N / 2, _N / 4, _N / 4>>) {
-            return {{__private_init, __extract_part<0, 2>(__data(__x))},
-                    {__private_init, __extract_part<2, 4>(__data(__x))},
-                    {__private_init, __extract_part<3, 4>(__data(__x))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<_N / 4, _N / 4, _N / 2>>) {
-            return {{__private_init, __extract_part<0, 4>(__data(__x))},
-                    {__private_init, __extract_part<1, 4>(__data(__x))},
-                    {__private_init, __extract_part<1, 2>(__data(__x))}};
-        } else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
-                                            _SizeList<_N / 4, _N / 2, _N / 4>>) {
-            return {
-                {__private_init, __extract_part<0, 4>(__data(__x))},
-                {__private_init, __extract_center(__data(__x))},
-                {__private_init, __extract_part<3, 4>(__data(__x))}};
-        } else if constexpr (((_Sizes * 4 == _N) && ...)) {
-            return {{__private_init, __extract_part<0, 4>(__data(__x))},
-                    {__private_init, __extract_part<1, 4>(__data(__x))},
-                    {__private_init, __extract_part<2, 4>(__data(__x))},
-                    {__private_init, __extract_part<3, 4>(__data(__x))}};
-        //} else if constexpr (__is_fixed_size_abi_v<_A>) {
-        } else {
-            __assert_unreachable<_Tp>();
-        }
-    } else {
+  if constexpr (_N == _N0)
+    {
+      static_assert(sizeof...(_Sizes) == 1);
+      return {simd_cast<_V>(__x)};
+    }
+  else if constexpr (__is_fixed_size_abi_v<_A> &&
+		     __fixed_size_storage_t<_Tp, _N>::_S_first_size == _N0)
+    {
+      // if the first part of the _SimdTuple input matches the first output
+      // vector in the std::tuple, extract it and recurse
+      static_assert(!__is_fixed_size_abi_v<typename _V::abi_type>,
+		    "How can <_Tp, _N> be __a single _SimdTuple entry but __a "
+		    "fixed_size_simd "
+		    "when deduced?");
+      const __fixed_size_storage_t<_Tp, _N>& __xx = __data(__x);
+      return std::tuple_cat(
+	std::make_tuple(_V(__private_init, __xx.first)),
+	__split_wrapper(_SL::template __pop_front<1>(), __xx.second));
+    }
+  else if constexpr ((!std::is_same_v<simd_abi::scalar,
+				      simd_abi::deduce_t<_Tp, _Sizes>> &&
+		      ...) &&
+		     (!__is_fixed_size_abi_v<simd_abi::deduce_t<_Tp, _Sizes>> &&
+		      ...))
+    {
+      if constexpr (((_Sizes * 2 == _N) && ...))
+	return {{__private_init, __extract_part<0, 2>(__data(__x))},
+		{__private_init, __extract_part<1, 2>(__data(__x))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<_N / 3, _N / 3, _N / 3>>)
+	return {{__private_init, __extract_part<0, 3>(__data(__x))},
+		{__private_init, __extract_part<1, 3>(__data(__x))},
+		{__private_init, __extract_part<2, 3>(__data(__x))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<2 * _N / 3, _N / 3>>)
+	return {{__private_init, __concat(__extract_part<0, 3>(__data(__x)),
+					  __extract_part<1, 3>(__data(__x)))},
+		{__private_init, __extract_part<2, 3>(__data(__x))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<_N / 3, 2 * _N / 3>>)
+	return {{__private_init, __extract_part<0, 3>(__data(__x))},
+		{__private_init, __concat(__extract_part<1, 3>(__data(__x)),
+					  __extract_part<2, 3>(__data(__x)))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<_N / 2, _N / 4, _N / 4>>)
+	return {{__private_init, __extract_part<0, 2>(__data(__x))},
+		{__private_init, __extract_part<2, 4>(__data(__x))},
+		{__private_init, __extract_part<3, 4>(__data(__x))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<_N / 4, _N / 4, _N / 2>>)
+	return {{__private_init, __extract_part<0, 4>(__data(__x))},
+		{__private_init, __extract_part<1, 4>(__data(__x))},
+		{__private_init, __extract_part<1, 2>(__data(__x))}};
+      else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
+					_SizeList<_N / 4, _N / 2, _N / 4>>)
+	return {{__private_init, __extract_part<0, 4>(__data(__x))},
+		{__private_init, __extract_center(__data(__x))},
+		{__private_init, __extract_part<3, 4>(__data(__x))}};
+      else if constexpr (((_Sizes * 4 == _N) && ...))
+	return {{__private_init, __extract_part<0, 4>(__data(__x))},
+		{__private_init, __extract_part<1, 4>(__data(__x))},
+		{__private_init, __extract_part<2, 4>(__data(__x))},
+		{__private_init, __extract_part<3, 4>(__data(__x))}};
+      //} else if constexpr (__is_fixed_size_abi_v<_A>) {
+      else
+	__assert_unreachable<_Tp>();
+    }
+  else
+    {
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
-        const __may_alias<_Tp> *const __element_ptr =
-            reinterpret_cast<const __may_alias<_Tp> *>(&__x);
-        return __generate_from_n_evaluations<sizeof...(_Sizes), _Tuple>([&](auto __i) constexpr {
-            using _Vi = __deduced_simd<_Tp, _SL::__at(__i)>;
-            constexpr size_t __offset = _SL::__before(__i);
-            constexpr size_t __base_align = alignof(simd<_Tp, _A>);
-            constexpr size_t __a = __base_align - ((__offset * sizeof(_Tp)) % __base_align);
-            constexpr size_t __b = ((__a - 1) & __a) ^ __a;
-            constexpr size_t __alignment = __b == 0 ? __a : __b;
-            return _Vi(__element_ptr + __offset, overaligned<__alignment>);
-        });
+      const __may_alias<_Tp>* const __element_ptr =
+	reinterpret_cast<const __may_alias<_Tp>*>(&__x);
+      return __generate_from_n_evaluations<sizeof...(_Sizes), _Tuple>([&](
+	auto __i) constexpr {
+	using _Vi                     = __deduced_simd<_Tp, _SL::__at(__i)>;
+	constexpr size_t __offset     = _SL::__before(__i);
+	constexpr size_t __base_align = alignof(simd<_Tp, _A>);
+	constexpr size_t __a =
+	  __base_align - ((__offset * sizeof(_Tp)) % __base_align);
+	constexpr size_t __b         = ((__a - 1) & __a) ^ __a;
+	constexpr size_t __alignment = __b == 0 ? __a : __b;
+	return _Vi(__element_ptr + __offset, overaligned<__alignment>);
+      });
 #else
-        return __generate_from_n_evaluations<sizeof...(_Sizes), _Tuple>([&](auto __i) constexpr {
-            using _Vi = __deduced_simd<_Tp, _SL::__at(__i)>;
-            const auto &__xx = __data(__x);
-            using _Offset = decltype(_SL::__before(__i));
-            return _Vi([&](auto __j) constexpr {
-                constexpr _SizeConstant<_Offset::value + __j> __k;
-                return __xx[__k];
-            });
-        });
+      return __generate_from_n_evaluations<sizeof...(_Sizes), _Tuple>([&](
+	auto __i) constexpr {
+	using _Vi        = __deduced_simd<_Tp, _SL::__at(__i)>;
+	const auto& __xx = __data(__x);
+	using _Offset    = decltype(_SL::__before(__i));
+	return _Vi([&](auto __j) constexpr {
+	  constexpr _SizeConstant<_Offset::value + __j> __k;
+	  return __xx[__k];
+	});
+      });
 #endif
     }
 }
