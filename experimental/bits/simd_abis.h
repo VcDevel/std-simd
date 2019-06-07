@@ -2747,7 +2747,12 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       __generator(_F&& __gen, _TypeTag<_Tp>)
     {
       return __generate_wrapper<_Tp, _S_full_size<_Tp>>([&](
-	auto __i) constexpr { return __i < _S_size<_Tp> ? __gen(__i) : 0; });
+	auto __i) constexpr {
+	if constexpr (__i < _S_size<_Tp>)
+	  return __gen(__i);
+	else
+	  return 0;
+      });
     }
 
     // __load {{{2
@@ -2869,15 +2874,16 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     }
 
     // __masked_store {{{2
-    template <class _Tp, size_t _NN, class _U, class _F>
-    static inline void __masked_store(const _SimdWrapper<_Tp, _NN> __v,
-				      _U*                           __mem,
-				      _F,
-				      const _MaskMember<_Tp> __k)
-      _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+    template <typename _V,
+	      typename _VVT = _VectorTraits<_V>,
+	      typename _Tp  = typename _VVT::value_type,
+	      class _U,
+	      class _F>
+    static inline void
+      __masked_store(const _V __v, _U* __mem, _F, const _MaskMember<_Tp> __k)
+	_GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
     {
       constexpr size_t _N = _S_size<_Tp>;
-      __tag<_SimdImplBuiltin, decltype(__masked_store<_Tp, _NN, _U, _F>)>();
         [[maybe_unused]] const auto __vi = __to_intrin(__v);
         constexpr size_t __max_store_size =
             (sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
@@ -2901,18 +2907,18 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
                                                           // is better handled via the
                                                           // bit_iteration fallback below
         ) {
-            using _V = __vector_type_t<_U, std::clamp(_N, 16 / sizeof(_U), __max_store_size / sizeof(_U))>;
-            constexpr size_t _VN = _VectorTraits<_V>::_S_width;
+            using _UV = __vector_type_t<_U, std::clamp(_N, 16 / sizeof(_U), __max_store_size / sizeof(_U))>;
+            constexpr size_t _VN = _VectorTraits<_UV>::_S_width;
             using _VV = _SimdWrapper<_U, _VN>;
             constexpr bool __prefer_bitmask =
                 (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw;
             using _M = _SimdWrapper<std::conditional_t<__prefer_bitmask, bool, _U>, _VN>;
 
             if constexpr (_VN >= _N) {
-                __maskstore(_VV(__convert<_V>(__v)), __mem,
-                               // careful, if _V has more elements than the input __v (_N),
+                __maskstore(_VV(__convert<_UV>(__v)), __mem,
+                               // careful, if _UV has more elements than the input __v (_N),
                                // vector_aligned is incorrect:
-                               std::conditional_t<(_VectorTraits<_V>::_S_width > _N),
+                               std::conditional_t<(_VectorTraits<_UV>::_S_width > _N),
                                                   overaligned_tag<sizeof(_U) * _N>, _F>(),
                                __convert_mask<_M>(__k));
 	      }
@@ -2920,18 +2926,18 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	      {
 		constexpr size_t _NFullStores = _N / _VN;
 		constexpr size_t _NAllStores  = (_N + _VN - 1) / _VN;
-		const std::array<_V, _NAllStores> __converted =
-		  __convert_all<_V, _NAllStores>(__v);
+		const std::array<_UV, _NAllStores> __converted =
+		  __convert_all<_UV, _NAllStores>(__v);
 		__execute_n_times<_NFullStores>([&](auto __i) {
 		  __maskstore(
 		    __converted[__i], __mem + __i * _VN, _F(),
-		    __convert_mask<_M>(__extract_part<__i, _NN / _VN>(__k)));
+		    __convert_mask<_M>(__extract_part<__i, _S_full_size<_Tp> / _VN>(__k)));
 		});
 		if constexpr (_NAllStores > _NFullStores) // one partial at the end
 		  __maskstore(__converted[_NFullStores],
 			      __mem + _NFullStores * _VN, _F(),
 			      __convert_mask<_M>(
-				__extract_part<_NFullStores, _NN / _VN>(__k)));
+				__extract_part<_NFullStores, _S_full_size<_Tp> / _VN>(__k)));
 	      }
 	} else {
             __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(),
@@ -3997,18 +4003,19 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     }
 
     // __multiplies {{{2
-    template <typename _Tp, size_t _N>
-    _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
-      __multiplies(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
+    template <typename _V, typename _VVT = _VectorTraits<_V>>
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _V
+      __multiplies(_V __x, _V __y)
     {
+      using _Tp           = typename _VVT::value_type;
       if (__builtin_is_constant_evaluated())
-	return __x._M_data * __y._M_data;
+	return __as_vector(__x) * __as_vector(__y);
       else if constexpr (sizeof(_Tp) == 1)
 	{
 	  // codegen of `x*y` is suboptimal (as of GCC 9.0.1)
-	  const auto __high_byte = __vector_broadcast<_N / 2, short>(-256);
 	  const auto __even =
 	    __vector_bitcast<short>(__x) * __vector_bitcast<short>(__y);
+	  const auto __high_byte = decltype(__even)() - 256;
 	  const auto __odd = (__vector_bitcast<short>(__x) >> 8) *
 			     (__vector_bitcast<short>(__y) & __high_byte);
 	  if constexpr (__have_avx512bw)
@@ -6710,7 +6717,7 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi>
   template <typename... _More>
   _GLIBCXX_SIMD_INTRINSIC constexpr _Ret operator()(_From __a, _More... __more)
   {
-    static_assert(sizeof...(_More) + 1 == _Ret::_S_width);
+    static_assert(sizeof...(_More) + 1 == _Abi::template size<_To>);
     static_assert(std::conjunction_v<std::is_same<_From, _More>...>);
     return __make_vector<_To>(__a, __more...);
   }

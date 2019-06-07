@@ -902,7 +902,9 @@ template <typename _Tp, size_t _N>
 struct __vector_type_n<_Tp, _N, enable_if_t<__is_vectorizable_v<_Tp>>>
 {
   static_assert(_N >= 2);
-  static constexpr size_t _Bytes = __next_power_of_2(_N * sizeof(_Tp));
+  static constexpr size_t _Bytes = _N * sizeof(_Tp) < __min_vector_size
+				     ? __min_vector_size
+				     : __next_power_of_2(_N * sizeof(_Tp));
   using type [[__gnu__::__vector_size__(_Bytes)]] = _Tp;
 };
 
@@ -954,10 +956,23 @@ struct _VectorTraits<_SimdWrapper<_Tp, _N>,
 {
   using type                    = __vector_type_t<_Tp, _N>;
   using value_type              = _Tp;
-  static constexpr int _S_width = _N;
+  static constexpr int _S_width = sizeof(type) / sizeof(value_type);
   template <typename _U, int _W = _S_width>
   static constexpr bool __is = std::is_same_v<value_type, _U>&& _W == _S_width;
 };
+
+// }}}
+// __as_vector{{{
+template <typename _V>
+_GLIBCXX_SIMD_INTRINSIC constexpr auto __as_vector(_V __x)
+{
+  if constexpr (__is_vector_type_v<_V>)
+    return __x;
+  else if constexpr (is_simd<_V>::value || is_simd_mask<_V>::value)
+    return __data(__x)._M_data;
+  else
+    return __x._M_data;
+}
 
 // }}}
 // __vector_bitcast{{{
@@ -2589,7 +2604,7 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int __testnzc(_Tp __a, _Tp
 template <size_t _Size>
 struct __bool_storage_member_type
 {
-  static_assert((_Size & (_Size - 1)) == 0,
+  static_assert((_Size & (_Size - 1)) != 0,
 		"This trait may only be used for non-power-of-2 sizes. "
 		"Power-of-2 sizes must be specialized.");
   using type =
@@ -2645,22 +2660,7 @@ struct __intrinsic_type<float, 16, void>
   using type [[__gnu__::__vector_size__(16)]] = float;
 };
 template <>
-struct __intrinsic_type<float, 8, void>
-{
-  using type [[__gnu__::__vector_size__(16)]] = float;
-};
-template <>
-struct __intrinsic_type<float, 4, void>
-{
-  using type [[__gnu__::__vector_size__(16)]] = float;
-};
-template <>
 struct __intrinsic_type<double, 16, void>
-{
-  using type [[__gnu__::__vector_size__(16)]] = double;
-};
-template <>
-struct __intrinsic_type<double, 8, void>
 {
   using type [[__gnu__::__vector_size__(16)]] = double;
 };
@@ -2668,26 +2668,22 @@ template <typename _Tp, size_t _Bytes>
 struct __intrinsic_type<
   _Tp,
   _Bytes,
-  enable_if_t<(_Bytes <= 16 && _Bytes >= sizeof(_Tp) &&
-	       ((_Bytes - 1) & _Bytes) == 0 && is_integral_v<_Tp>)>>
+  enable_if_t<(_Bytes == 16 && is_integral_v<_Tp>)>>
 {
   using type [[__gnu__::__vector_size__(16)]] = long long int;
+};
+template <typename _Tp, size_t _Bytes>
+struct __intrinsic_type<
+  _Tp,
+  _Bytes,
+  std::enable_if_t<__is_vectorizable_v<_Tp> && (_Bytes < 16)>>
+{
+  using type [[__gnu__::__vector_size__(16)]] =
+    std::conditional_t<std::is_integral_v<_Tp>, long long int, _Tp>;
 };
 #endif  // _GLIBCXX_SIMD_HAVE_SSE
 
 // }}}
-// _(Sse|Avx|Avx512)(Simd|Mask)Member{{{
-template <typename _Tp> using _SseSimdMember = _SimdWrapper16<_Tp>;
-template <typename _Tp> using _SseMaskMember = _SimdWrapper16<_Tp>;
-
-template <typename _Tp> using _AvxSimdMember = _SimdWrapper32<_Tp>;
-template <typename _Tp> using _AvxMaskMember = _SimdWrapper32<_Tp>;
-
-template <typename _Tp> using _Avx512SimdMember = _SimdWrapper64<_Tp>;
-template <typename _Tp> using _Avx512MaskMember = _SimdWrapper<bool, 64 / sizeof(_Tp)>;
-template <size_t _N> using _Avx512MaskMemberN = _SimdWrapper<bool, _N>;
-
-//}}}
 #endif  // _GLIBCXX_SIMD_HAVE_SSE_ABI
 // __intrinsic_type (ARM){{{
 #if _GLIBCXX_SIMD_HAVE_NEON
@@ -2838,7 +2834,7 @@ struct _SimdWrapper<
   static_assert(_Width >= 2); // 1 doesn't make sense, use _Tp directly then
   using _BuiltinType               = __vector_type_t<_Tp, _Width>;
   using value_type                 = _Tp;
-  static constexpr size_t _S_width = _Width;
+  static constexpr size_t _S_width = sizeof(_BuiltinType) / sizeof(value_type);
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper() = default;
   template <
@@ -4637,9 +4633,10 @@ struct _NeonAbi : _MixinImplicitMasking<_Bytes, _NeonAbi<_Bytes>> {
 
     // __traits {{{2
     template <class _Tp>
-    using __traits = std::conditional_t<__is_valid_v<_Tp>,
-                                      _GnuTraits<_Tp, _Tp, _NeonAbi, _S_full_size<_Tp>>,
-                                      _InvalidTraits>;
+    using __traits =
+      std::conditional_t<__is_valid_v<_Tp>,
+			 _GnuTraits<_Tp, _Tp, _NeonAbi, size<_Tp>>,
+			 _InvalidTraits>;
     //}}}2
 };
 
@@ -4670,9 +4667,10 @@ struct _SseAbi : _MixinImplicitMasking<_Bytes, _SseAbi<_Bytes>> {
 
     // __traits {{{2
     template <class _Tp>
-    using __traits = std::conditional_t<__is_valid_v<_Tp>,
-                                      _GnuTraits<_Tp, _Tp, _SseAbi, _S_full_size<_Tp>>,
-                                      _InvalidTraits>;
+    using __traits =
+      std::conditional_t<__is_valid_v<_Tp>,
+			 _GnuTraits<_Tp, _Tp, _SseAbi, size<_Tp>>,
+			 _InvalidTraits>;
     //}}}2
 };
 
@@ -4708,9 +4706,10 @@ struct _AvxAbi : _MixinImplicitMasking<_Bytes, _AvxAbi<_Bytes>> {
 
     // __traits {{{2
     template <class _Tp>
-    using __traits = std::conditional_t<__is_valid_v<_Tp>,
-                                      _GnuTraits<_Tp, _Tp, _AvxAbi, _S_full_size<_Tp>>,
-                                      _InvalidTraits>;
+    using __traits =
+      std::conditional_t<__is_valid_v<_Tp>,
+			 _GnuTraits<_Tp, _Tp, _AvxAbi, size<_Tp>>,
+			 _InvalidTraits>;
     //}}}2
 };
 
@@ -4770,9 +4769,9 @@ public:
     // __traits {{{2
     template <class _Tp>
     using __traits =
-        std::conditional_t<__is_valid_v<_Tp>,
-                           _GnuTraits<_Tp, bool, _Avx512Abi, _S_full_size<_Tp>>,
-                           _InvalidTraits>;
+      std::conditional_t<__is_valid_v<_Tp>,
+			 _GnuTraits<_Tp, bool, _Avx512Abi, size<_Tp>>,
+			 _InvalidTraits>;
     //}}}2
 };
 
