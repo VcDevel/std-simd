@@ -3870,16 +3870,22 @@ template <size_t... _Sizes, class _Tp, class _A,
 inline std::tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...> split(const simd<_Tp, _A> &);
 
 // __extract_part {{{
-template <size_t _Index,
-	  size_t _Total,
+template <int _Index,
+	  int _Total,
+	  int _Combine = 1,
 	  class _Tp,
 	  typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST
   typename __vector_type<typename _TVT::value_type,
-			 std::max(__min_vector_size,
-				  int(sizeof(_Tp) / _Total))>::type
+			 int(sizeof(_Tp) / _Total)>::type
   __extract_part(_Tp __x);
-template <int Index, int Parts, typename _Tp, typename _A0, typename... _As>
+
+template <int Index,
+	  int Parts,
+	  int _Combine = 1,
+	  typename _Tp,
+	  typename _A0,
+	  typename... _As>
 auto __extract_part(const _SimdTuple<_Tp, _A0, _As...>& __x);
 
 // }}}
@@ -3915,26 +3921,49 @@ template <size_t _V0, size_t... _Values> struct _SizeList {
 // }}}
 // __extract_center {{{
 template <class _Tp, size_t _N>
-_GLIBCXX_SIMD_INTRINSIC _SimdWrapper<_Tp, _N / 2> __extract_center(_SimdWrapper<_Tp, _N> __x)
+_GLIBCXX_SIMD_INTRINSIC _SimdWrapper<_Tp, _N / 2>
+			__extract_center(_SimdWrapper<_Tp, _N> __x)
 {
-    if constexpr (__have_avx512f && sizeof(__x) == 64) {
-        const auto __intrin = __to_intrin(__x);
-        if constexpr (std::is_integral_v<_Tp>) {
-            return __vector_bitcast<_Tp>(_mm512_castsi512_si256(_mm512_shuffle_i32x4(
-                __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
-        } else if constexpr (sizeof(_Tp) == 4) {
-            return __vector_bitcast<_Tp>(_mm512_castps512_ps256(_mm512_shuffle_f32x4(
-                __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
-        } else if constexpr (sizeof(_Tp) == 8) {
-            return __vector_bitcast<_Tp>(_mm512_castpd512_pd256(_mm512_shuffle_f64x2(
-                __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
-        } else {
-            __assert_unreachable<_Tp>();
-        }
-    } else {
-        __assert_unreachable<_Tp>();
+  static_assert(_N >= 4);
+  static_assert(_N % 4 == 0); // x0 - x1 - x2 - x3 -> return {x1, x2}
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+  if constexpr (__have_avx512f && sizeof(__x) == 64)
+    {
+      const auto __intrin = __to_intrin(__x);
+      if constexpr (std::is_integral_v<_Tp>)
+	return __vector_bitcast<_Tp>(
+	  _mm512_castsi512_si256(_mm512_shuffle_i32x4(
+	    __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
+      else if constexpr (sizeof(_Tp) == 4)
+	return __vector_bitcast<_Tp>(
+	  _mm512_castps512_ps256(_mm512_shuffle_f32x4(
+	    __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
+      else if constexpr (sizeof(_Tp) == 8)
+	return __vector_bitcast<_Tp>(
+	  _mm512_castpd512_pd256(_mm512_shuffle_f64x2(
+	    __intrin, __intrin, 1 + 2 * 0x4 + 2 * 0x10 + 3 * 0x40)));
+      else
+	__assert_unreachable<_Tp>();
+    }
+  else if constexpr (sizeof(_Tp) * _N == 32 && std::is_floating_point_v<_Tp>)
+    return __vector_bitcast<_Tp>(
+      _mm_shuffle_pd(__lo128(__vector_bitcast<double>(__x)),
+		     __hi128(__vector_bitcast<double>(__x)), 1));
+  else if constexpr (sizeof(__x) ==32 && sizeof(_Tp) * _N <= 32)
+    return __vector_bitcast<_Tp>(_mm_alignr_epi8(
+      __hi128(__vector_bitcast<_LLong>(__x)),
+      __lo128(__vector_bitcast<_LLong>(__x)), sizeof(_Tp) * _N / 2));
+  else
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+    {
+      __vector_type_t<_Tp, _N / 2> __r;
+      __builtin_memcpy(
+	&__r, reinterpret_cast<const char*>(&__x) + sizeof(_Tp) * _N / 4,
+	sizeof(__r));
+      return __r;
     }
 }
+
 template <class _Tp, class _A>
 inline _SimdWrapper<_Tp, simd_size_v<_Tp, _A>> __extract_center(
     const _SimdTuple<_Tp, _A, _A>& __x)
@@ -4076,19 +4105,18 @@ _GLIBCXX_SIMD_ALWAYS_INLINE
       static_assert(sizeof...(_Sizes) == 1);
       return {simd_cast<_V>(__x)};
     }
-  else if constexpr (__is_fixed_size_abi_v<_A> &&
-		     __fixed_size_storage_t<_Tp, _N>::_S_first_size == _N0)
+  else if constexpr // split from fixed_size, such that __x::first.size == _N0
+    (__is_fixed_size_abi_v<_A> &&
+     __fixed_size_storage_t<_Tp, _N>::_S_first_size == _N0)
     {
-      // if the first part of the _SimdTuple input matches the first output
-      // vector in the std::tuple, extract it and recurse
       static_assert(!__is_fixed_size_abi_v<typename _V::abi_type>,
 		    "How can <_Tp, _N> be __a single _SimdTuple entry but __a "
 		    "fixed_size_simd "
 		    "when deduced?");
-      const __fixed_size_storage_t<_Tp, _N>& __xx = __data(__x);
+      // extract first and recurse (__split_wrapper is needed to deduce a new _Sizes pack)
       return std::tuple_cat(
-	std::make_tuple(_V(__private_init, __xx.first)),
-	__split_wrapper(_SL::template __pop_front<1>(), __xx.second));
+	std::make_tuple(_V(__private_init, __data(__x).first)),
+	__split_wrapper(_SL::template __pop_front<1>(), __data(__x).second));
     }
   else if constexpr ((!std::is_same_v<simd_abi::scalar,
 				      simd_abi::deduce_t<_Tp, _Sizes>> &&
@@ -4106,14 +4134,14 @@ _GLIBCXX_SIMD_ALWAYS_INLINE
 		{__private_init, __extract_part<2, 3>(__data(__x))}};
       else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
 					_SizeList<2 * _N / 3, _N / 3>>)
-	return {{__private_init, __concat(__extract_part<0, 3>(__data(__x)),
-					  __extract_part<1, 3>(__data(__x)))},
+	return {{__private_init, __extract_part<0, 3, 2>(__data(__x))},
 		{__private_init, __extract_part<2, 3>(__data(__x))}};
       else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
 					_SizeList<_N / 3, 2 * _N / 3>>)
-	return {{__private_init, __extract_part<0, 3>(__data(__x))},
-		{__private_init, __concat(__extract_part<1, 3>(__data(__x)),
-					  __extract_part<2, 3>(__data(__x)))}};
+	return {__deduced_simd<_Tp, _SL::template __at<0>()>{
+		  __private_init, __extract_part<0, 3>(__data(__x))},
+		__deduced_simd<_Tp, _SL::template __at<1>()>{
+		  __private_init, __extract_part<1, 3, 2>(__data(__x))}};
       else if constexpr (std::is_same_v<_SizeList<_Sizes...>,
 					_SizeList<_N / 2, _N / 4, _N / 4>>)
 	return {{__private_init, __extract_part<0, 2>(__data(__x))},
