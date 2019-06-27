@@ -329,6 +329,12 @@ template <class _Tp, class _Abi> struct simd_size;
 // incorrect use of k0 register for _kortestc_mask64_u8 and _kortestc_mask32_u8:
 #define _GLIBCXX_SIMD_WORKAROUND_PR85538 1
 
+// Invalid instruction mov from xmm16-31
+#define _GLIBCXX_SIMD_WORKAROUND_PR89229 1
+
+// integer division not optimized
+#define _GLIBCXX_SIMD_WORKAROUND_PR90993 1
+
 // very bad codegen for extraction and concatenation of 128/256 "subregisters" with
 // sizeof(element type) < 8: https://godbolt.org/g/mqUsgM
 #if _GLIBCXX_SIMD_X86INTRIN
