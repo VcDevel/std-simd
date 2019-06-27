@@ -456,7 +456,7 @@ vc_add_test(simd)
 vc_add_test(operators)
 vc_add_test(integer_operators SINGLE_TESTTYPE) # without SINGLE_TESTTYPE GCC gets OOM killed
 vc_add_test(casts DEFINITIONS ONE_RANDOM_ARITHMETIC_TYPE)
-vc_add_test(allcvt_casts SOURCE casts.cpp EXCLUDE_FROM_ALL)
+vc_add_test(allcvt_casts SOURCE casts.cpp EXCLUDE_FROM_ALL SINGLE_TESTTYPE)
 vc_add_test(math NO_TESTTYPES ROUNDINGMODES)
 vc_add_test(specialmath NO_TESTTYPES ROUNDINGMODES)
 vc_add_test(where NO_TESTTYPES)
