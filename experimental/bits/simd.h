@@ -3866,9 +3866,12 @@ template <int _Stride, int _Offset = 0> struct strided {
     static constexpr int _S_offset = _Offset;
     template <class _Tp, class _A>
     using __shuffle_return_type = simd<
-        _Tp, simd_abi::deduce_t<_Tp, (simd_size_v<_Tp, _A> - _Offset + _Stride - 1) / _Stride, _A>>;
+      _Tp,
+      simd_abi::deduce_t<_Tp,
+			 __div_roundup(simd_size_v<_Tp, _A> - _Offset, _Stride),
+			 _A>>;
     // alternative, always use fixed_size:
-    // fixed_size_simd<_Tp, (simd_size_v<_Tp, _A> - _Offset + _Stride - 1) / _Stride>;
+    // fixed_size_simd<_Tp, __div_roundup(simd_size_v<_Tp, _A> - _Offset, _Stride)>;
     template <class _Tp> static constexpr auto __src_index(_Tp __dst_index)
     {
         return _Offset + __dst_index * _Stride;
