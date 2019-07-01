@@ -451,9 +451,6 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple
     __apply_per_chunk(_F&& __fun, _More&&... __more) const
   {
-    static_assert(
-      (... && ((_S_first_size % __remove_cvref_t<_More>::_S_first_size == 0) ||
-	       (__remove_cvref_t<_More>::_S_first_size % _S_first_size == 0))));
     if constexpr ((... || conjunction_v<
 			    is_lvalue_reference<_More>,
 			    negation<is_const<remove_reference_t<_More>>>>))
