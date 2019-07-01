@@ -6,17 +6,33 @@ build_dir := $(shell sh -c $(tmp))
 build_dir := $(realpath $(build_dir))
 build_dir := build-$(subst /,-,$(build_dir:/%=%))
 cols := $(shell sh -c '{ stty size 2>/dev/null || echo 0 80; }|cut -d" " -f2')
+NINJA ?= $(shell which ninja)
+ifeq (,$(NINJA))
+	GENERATOR :=
+	HELP_TARGET := --target help
+	BUILD_FLAGS := $(MAKEFLAGS)
+else
+	GENERATOR := -G Ninja
+	HELP_TARGET := -- -t targets all
+	BUILD_FLAGS := -j 100 -k 6
+endif
+CMAKE=cmake
+FIX_OUTPUT=sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
 
 test: $(build_dir)/CMakeCache.txt
-	$(MAKE) --no-print-directory -C "$(build_dir)" all test 2>&1|sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
+	$(CMAKE) --build $(build_dir) --target all -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
+	$(CMAKE) --build $(build_dir) --target test -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
+
+help: $(build_dir)/CMakeCache.txt
+	$(CMAKE) --build $(build_dir) $(HELP_TARGET)
 
 %:: $(build_dir)/CMakeCache.txt
-	$(MAKE) --no-print-directory -C "$(build_dir)" $* 2>&1|sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
+	$(CMAKE) --build $(build_dir) --target $* -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
 
 $(build_dir)/CMakeCache.txt:
 	@test -n "$(build_dir)"
 	@mkdir -p "$(build_dir)"
-	@test -e "$(build_dir)/CMakeCache.txt" || cmake -Htests -B"$(build_dir)"
+	@test -e "$(build_dir)/CMakeCache.txt" || $(CMAKE) $(GENERATOR) -Htests -B"$(build_dir)"
 
 print_build_dir:
 	@echo "$(PWD)/$(build_dir)"
