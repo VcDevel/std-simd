@@ -445,11 +445,19 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto
 
 // }}}
 // __call_with_subscripts{{{
-template <size_t... _It, typename _Tp, typename _F>
+template <size_t _First = 0, size_t... _It, typename _Tp, typename _F>
 _GLIBCXX_SIMD_INTRINSIC auto
   __call_with_subscripts(_Tp&& __x, index_sequence<_It...>, _F&& __fun)
 {
-  return __fun(__x[_It]...);
+  return __fun(__x[_First + _It]...);
+}
+
+template <size_t _N, size_t _First = 0, typename _Tp, typename _F>
+_GLIBCXX_SIMD_INTRINSIC auto __call_with_subscripts(_Tp&& __x, _F&& __fun)
+{
+  return __call_with_subscripts<_First>(std::forward<_Tp>(__x),
+					std::make_index_sequence<_N>(),
+					std::forward<_F>(__fun));
 }
 
 // }}}
@@ -1632,54 +1640,19 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _R __extract(_Tp __in)
   using _W =
     std::conditional_t<std::is_floating_point_v<typename _TVT::value_type>,
 		       double, long long>;
-  constexpr int return_width = sizeof(_R) / sizeof(_W);
-  using _U                   = __vector_type_t<_W, return_width>;
-  const auto __x             = __vector_bitcast<_W>(__in);
+  constexpr int __return_width = sizeof(_R) / sizeof(_W);
+  using _U                     = __vector_type_t<_W, __return_width>;
+  const auto __x               = __vector_bitcast<_W>(__in);
 #else
-  constexpr int return_width                   = _TVT::_S_width / _SplitBy;
+  constexpr int __return_width                 = _TVT::_S_width / _SplitBy;
   using _U                                     = _R;
   const __vector_type_t<typename _TVT::value_type, _TVT::_S_width>& __x =
     __in; // only needed for _Tp = _SimdWrapper<value_type, _N>
 #endif
-  constexpr int _O = _Offset * return_width;
-  if constexpr (return_width == 2)
-    {
-      return reinterpret_cast<_R>(_U{__x[_O + 0], __x[_O + 1]});
-    }
-  else if constexpr (return_width == 4)
-    {
-      return reinterpret_cast<_R>(
-	_U{__x[_O + 0], __x[_O + 1], __x[_O + 2], __x[_O + 3]});
-    }
-  else if constexpr (return_width == 8)
-    {
-      return reinterpret_cast<_R>(_U{__x[_O + 0], __x[_O + 1], __x[_O + 2],
-				     __x[_O + 3], __x[_O + 4], __x[_O + 5],
-				     __x[_O + 6], __x[_O + 7]});
-    }
-  else if constexpr (return_width == 16)
-    {
-      return reinterpret_cast<_R>(
-	_U{__x[_O + 0], __x[_O + 1], __x[_O + 2], __x[_O + 3], __x[_O + 4],
-	   __x[_O + 5], __x[_O + 6], __x[_O + 7], __x[_O + 8], __x[_O + 9],
-	   __x[_O + 10], __x[_O + 11], __x[_O + 12], __x[_O + 13], __x[_O + 14],
-	   __x[_O + 15]});
-    }
-  else if constexpr (return_width == 32)
-    {
-      return reinterpret_cast<_R>(
-	_U{__x[_O + 0],  __x[_O + 1],  __x[_O + 2],  __x[_O + 3],  __x[_O + 4],
-	   __x[_O + 5],  __x[_O + 6],  __x[_O + 7],  __x[_O + 8],  __x[_O + 9],
-	   __x[_O + 10], __x[_O + 11], __x[_O + 12], __x[_O + 13], __x[_O + 14],
-	   __x[_O + 15], __x[_O + 16], __x[_O + 17], __x[_O + 18], __x[_O + 19],
-	   __x[_O + 20], __x[_O + 21], __x[_O + 22], __x[_O + 23], __x[_O + 24],
-	   __x[_O + 25], __x[_O + 26], __x[_O + 27], __x[_O + 28], __x[_O + 29],
-	   __x[_O + 30], __x[_O + 31]});
-    }
-  else
-    {
-      __assert_unreachable<_Tp>();
-    }
+  constexpr int _O = _Offset * __return_width;
+  return __call_with_subscripts<__return_width, _O>(__x, [](auto... __entries) {
+    return reinterpret_cast<_R>(_U{__entries...});
+  });
 }
 
 // }}}
