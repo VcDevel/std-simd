@@ -39,6 +39,13 @@
 #endif  // _GLIBCXX_SIMD_ENABLE_DEBUG
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
+
+template <class... T>
+[[__gnu__::__noinline__]] void __tag()
+{
+  asm("");
+}
+
 enum class __area : unsigned {
     __disabled = 0,
     __enabled = 1,
