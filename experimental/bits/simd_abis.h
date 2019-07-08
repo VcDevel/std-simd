@@ -1355,6 +1355,18 @@ _GLIBCXX_SIMD_INTRINSIC
       else if constexpr (_Index == 0)
 	return __intrin_bitcast<__vector_type_t<_Tp, __return_size>>(
 	  __as_vector(__x));
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+      else if constexpr (sizeof(__x) == 32 && __return_size * sizeof(_Tp) <= 16)
+	{
+	  constexpr size_t __bytes_to_skip = __values_to_skip * sizeof(_Tp);
+	  if constexpr (__bytes_to_skip == 16)
+	    return __hi128(__as_vector(__x));
+	  else
+	    return __vector_bitcast<_Tp>(_mm_alignr_epi8(
+	      __hi128(__vector_bitcast<_LLong>(__x)),
+	      __lo128(__vector_bitcast<_LLong>(__x)), __bytes_to_skip));
+	}
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
       else if constexpr (_Index % _Combine == 0 && _Total % _Combine == 0 &&
 			 sizeof(_Tp) * __return_size >= __min_vector_size)
 	return __extract<_Index / _Combine, _Total / _Combine>(__x);
@@ -1521,28 +1533,33 @@ _GLIBCXX_SIMD_TO_STORAGE(__mmask64);
 template <class _To, class _From, class... _More>
 _GLIBCXX_SIMD_INTRINSIC auto __convert(_From __v0, _More... __vs)
 {
-  static_assert((true && ... && is_same_v<_From, _More>));
   if constexpr (__is_vectorizable_v<_From>)
     {
+      static_assert((true && ... && is_same_v<_From, _More>));
       using _V = typename _VectorTraits<_To>::type;
       using _Tp = typename _VectorTraits<_To>::value_type;
       return _V{static_cast<_Tp>(__v0), static_cast<_Tp>(__vs)...};
     }
   else if constexpr (!__is_vector_type_v<_From>)
-    return __convert<_To>(__v0._M_data, __vs._M_data...);
-  else if constexpr (__is_vectorizable_v<_To>)
-    return __convert<__vector_type_t<_To, (_VectorTraits<_From>::_S_width *
-					   (1 + sizeof...(_More)))>>(__v0,
-								     __vs...);
-  else if constexpr (!__is_vector_type_v<_To>)
-    return _To(__convert<typename _To::_BuiltinType>(__v0, __vs...));
+    return __convert<_To>(__as_vector(__v0), __as_vector(__vs)...);
   else
     {
-      static_assert(sizeof...(_More) == 0 ||
-		      _VectorTraits<_To>::_S_width >=
-			(1 + sizeof...(_More)) * _VectorTraits<_From>::_S_width,
-		    "__convert(...) requires the input to fit into the output");
-      return __vector_convert<_To>(__v0, __vs...);
+      static_assert((true && ... && is_same_v<_From, _More>));
+      if constexpr (__is_vectorizable_v<_To>)
+	return __convert<__vector_type_t<_To, (_VectorTraits<_From>::_S_width *
+					       (1 + sizeof...(_More)))>>(
+	  __v0, __vs...);
+      else if constexpr (!__is_vector_type_v<_To>)
+	return _To(__convert<typename _To::_BuiltinType>(__v0, __vs...));
+      else
+	{
+	  static_assert(
+	    sizeof...(_More) == 0 ||
+	      _VectorTraits<_To>::_S_width >=
+		(1 + sizeof...(_More)) * _VectorTraits<_From>::_S_width,
+	    "__convert(...) requires the input to fit into the output");
+	  return __vector_convert<_To>(__v0, __vs...);
+	}
     }
 }
 
@@ -3334,18 +3351,20 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 		       simd<_Tp, _Abi>    __x,
 		       _BinaryOperation&& __binary_op)
     {
-      using _FullSimd = __deduced_simd<_Tp, _Abi::template _S_full_size<_Tp>>;
+      using _V = __vector_type_t<_Tp, _N / 2>;
+      static_assert(sizeof(_V) <= sizeof(__x));
+      // _S_width is the size of the smallest native SIMD register that can
+      // store _N/2 elements:
+      using _FullSimd =
+	__deduced_simd<_Tp, _VectorTraits<_V>::_S_width>;
       using _HalfSimd = __deduced_simd<_Tp, _N / 2>;
-      const auto __xx = __data(__x)._M_data;
+      const auto __xx = __as_vector(__x);
       return _HalfSimd::abi_type::_SimdImpl::__reduce(
-	_HalfSimd(
-	  __data(__binary_op(
-		   _FullSimd(__private_init, __xx),
-		   _FullSimd(
-		     __private_init,
-		     __vector_permute<(_N / 2 + _Is)..., (int(_Zeros * 0) - 1)...>(
-		       __xx))))
-	    ._M_data),
+	static_cast<_HalfSimd>(__as_vector(__binary_op(
+	  static_cast<_FullSimd>(__intrin_bitcast<_V>(__xx)),
+	  static_cast<_FullSimd>(__intrin_bitcast<_V>(
+	    __vector_permute<(_N / 2 + _Is)..., (int(_Zeros * 0) - 1)...>(
+	      __xx)))))),
 	__binary_op);
     }
 
@@ -3393,7 +3412,8 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	      using _A = simd_abi::deduce_t<_Tp, _N-1>;
 	      return __binary_op(
 		simd<_Tp, simd_abi::scalar>(_A::_SimdImpl::__reduce(
-		  simd<_Tp, _A>(__private_init, __data(__x)._M_data),
+		  simd<_Tp, _A>(__intrin_bitcast<__vector_type_t<_Tp, _N - 1>>(
+		    __as_vector(__x))),
 		  __binary_op)),
 		simd<_Tp, simd_abi::scalar>(__x[_N - 1]))[0];
 	    }
@@ -3700,26 +3720,26 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 		    __fp_infinite));
       if constexpr (sizeof(_Tp) == sizeof(int))
 	{
-	  if constexpr (__fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
-	    {
-	      return {__vector_bitcast<int>(__tmp)};
-	    }
-	  else if constexpr (__fixed_size_storage_t<int, _N>::_S_tuple_size == 2)
-	    {
-	      return {__extract<0, 2>(__vector_bitcast<int>(__tmp)),
-		      __extract<1, 2>(__vector_bitcast<int>(__tmp))};
-	    }
+	  using _FixedInt = __fixed_size_storage_t<int, _N>;
+	  const auto __as_int = __vector_bitcast<int>(__tmp);
+	  if constexpr (_FixedInt::_S_tuple_size == 1)
+	    return {__as_int};
+	  else if constexpr (_FixedInt::_S_tuple_size == 2 &&
+			     std::is_same_v<
+			       typename _FixedInt::_Second_type::_First_abi,
+			       simd_abi::scalar>)
+	    return {__extract<0, 2>(__as_int), __as_int[_N - 1]};
+	  else if constexpr (_FixedInt::_S_tuple_size == 2)
+	    return {__extract<0, 2>(__as_int), __extract<1, 2>(__as_int)};
 	  else
-	    {
-	      __assert_unreachable<_Tp>();
-	    }
+	    __assert_unreachable<_Tp>();
 	}
       else if constexpr (_N == 2 && sizeof(_Tp) == 8 &&
 			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 2)
 	{
 	  return {int(__tmp[0]), {int(__tmp[1])}};
 	}
-      else if constexpr (_N == 4 && sizeof(_Tp) == 8 &&
+      else if constexpr (sizeof(_Tp) == 8 && sizeof(__tmp) == 32 &&
 			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
 	{
 #if _GLIBCXX_SIMD_X86INTRIN
@@ -3732,9 +3752,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
 	return {__make_wrapper<int>(__tmp[0], __tmp[1])};
       else
-	{
-	  __assert_unreachable<_Tp>();
-	}
+	__assert_unreachable<_Tp>();
     }
 
     // __increment & __decrement{{{2
@@ -5872,11 +5890,16 @@ struct _MaskImplSse : __x86_mask_impl<simd_abi::_SseAbi<_Bytes>> {};
 template <int _Bytes>
 struct _SimdImplSse : __x86_simd_impl<simd_abi::_SseAbi<_Bytes>> {};
 
-struct _MaskImplAvx : __x86_mask_impl<simd_abi::__avx> {};
-struct _SimdImplAvx : __x86_simd_impl<simd_abi::__avx> {};
+template <int _Bytes>
+struct _MaskImplAvx : __x86_mask_impl<simd_abi::_AvxAbi<_Bytes>> {};
+template <int _Bytes>
+struct _SimdImplAvx : __x86_simd_impl<simd_abi::_AvxAbi<_Bytes>> {};
 
-struct _SimdImplAvx512 : __x86_simd_impl<simd_abi::__avx512> {};
-struct _MaskImplAvx512 : __x86_mask_impl<simd_abi::__avx512> {};
+template <int _Bytes>
+struct _MaskImplAvx512 : __x86_mask_impl<simd_abi::_Avx512Abi<_Bytes>> {};
+template <int _Bytes>
+struct _SimdImplAvx512 : __x86_simd_impl<simd_abi::_Avx512Abi<_Bytes>> {};
+
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
 
 #if _GLIBCXX_SIMD_HAVE_NEON // {{{
@@ -6881,39 +6904,13 @@ template <int _N> struct _MaskImplFixedSize {
 };
 // }}}1
 
-// _SimdConverter <From, A> -> <To, A> (same ABI) {{{
-template <typename _From, typename _To, typename _Abi>
-struct _SimdConverter<_From, _Abi, _To, _Abi>
-{
-  template <typename _Tp>
-  using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
-  using _Arg = _SimdMember<_From>;
-  using _Ret = _SimdMember<_To>;
-  using _V = __vector_type_t<_To, simd_size_v<_To, _Abi>>;
-
-  _GLIBCXX_SIMD_INTRINSIC decltype(auto) operator()(const _Arg& __a)
-  {
-    if constexpr (is_same_v<_To, _From>)
-      return __a;
-    else
-      return __convert<_V>(__a);
-  }
-  template <typename... _More>
-  _GLIBCXX_SIMD_INTRINSIC _Ret operator()(_Arg __a, _More... __more)
-  {
-    static_assert(sizeof(_From) >= (sizeof...(_More)+1) * sizeof(_To));
-    return __convert<_V>(__a, __more...);
-  }
-
-  _GLIBCXX_SIMD_INTRINSIC auto __all(const _Arg& __a)
-  {
-    return __convert_all<_V>(__a);
-  }
-};
-// }}}
 // _SimdConverter scalar -> scalar {{{
 template <typename _From, typename _To>
-struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::scalar>
+struct _SimdConverter<_From,
+		      simd_abi::scalar,
+		      _To,
+		      simd_abi::scalar,
+		      std::enable_if_t<!std::is_same_v<_From, _To>>>
 {
   _GLIBCXX_SIMD_INTRINSIC _To operator()(_From __a)
   {
@@ -6924,7 +6921,11 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::scalar>
 // }}}
 // _SimdConverter "native" -> scalar {{{
 template <typename _From, typename _To, typename _Abi>
-struct _SimdConverter<_From, _Abi, _To, simd_abi::scalar>
+struct _SimdConverter<_From,
+		      _Abi,
+		      _To,
+		      simd_abi::scalar,
+		      std::enable_if_t<!std::is_same_v<_Abi, simd_abi::scalar>>>
 {
   using _Arg = typename _Abi::template __traits<_From>::_SimdMember;
   static constexpr size_t _S_n = _Arg::_S_width;
@@ -6942,7 +6943,11 @@ struct _SimdConverter<_From, _Abi, _To, simd_abi::scalar>
 // }}}
 // _SimdConverter scalar -> "native" {{{
 template <typename _From, typename _To, typename _Abi>
-struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi>
+struct _SimdConverter<_From,
+		      simd_abi::scalar,
+		      _To,
+		      _Abi,
+		      std::enable_if_t<!std::is_same_v<_Abi, simd_abi::scalar>>>
 {
   using _Ret = typename _Abi::template __traits<_To>::_SimdMember;
 
@@ -6958,7 +6963,16 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi>
 // }}}
 // _SimdConverter "native 1" -> "native 2" {{{
 template <typename _From, typename _To, typename _AFrom, typename _ATo>
-struct _SimdConverter<_From, _AFrom, _To, _ATo>
+struct _SimdConverter<
+  _From,
+  _AFrom,
+  _To,
+  _ATo,
+  std::enable_if_t<!std::disjunction_v<__is_fixed_size_abi<_AFrom>,
+				       __is_fixed_size_abi<_ATo>,
+				       std::is_same<_AFrom, simd_abi::scalar>,
+				       std::is_same<_ATo, simd_abi::scalar>,
+				       std::is_same<_From, _To>>>>
 {
   using _Arg = typename _AFrom::template __traits<_From>::_SimdMember;
   using _Ret = typename _ATo::template __traits<_To>::_SimdMember;
@@ -6972,7 +6986,6 @@ struct _SimdConverter<_From, _AFrom, _To, _ATo>
   template <typename... _More>
   _GLIBCXX_SIMD_INTRINSIC _Ret operator()(_Arg __a, _More... __more)
   {
-    static_assert(std::conjunction_v<std::is_same<_Arg, _More>...>);
     return __convert<_V>(__a, __more...);
   }
 };
@@ -6980,17 +6993,31 @@ struct _SimdConverter<_From, _AFrom, _To, _ATo>
 // }}}
 // _SimdConverter scalar -> fixed_size<1> {{{1
 template <typename _From, typename _To>
-struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::fixed_size<1>> {
-    _SimdTuple<_To, simd_abi::scalar> operator()(_From __x) { return {static_cast<_To>(__x)}; }
+struct _SimdConverter<_From,
+		      simd_abi::scalar,
+		      _To,
+		      simd_abi::fixed_size<1>,
+		      void>
+{
+  _SimdTuple<_To, simd_abi::scalar> operator()(_From __x)
+  {
+    return {static_cast<_To>(__x)};
+  }
 };
 
 // _SimdConverter fixed_size<1> -> scalar {{{1
 template <typename _From, typename _To>
-struct _SimdConverter<_From, simd_abi::fixed_size<1>, _To, simd_abi::scalar> {
-    _GLIBCXX_SIMD_INTRINSIC _To operator()(_SimdTuple<_From, simd_abi::scalar> __x)
-    {
-        return {static_cast<_To>(__x.first)};
-    }
+struct _SimdConverter<_From,
+		      simd_abi::fixed_size<1>,
+		      _To,
+		      simd_abi::scalar,
+		      void>
+{
+  _GLIBCXX_SIMD_INTRINSIC _To
+			  operator()(_SimdTuple<_From, simd_abi::scalar> __x)
+  {
+    return {static_cast<_To>(__x.first)};
+  }
 };
 
 // _SimdConverter fixed_size<_N> -> fixed_size<_N> {{{1
@@ -6998,7 +7025,8 @@ template <typename _From, typename _To, int _N>
 struct _SimdConverter<_From,
 		      simd_abi::fixed_size<_N>,
 		      _To,
-		      simd_abi::fixed_size<_N>>
+		      simd_abi::fixed_size<_N>,
+		      std::enable_if_t<!std::is_same_v<_From, _To>>>
 {
   using _Ret = __fixed_size_storage_t<_To, _N>;
   using _Arg = __fixed_size_storage_t<_From, _N>;
@@ -7152,53 +7180,47 @@ struct _SimdConverter<_From,
 // _SimdConverter "native" -> fixed_size<_N> {{{1
 // i.e. 1 register to ? registers
 template <typename _From, typename _A, typename _To, int _N>
-struct _SimdConverter<_From, _A, _To, simd_abi::fixed_size<_N>> {
-    using __traits = _SimdTraits<_From, _A>;
-    using _Arg = typename __traits::_SimdMember;
-    using _ReturnType = __fixed_size_storage_t<_To, _N>;
-    static_assert(_N == simd_size_v<_From, _A>,
-                  "_SimdConverter to fixed_size only works for equal element counts");
+struct _SimdConverter<_From,
+		      _A,
+		      _To,
+		      simd_abi::fixed_size<_N>,
+		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
+{
+  static_assert(
+    _N == simd_size_v<_From, _A>,
+    "_SimdConverter to fixed_size only works for equal element counts");
 
-    _GLIBCXX_SIMD_INTRINSIC _ReturnType operator()(_Arg __x)
-    {
-        return __impl(std::make_index_sequence<_ReturnType::_S_tuple_size>(), __x);
-    }
-
-private:
-    _ReturnType __impl(std::index_sequence<0>, _Arg __x)
-    {
-        _SimdConverter<_From, _A, _To, typename _ReturnType::_First_abi> __native_cvt;
-        return {__native_cvt(__x)};
-    }
-    template <size_t... _Indexes> _ReturnType __impl(std::index_sequence<_Indexes...>, _Arg __x)
-    {
-        _SimdConverter<_From, _A, _To, typename _ReturnType::_First_abi> __native_cvt;
-        const auto &__tmp = __native_cvt.__all(__x);
-        return {__tmp[_Indexes]...};
-    }
+  _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_To, _N>
+			  operator()(typename _SimdTraits<_From, _A>::_SimdMember __x)
+  {
+    _SimdConverter<_From, simd_abi::fixed_size<_N>, _To,
+		   simd_abi::fixed_size<_N>>
+      __fixed_cvt;
+    return __fixed_cvt(_SimdTuple<_From, _A>{__x});
+  }
 };
 
 // _SimdConverter fixed_size<_N> -> "native" {{{1
 // i.e. ? register to 1 registers
 template <typename _From, int _N, typename _To, typename _A>
-struct _SimdConverter<_From, simd_abi::fixed_size<_N>, _To, _A> {
-    using __traits = _SimdTraits<_To, _A>;
-    using _ReturnType = typename __traits::_SimdMember;
-    using _Arg = __fixed_size_storage_t<_From, _N>;
-    static_assert(_N == simd_size_v<_To, _A>,
-                  "_SimdConverter to fixed_size only works for equal element counts");
+struct _SimdConverter<_From,
+		      simd_abi::fixed_size<_N>,
+		      _To,
+		      _A,
+		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
+{
+  static_assert(
+    _N == simd_size_v<_To, _A>,
+    "_SimdConverter to fixed_size only works for equal element counts");
 
-    _GLIBCXX_SIMD_INTRINSIC _ReturnType operator()(_Arg __x)
-    {
-        return __impl(std::make_index_sequence<_Arg::_S_tuple_size>(), __x);
-    }
-
-private:
-    template <size_t... _Indexes> _ReturnType __impl(std::index_sequence<_Indexes...>, _Arg __x)
-    {
-        _SimdConverter<_From, typename _Arg::_First_abi, _To, _A> __native_cvt;
-        return __native_cvt(__get_tuple_at<_Indexes>(__x)...);
-    }
+  _GLIBCXX_SIMD_INTRINSIC typename _SimdTraits<_To, _A>::_SimdMember
+    operator()(__fixed_size_storage_t<_From, _N> __x)
+  {
+    _SimdConverter<_From, simd_abi::fixed_size<_N>, _To,
+		   simd_abi::fixed_size<_N>>
+      __fixed_cvt;
+    return __fixed_cvt(__x).first;
+  }
 };
 
 // }}}1

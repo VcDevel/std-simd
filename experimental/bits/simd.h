@@ -629,11 +629,11 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto& __data(simd_mask<_Tp, _A>& __x);
 
 // }}}
 // _SimdConverter {{{
-template <typename _FromT, typename _FromA, typename _ToT, typename _ToA>
+template <typename _FromT, typename _FromA, typename _ToT, typename _ToA, typename = void>
 struct _SimdConverter;
 
 template <typename _Tp, typename _A>
-struct _SimdConverter<_Tp, _A, _Tp, _A>
+struct _SimdConverter<_Tp, _A, _Tp, _A, void>
 {
   template <typename _U>
   _GLIBCXX_SIMD_INTRINSIC const _U& operator()(const _U& __x)
@@ -999,6 +999,8 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto __as_vector(_V __x)
     return __x;
   else if constexpr (is_simd<_V>::value || is_simd_mask<_V>::value)
     return __data(__x)._M_data;
+  else if constexpr (__is_vectorizable_v<_V>)
+    return __vector_type_t<_V, 2>{__x};
   else
     return __x._M_data;
 }
@@ -1936,6 +1938,14 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
   return __r;
 }
 
+template <typename _Tp, size_t _N>
+_GLIBCXX_SIMD_INTRINSIC std::bitset<_N>
+			__vector_to_bitset(_SimdWrapper<_Tp, _N> __x)
+{
+  static_assert(sizeof(_ULLong) * CHAR_BIT >= _N);
+  return __vector_to_bitset(__x._M_data).to_ullong();
+}
+
 // }}}
 // __blend{{{
 template <typename _K, typename _V0, typename _V1>
@@ -2646,6 +2656,15 @@ template <typename _Tp>
 struct __intrinsic_type<_Tp, 32, enable_if_t<is_integral_v<_Tp>>>
 {
   using type [[__gnu__::__vector_size__(32)]] = long long int;
+};
+template <typename _Tp, size_t _Bytes>
+struct __intrinsic_type<
+  _Tp,
+  _Bytes,
+  std::enable_if_t<__is_vectorizable_v<_Tp> && (_Bytes > 16 && _Bytes < 32)>>
+{
+  using type [[__gnu__::__vector_size__(32)]] =
+    std::conditional_t<std::is_integral_v<_Tp>, long long int, _Tp>;
 };
 
 template <>
@@ -4349,10 +4368,10 @@ template <int _Bytes> struct _SimdImplNeon;
 template <int _Bytes> struct _MaskImplNeon;
 template <int _Bytes> struct _MaskImplSse;
 template <int _Bytes> struct _SimdImplSse;
-struct _MaskImplAvx;
-struct _SimdImplAvx;
-struct _MaskImplAvx512;
-struct _SimdImplAvx512;
+template <int _Bytes> struct _MaskImplAvx;
+template <int _Bytes> struct _SimdImplAvx;
+template <int _Bytes> struct _MaskImplAvx512;
+template <int _Bytes> struct _SimdImplAvx512;
 struct _SimdImplScalar;
 struct _MaskImplScalar;
 template <int _N> struct _SimdImplFixedSize;
@@ -4662,7 +4681,6 @@ struct _SseAbi : _MixinImplicitMasking<_Bytes, _SseAbi<_Bytes>> {
     static constexpr bool _S_is_partial = _Bytes < 16;
 
     // validity traits {{{2
-    //struct _IsValidAbiTag : __bool_constant<_Bytes == 16> {};
     struct _IsValidAbiTag : __bool_constant<(_Bytes > 0 && _Bytes <= 16)> {};
     template <class _Tp>
     struct _IsValidSizeFor
@@ -4696,15 +4714,7 @@ struct _AvxAbi : _MixinImplicitMasking<_Bytes, _AvxAbi<_Bytes>> {
     static constexpr bool _S_is_partial = _Bytes < 32;
 
     // validity traits {{{2
-    // - allow 2x, 3x, and 4x "unroll"
-    // - disallow <= 16 _Bytes as that's covered by _SseAbi
-    struct _IsValidAbiTag : __bool_constant<_Bytes == 32> {};
-    /* TODO:
-    struct _IsValidAbiTag
-        : __bool_constant<((_Bytes > 16 && _Bytes <= 32) || _Bytes == 64 ||
-                                 _Bytes == 96 || _Bytes == 128)> {
-    };
-    */
+    struct _IsValidAbiTag : __bool_constant<(_Bytes > 16 && _Bytes <= 32)> {};
     template <class _Tp>
     struct _IsValidSizeFor : __bool_constant<(_Bytes % sizeof(_Tp) == 0)> {
     };
@@ -4715,8 +4725,8 @@ struct _AvxAbi : _MixinImplicitMasking<_Bytes, _AvxAbi<_Bytes>> {
     template <class _Tp> static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
 
     // simd/_MaskImpl {{{2
-    using _SimdImpl = _SimdImplAvx;
-    using _MaskImpl = _MaskImplAvx;
+    using _SimdImpl = _SimdImplAvx<_Bytes>;
+    using _MaskImpl = _MaskImplAvx<_Bytes>;
 
     // __traits {{{2
     template <class _Tp>
@@ -4777,8 +4787,8 @@ public:
     }
 
     // simd/_MaskImpl {{{2
-    using _SimdImpl = _SimdImplAvx512;
-    using _MaskImpl = _MaskImplAvx512;
+    using _SimdImpl = _SimdImplAvx512<_Bytes>;
+    using _MaskImpl = _MaskImplAvx512<_Bytes>;
 
     // __traits {{{2
     template <class _Tp>
