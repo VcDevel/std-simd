@@ -305,13 +305,6 @@ constexpr bool __is_combined_abi()
 // }}}
 // ^^^ ---- type traits ---- ^^^
 
-// __unused{{{
-template <typename _Tp>
-static constexpr void __unused(_Tp&&)
-{
-}
-
-// }}}
 // __assert_unreachable{{{
 template <typename _Tp>
 struct __assert_unreachable
@@ -388,8 +381,7 @@ template <typename _F, size_t... _I>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __execute_on_index_sequence(_F&& __f, std::index_sequence<_I...>)
 {
-  auto&& __x = {(__f(_SizeConstant<_I>()), 0)...};
-  __unused(__x);
+  [[maybe_unused]] auto&& __x = {(__f(_SizeConstant<_I>()), 0)...};
 }
 
 template <typename _F>
@@ -5190,10 +5182,9 @@ public :
     // }}}
     // scalar access {{{
     _GLIBCXX_SIMD_ALWAYS_INLINE reference operator[](size_t __i) { return {_M_data, int(__i)}; }
-    _GLIBCXX_SIMD_ALWAYS_INLINE value_type operator[](size_t __i) const {
+    _GLIBCXX_SIMD_ALWAYS_INLINE value_type operator[]([[maybe_unused]] size_t __i) const {
         if constexpr (__is_scalar()) {
             _GLIBCXX_DEBUG_ASSERT(__i == 0);
-            __unused(__i);
             return _M_data;
         } else {
             return _M_data[__i];
@@ -6079,11 +6070,10 @@ public:
 
     // scalar access
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr reference operator[](size_t __i) { return {_M_data, int(__i)}; }
-    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr value_type operator[](size_t __i) const
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr value_type operator[]([[maybe_unused]] size_t __i) const
     {
         if constexpr (__is_scalar()) {
             _GLIBCXX_DEBUG_ASSERT(__i == 0);
-            __unused(__i);
             return _M_data;
         } else {
             return _M_data[__i];
