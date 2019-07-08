@@ -1128,10 +1128,10 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
                 }
             } else if constexpr (__y_to_y) {
                 const auto __a = _mm256_shuffle_epi8(
-                    __to_intrin((__vector_bitcast<ushort>(_mm256_blend_epi16(
+                    __to_intrin((__vector_bitcast<_UShort>(_mm256_blend_epi16(
                                    __i0, _mm256_slli_epi32(__i1, 16), 0xAA)) &
                                0xff) |
-                              (__vector_bitcast<ushort>(_mm256_blend_epi16(
+                              (__vector_bitcast<_UShort>(_mm256_blend_epi16(
                                    __i2, _mm256_slli_epi32(__i3, 16), 0xAA))
                                << 8)),
                     _mm256_setr_epi8(0, 4, 8, 12, 2, 6, 10, 14, 1, 5, 9, 13, 3, 7, 11, 15,

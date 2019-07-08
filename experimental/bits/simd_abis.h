@@ -463,7 +463,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	auto&& __first = [&](auto... __args) constexpr {
 	  auto __r =
 	    __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), first, __args...);
-	  [[maybe_unused]] auto&& __unused = {(
+	  [[maybe_unused]] auto&& __ignore_me = {(
 	    [](auto&& __dst, const auto& __src) {
 	      if constexpr (is_assignable_v<decltype(__dst), decltype(__dst)>)
 		{
@@ -1570,8 +1570,8 @@ inline _To __convert_mask(_From __k)
         // from std::bitset {{{
         static_assert(__k.size() <= sizeof(_ULLong) * CHAR_BIT);
         using _Tp = std::conditional_t<
-            (__k.size() <= sizeof(ushort) * CHAR_BIT),
-            std::conditional_t<(__k.size() <= CHAR_BIT), _UChar, ushort>,
+            (__k.size() <= sizeof(_UShort) * CHAR_BIT),
+            std::conditional_t<(__k.size() <= CHAR_BIT), _UChar, _UShort>,
             std::conditional_t<(__k.size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
         return __convert_mask<_To>(static_cast<_Tp>(__k.to_ullong()));
         // }}}
@@ -1579,8 +1579,8 @@ inline _To __convert_mask(_From __k)
         // to std::bitset {{{
         static_assert(_To().size() <= sizeof(_ULLong) * CHAR_BIT);
         using _Tp = std::conditional_t<
-            (_To().size() <= sizeof(ushort) * CHAR_BIT),
-            std::conditional_t<(_To().size() <= CHAR_BIT), _UChar, ushort>,
+            (_To().size() <= sizeof(_UShort) * CHAR_BIT),
+            std::conditional_t<(_To().size() <= CHAR_BIT), _UChar, _UShort>,
             std::conditional_t<(_To().size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
         return __convert_mask<_Tp>(__k);
         // }}}
@@ -2523,11 +2523,11 @@ struct _SimdImplScalar : _SimdMathFallback<simd_abi::scalar> {
     template <class _Tp> static bool __less_equal(_Tp __x, _Tp __y) { return __x <= __y; }
 
     // smart_reference access {{{2
-    template <class _Tp, class _U> static void __set(_Tp &__v, int __i, _U &&__x) noexcept
+    template <class _Tp, class _U>
+    static void __set(_Tp& __v, [[maybe_unused]] int __i, _U&& __x) noexcept
     {
-        _GLIBCXX_DEBUG_ASSERT(__i == 0);
-        __unused(__i);
-        __v = std::forward<_U>(__x);
+      _GLIBCXX_DEBUG_ASSERT(__i == 0);
+      __v = std::forward<_U>(__x);
     }
 
     // __masked_assign {{{2
@@ -2605,11 +2605,10 @@ struct _MaskImplScalar {
     static constexpr bool __bit_xor(bool __x, bool __y) { return __x != __y; }
 
     // smart_reference access {{{2
-    static void __set(bool &__k, int __i, bool __x) noexcept
+    static void __set(bool& __k, [[maybe_unused]] int __i, bool __x) noexcept
     {
-        _GLIBCXX_DEBUG_ASSERT(__i == 0);
-        __unused(__i);
-        __k = __x;
+      _GLIBCXX_DEBUG_ASSERT(__i == 0);
+      __k = __x;
     }
 
     // __masked_assign {{{2
@@ -3203,7 +3202,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isnan(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
-      __unused(__x);
+      [](auto&&){}(__x);
       return {}; // false
 #else
       return __cmpunord(__x._M_data, __x._M_data);
@@ -3215,7 +3214,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isfinite(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
-      __unused(__x);
+      [](auto&&){}(__x);
       return __vector_bitcast<_N>(_Tp()) == __vector_bitcast<_N>(_Tp());
 #else
       // if all exponent bits are set, __x is either inf or NaN
@@ -3249,7 +3248,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isinf(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
-      __unused(__x);
+      [](auto&&){}(__x);
       return {}; // false
 #else
       return _SuperImpl::template __equal_to<_Tp, _N>(
@@ -4567,29 +4566,28 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     {
       if constexpr (sizeof(__x) == 64)
 	{ // AVX512
-	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
 	  if constexpr (std::is_same_v<_Tp, float>)
-	    return _mm512_mask_cmp_ps_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	    return _mm512_cmp_ps_mask(__xi, __yi, _CMP_LT_OS);
 	  else if constexpr (std::is_same_v<_Tp, double>)
-	    return _mm512_mask_cmp_pd_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	    return _mm512_cmp_pd_mask(__xi, __yi, _CMP_LT_OS);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 1)
-	    return _mm512_mask_cmplt_epi8_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi8_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 2)
-	    return _mm512_mask_cmplt_epi16_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi16_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 4)
-	    return _mm512_mask_cmplt_epi32_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi32_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 8)
-	    return _mm512_mask_cmplt_epi64_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi64_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 1)
-	    return _mm512_mask_cmplt_epu8_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu8_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 2)
-	    return _mm512_mask_cmplt_epu16_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu16_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 4)
-	    return _mm512_mask_cmplt_epu32_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu32_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 8)
-	    return _mm512_mask_cmplt_epu64_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu64_mask(__xi, __yi);
 	  else
 	    __assert_unreachable<_Tp>();
 	}
@@ -4924,7 +4922,7 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
       __isfinite(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
-      __unused(__x);
+      [](auto&&){}(__x);
       return __equal_to(_SimdWrapper<_Tp, _N>(), _SimdWrapper<_Tp, _N>());
 #else
       return __cmpord(__x._M_data, __x._M_data * _Tp());
@@ -4936,7 +4934,7 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isinf(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
-      __unused(__x);
+      [](auto&&){}(__x);
       return {}; // false
 #else
       if constexpr (__is_avx512_pd<_Tp, _N>() && __have_avx512dq)
@@ -5188,7 +5186,7 @@ struct __x86_mask_impl : _MaskImplBuiltin<_Abi>
 	else if constexpr (_N == 8 && __have_sse2)
 	  {
 	    __vector_store<8>(
-	      _mm_packs_epi16(__to_intrin(__vector_bitcast<ushort>(__v) >> 15),
+	      _mm_packs_epi16(__to_intrin(__vector_bitcast<_UShort>(__v) >> 15),
 			      __m128i()),
 	      __mem, _F());
 	  }
@@ -6298,7 +6296,7 @@ template <int _N> struct _MaskImplFixedSize {
     // __load {{{2
     template <typename _F> static inline _MaskMember __load(const bool *__mem, _F __f) noexcept
     {
-        // TODO: _UChar is not necessarily the best type to use here. For smaller _N ushort,
+        // TODO: _UChar is not necessarily the best type to use here. For smaller _N _UShort,
         // _UInt, _ULLong, float, and double can be more efficient.
         _ULLong __r = 0;
         using _Vs = __fixed_size_storage_t<_UChar, _N>;
@@ -6321,14 +6319,13 @@ template <int _N> struct _MaskImplFixedSize {
 
     // __store {{{2
     template <typename _F>
-    static inline void __store(_MaskMember __bs, bool *__mem, _F __f) noexcept
+    static inline void __store(_MaskMember __bs, bool *__mem, _F) noexcept
     {
 #if _GLIBCXX_SIMD_HAVE_AVX512BW
         const __m512i bool64 = _mm512_movm_epi8(__bs.to_ullong()) & 0x0101010101010101ULL;
-        __vector_store<_N>(bool64, __mem, __f);
+        __vector_store<_N>(bool64, __mem, _F());
 #elif _GLIBCXX_SIMD_HAVE_BMI2
 #ifdef __x86_64__
-        __unused(__f);
         __execute_n_times<_N / 8>([&](auto __i) {
             constexpr size_t __offset = __i * 8;
             const _ULLong bool8 =
@@ -6342,7 +6339,6 @@ template <int _N> struct _MaskImplFixedSize {
             std::memcpy(&__mem[__offset], &bool8, _N % 8);
         }
 #else   // __x86_64__
-        __unused(__f);
         __execute_n_times<_N / 4>([&](auto __i) {
             constexpr size_t __offset = __i * 4;
             const _ULLong __bool4 =
@@ -6384,7 +6380,7 @@ template <int _N> struct _MaskImplFixedSize {
                     __vector_bitcast<_UChar>(__data(__tmp2 == 0)) +
                     1);  // 0xff -> 0x00 | 0x00 -> 0x01
                 if constexpr (__remaining >= 16) {
-                    __vector_store<16>(__bool16, &__mem[__offset], __f);
+                    __vector_store<16>(__bool16, &__mem[__offset], _F());
                 } else if constexpr (__remaining & 3) {
                     constexpr int to_shift = 16 - int(__remaining);
                     _mm_maskmoveu_si128(__bool16,
@@ -6392,10 +6388,10 @@ template <int _N> struct _MaskImplFixedSize {
                                         reinterpret_cast<char *>(&__mem[__offset]));
                 } else  // at this point: 8 < __remaining < 16
                     if constexpr (__remaining >= 8) {
-                    __vector_store<8>(__bool16, &__mem[__offset], __f);
+                    __vector_store<8>(__bool16, &__mem[__offset], _F());
                     if constexpr (__remaining == 12) {
                         __vector_store<4>(_mm_unpackhi_epi64(__bool16, __bool16),
-                                         &__mem[__offset + 8], __f);
+                                         &__mem[__offset + 8], _F());
                     }
                 }
             } else {
@@ -6403,11 +6399,11 @@ template <int _N> struct _MaskImplFixedSize {
             }
         });
 #else
-        // TODO: _UChar is not necessarily the best type to use here. For smaller _N ushort,
+        // TODO: _UChar is not necessarily the best type to use here. For smaller _N _UShort,
         // _UInt, _ULLong, float, and double can be more efficient.
         using _Vs = __fixed_size_storage_t<_UChar, _N>;
         __for_each(_Vs{}, [&](auto __meta, auto) {
-            __meta._S_mask_impl.__store(__meta.__make_mask(__bs), &__mem[__meta._S_offset], __f);
+            __meta._S_mask_impl.__store(__meta.__make_mask(__bs), &__mem[__meta._S_offset], _F());
         });
 //#else
         //__execute_n_times<_N>([&](auto __i) { __mem[__i] = __bs[__i]; });
