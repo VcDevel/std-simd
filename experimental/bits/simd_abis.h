@@ -4566,29 +4566,28 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     {
       if constexpr (sizeof(__x) == 64)
 	{ // AVX512
-	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
 	  if constexpr (std::is_same_v<_Tp, float>)
-	    return _mm512_mask_cmp_ps_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	    return _mm512_cmp_ps_mask(__xi, __yi, _CMP_LT_OS);
 	  else if constexpr (std::is_same_v<_Tp, double>)
-	    return _mm512_mask_cmp_pd_mask(__k1, __xi, __yi, _CMP_LT_OS);
+	    return _mm512_cmp_pd_mask(__xi, __yi, _CMP_LT_OS);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 1)
-	    return _mm512_mask_cmplt_epi8_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi8_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 2)
-	    return _mm512_mask_cmplt_epi16_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi16_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 4)
-	    return _mm512_mask_cmplt_epi32_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi32_mask(__xi, __yi);
 	  else if constexpr (std::is_signed_v<_Tp> && sizeof(_Tp) == 8)
-	    return _mm512_mask_cmplt_epi64_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epi64_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 1)
-	    return _mm512_mask_cmplt_epu8_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu8_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 2)
-	    return _mm512_mask_cmplt_epu16_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu16_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 4)
-	    return _mm512_mask_cmplt_epu32_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu32_mask(__xi, __yi);
 	  else if constexpr (std::is_unsigned_v<_Tp> && sizeof(_Tp) == 8)
-	    return _mm512_mask_cmplt_epu64_mask(__k1, __xi, __yi);
+	    return _mm512_cmplt_epu64_mask(__xi, __yi);
 	  else
 	    __assert_unreachable<_Tp>();
 	}
