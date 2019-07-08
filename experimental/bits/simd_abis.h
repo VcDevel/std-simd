@@ -41,28 +41,6 @@ static inline constexpr _V _S_signmask = __xor(_V() + 1, _V() - 1);
 template <typename _V, typename = _VectorTraits<_V>>
 static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, __allbits<_V>);
 
-// __subscript_read/_write {{{1
-template <typename _Tp> _Tp __subscript_read(_Vectorizable<_Tp> __x, size_t) noexcept
-{
-    return __x;
-}
-template <typename _Tp>
-void __subscript_write(_Vectorizable<_Tp> &__x, size_t, __id<_Tp> __y) noexcept
-{
-    __x = __y;
-}
-
-template <typename _Tp>
-typename _Tp::value_type __subscript_read(const _Tp &__x, size_t __i) noexcept
-{
-    return __x[__i];
-}
-template <typename _Tp>
-void __subscript_write(_Tp &__x, size_t __i, typename _Tp::value_type __y) noexcept
-{
-    return __x.__set(__i, __y);
-}
-
 // __simd_tuple_element {{{1
 template <size_t _I, typename _Tp> struct __simd_tuple_element;
 template <typename _Tp, typename _A0, typename... _As>
@@ -526,7 +504,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
     operator[](std::integral_constant<_U, _I>) const noexcept
   {
     if constexpr (_I < simd_size_v<_Tp, _Abi0>)
-      return __subscript_read(first, _I);
+      return __subscript_read(_I);
     else
       return second[std::integral_constant<_U, _I - simd_size_v<_Tp, _Abi0>>()];
   }
@@ -534,7 +512,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _Tp operator[](size_t __i) const noexcept
   {
     if constexpr (_S_tuple_size == 1)
-      return __subscript_read(first, __i);
+      return __subscript_read(__i);
     else
       {
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
@@ -547,7 +525,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	  }
 	else
 	  return __i < simd_size_v<_Tp, _Abi0>
-		   ? __subscript_read(first, __i)
+		   ? __subscript_read(__i)
 		   : second[__i - simd_size_v<_Tp, _Abi0>];
 #endif
       }
@@ -556,19 +534,39 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   void __set(size_t __i, _Tp __val) noexcept
   {
     if constexpr (_S_tuple_size == 1)
-      return __subscript_write(first, __i, __val);
+      return __subscript_write(__i, __val);
     else
       {
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
 	reinterpret_cast<__may_alias<_Tp>*>(this)[__i] = __val;
 #else
 	if (__i < simd_size_v<_Tp, _Abi0>)
-	  __subscript_write(first, __i, __val);
+	  __subscript_write(__i, __val);
 	else
 	  second.__set(__i - simd_size_v<_Tp, _Abi0>, __val);
 #endif
       }
   }
+
+private:
+  // __subscript_read/_write {{{
+  _Tp __subscript_read([[maybe_unused]] size_t __i) const noexcept
+  {
+    if constexpr (__is_vectorizable_v<_FirstType>)
+      return first;
+    else
+      return first[__i];
+  }
+
+  void __subscript_write([[maybe_unused]] size_t __i, _Tp __y) noexcept
+  {
+    if constexpr (__is_vectorizable_v<_FirstType>)
+      first = __y;
+    else
+      first.__set(__i, __y);
+  }
+
+  // }}}
 };
 
 // __make_simd_tuple {{{1
