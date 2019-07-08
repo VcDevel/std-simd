@@ -292,14 +292,14 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 : _SimdTupleData<typename _SimdTraits<_Tp, _Abi0>::_SimdMember,
 		 _SimdTuple<_Tp, _Abis...>>
 {
-  using value_type   = _Tp;
-  using _First_type  = typename _SimdTraits<_Tp, _Abi0>::_SimdMember;
-  using _First_abi   = _Abi0;
-  using _Second_type = _SimdTuple<_Tp, _Abis...>;
+  using value_type  = _Tp;
+  using _FirstType  = typename _SimdTraits<_Tp, _Abi0>::_SimdMember;
+  using _FirstAbi   = _Abi0;
+  using _SecondType = _SimdTuple<_Tp, _Abis...>;
   static constexpr size_t _S_tuple_size = sizeof...(_Abis) + 1;
   static constexpr size_t size()
   {
-    return simd_size_v<_Tp, _Abi0> + _Second_type::size();
+    return simd_size_v<_Tp, _Abi0> + _SecondType::size();
   }
   static constexpr size_t _S_first_size = simd_size_v<_Tp, _Abi0>;
 
@@ -327,7 +327,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
     if constexpr (_S_tuple_size == 1)
       return {__first};
     else
-      return {__first, _Second_type::__generate(
+      return {__first, _SecondType::__generate(
 			 std::forward<_F>(__gen),
 			 _SizeConstant<_Offset + simd_size_v<_Tp, _Abi0>>())};
   }
@@ -363,7 +363,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       {
 	static_assert(_Offset % _Size == 0);
 	static_assert(_S_first_size % _Size == 0);
-	return {typename _R::_First_type(
+	return {typename _R::_FirstType(
 	  __private_init,
 	  __extract_part<_Offset / _Size, _S_first_size / _Size>(first))};
       }
@@ -427,7 +427,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 
   template <size_t _Offset>
   _GLIBCXX_SIMD_INTRINSIC constexpr void
-    __assign_front(const _First_type& __x) &
+    __assign_front(const _FirstType& __x) &
   {
     static_assert(_Offset == 0);
     first = __x;
@@ -777,13 +777,13 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
       }
     else if constexpr (_R::_S_first_size == simd_size_v<_Tp, _A0>)
       {
-	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_First_abi>{__x.first},
+	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_FirstAbi>{__x.first},
                             __optimize_simd_tuple(__x.second));
       }
     else if constexpr (_R::_S_first_size ==
 		       simd_size_v<_Tp, _A0> + simd_size_v<_Tp, _A1>)
       {
-	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_First_abi>{__data(
+	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_FirstAbi>{__data(
                                 std::experimental::concat(__get_simd_at<0>(__x), __get_simd_at<1>(__x)))},
                             __optimize_simd_tuple(__x.second.second));
       }
@@ -791,7 +791,7 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
 		       4 * __simd_tuple_element_t<0, _Tup>::size())
       {
 	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_First_abi>{
+	  _SimdTuple<_Tp, typename _R::_FirstAbi>{
 	    __data(concat(__get_simd_at<0>(__x), __get_simd_at<1>(__x),
 			  __get_simd_at<2>(__x), __get_simd_at<3>(__x)))},
 	  __optimize_simd_tuple(__x.second.second.second.second));
@@ -800,7 +800,7 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
 		       8 * __simd_tuple_element_t<0, _Tup>::size())
       {
 	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_First_abi>{__data(concat(
+	  _SimdTuple<_Tp, typename _R::_FirstAbi>{__data(concat(
 	    __get_simd_at<0>(__x), __get_simd_at<1>(__x), __get_simd_at<2>(__x),
 	    __get_simd_at<3>(__x), __get_simd_at<4>(__x), __get_simd_at<5>(__x),
 	    __get_simd_at<6>(__x), __get_simd_at<7>(__x)))},
@@ -811,7 +811,7 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
 		       16 * __simd_tuple_element_t<0, _Tup>::size())
       {
 	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_First_abi>{__data(concat(
+	  _SimdTuple<_Tp, typename _R::_FirstAbi>{__data(concat(
 	    __get_simd_at<0>(__x), __get_simd_at<1>(__x), __get_simd_at<2>(__x),
 	    __get_simd_at<3>(__x), __get_simd_at<4>(__x), __get_simd_at<5>(__x),
 	    __get_simd_at<6>(__x), __get_simd_at<7>(__x), __get_simd_at<8>(__x),
@@ -3726,7 +3726,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	    return {__as_int};
 	  else if constexpr (_FixedInt::_S_tuple_size == 2 &&
 			     std::is_same_v<
-			       typename _FixedInt::_Second_type::_First_abi,
+			       typename _FixedInt::_SecondType::_FirstAbi,
 			       simd_abi::scalar>)
 	    return {__extract<0, 2>(__as_int), __as_int[_N - 1]};
 	  else if constexpr (_FixedInt::_S_tuple_size == 2)
@@ -7042,7 +7042,7 @@ struct _SimdConverter<_From,
       return __bit_cast<_Ret>(__x);
 
     // special case of all ABI tags in _Ret are scalar
-    else if constexpr (__is_abi<typename _Ret::_First_abi, simd_abi::scalar>())
+    else if constexpr (__is_abi<typename _Ret::_FirstAbi, simd_abi::scalar>())
       {
 	return __call_with_subscripts(
 	  __x, make_index_sequence<_N>(), [](auto... __values) constexpr->_Ret {
@@ -7056,8 +7056,8 @@ struct _SimdConverter<_From,
     // from one vector to one vector
     else if constexpr (_Arg::_S_first_size == _Ret::_S_first_size)
       {
-	_SimdConverter<_From, typename _Arg::_First_abi, _To,
-		       typename _Ret::_First_abi>
+	_SimdConverter<_From, typename _Arg::_FirstAbi, _To,
+		       typename _Ret::_FirstAbi>
 	  __native_cvt;
 	if constexpr (_Arg::_S_tuple_size == 1)
 	  return {__native_cvt(__x.first)};
@@ -7077,7 +7077,7 @@ struct _SimdConverter<_From,
 	const auto __multiple_return_chunks =
 	  __convert_all<__vector_type_t<_To, _Ret::_S_first_size>>(__x.first);
 	constexpr auto __converted = __multiple_return_chunks.size() *
-				     _Ret::_First_abi::template size<_To>;
+				     _Ret::_FirstAbi::template size<_To>;
 	constexpr auto __remaining = _N - __converted;
 	if constexpr (_Arg::_S_tuple_size == 1 && __remaining == 0)
 	  return __to_simd_tuple<_To, _N>(__multiple_return_chunks);
@@ -7146,9 +7146,9 @@ struct _SimdConverter<_From,
     //    native registers in _Ret)
     else if constexpr (_Ret::_S_tuple_size == 1 && _N % _Arg::_S_first_size != 0)
       {
-	static_assert(_Ret::_First_abi::_S_is_partial);
+	static_assert(_Ret::_FirstAbi::_S_is_partial);
 	return _Ret{__generate_from_n_evaluations<
-	  _N, typename _VectorTraits<typename _Ret::_First_type>::type>(
+	  _N, typename _VectorTraits<typename _Ret::_FirstType>::type>(
 	  [&](auto __i) { return static_cast<_To>(__x[__i]); })};
       }
     else
@@ -7158,9 +7158,9 @@ struct _SimdConverter<_From,
 	  __div_roundup(_Ret::_S_first_size, _Arg::_S_first_size);
 	return __call_with_n_evaluations<__n>(
 	  [&__x](auto... __uncvted) {
-	    // assuming _Arg Abi tags for all __i are _Arg::_First_abi
-	    _SimdConverter<_From, typename _Arg::_First_abi, _To,
-			   typename _Ret::_First_abi>
+	    // assuming _Arg Abi tags for all __i are _Arg::_FirstAbi
+	    _SimdConverter<_From, typename _Arg::_FirstAbi, _To,
+			   typename _Ret::_FirstAbi>
 	      __native_cvt;
 	    if constexpr (_Ret::_S_tuple_size == 1)
 	      return _Ret{__native_cvt(__uncvted...)};
