@@ -1570,8 +1570,8 @@ inline _To __convert_mask(_From __k)
         // from std::bitset {{{
         static_assert(__k.size() <= sizeof(_ULLong) * CHAR_BIT);
         using _Tp = std::conditional_t<
-            (__k.size() <= sizeof(ushort) * CHAR_BIT),
-            std::conditional_t<(__k.size() <= CHAR_BIT), _UChar, ushort>,
+            (__k.size() <= sizeof(_UShort) * CHAR_BIT),
+            std::conditional_t<(__k.size() <= CHAR_BIT), _UChar, _UShort>,
             std::conditional_t<(__k.size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
         return __convert_mask<_To>(static_cast<_Tp>(__k.to_ullong()));
         // }}}
@@ -1579,8 +1579,8 @@ inline _To __convert_mask(_From __k)
         // to std::bitset {{{
         static_assert(_To().size() <= sizeof(_ULLong) * CHAR_BIT);
         using _Tp = std::conditional_t<
-            (_To().size() <= sizeof(ushort) * CHAR_BIT),
-            std::conditional_t<(_To().size() <= CHAR_BIT), _UChar, ushort>,
+            (_To().size() <= sizeof(_UShort) * CHAR_BIT),
+            std::conditional_t<(_To().size() <= CHAR_BIT), _UChar, _UShort>,
             std::conditional_t<(_To().size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
         return __convert_mask<_Tp>(__k);
         // }}}
@@ -5188,7 +5188,7 @@ struct __x86_mask_impl : _MaskImplBuiltin<_Abi>
 	else if constexpr (_N == 8 && __have_sse2)
 	  {
 	    __vector_store<8>(
-	      _mm_packs_epi16(__to_intrin(__vector_bitcast<ushort>(__v) >> 15),
+	      _mm_packs_epi16(__to_intrin(__vector_bitcast<_UShort>(__v) >> 15),
 			      __m128i()),
 	      __mem, _F());
 	  }
@@ -6298,7 +6298,7 @@ template <int _N> struct _MaskImplFixedSize {
     // __load {{{2
     template <typename _F> static inline _MaskMember __load(const bool *__mem, _F __f) noexcept
     {
-        // TODO: _UChar is not necessarily the best type to use here. For smaller _N ushort,
+        // TODO: _UChar is not necessarily the best type to use here. For smaller _N _UShort,
         // _UInt, _ULLong, float, and double can be more efficient.
         _ULLong __r = 0;
         using _Vs = __fixed_size_storage_t<_UChar, _N>;
@@ -6403,7 +6403,7 @@ template <int _N> struct _MaskImplFixedSize {
             }
         });
 #else
-        // TODO: _UChar is not necessarily the best type to use here. For smaller _N ushort,
+        // TODO: _UChar is not necessarily the best type to use here. For smaller _N _UShort,
         // _UInt, _ULLong, float, and double can be more efficient.
         using _Vs = __fixed_size_storage_t<_UChar, _N>;
         __for_each(_Vs{}, [&](auto __meta, auto) {
