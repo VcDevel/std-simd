@@ -202,7 +202,7 @@ using fixed_size_abi_list = vir::concat<
         vir::Typelist<vir::Template<base_template, simd_abi::fixed_size<16>>,
                       vir::Template<base_template, simd_abi::fixed_size<31>>,
                       vir::Template<base_template, simd_abi::fixed_size<32>>>)
-#elif ABITYPES >= 1 && ABITYPES < 8
+#elif ABITYPES >= 1 && ABITYPES <= 8
     vir::Template<base_template, simd_abi::fixed_size<ABITYPES>>,
     vir::Template<base_template, simd_abi::fixed_size<8 + ABITYPES>>,
     vir::Template<base_template, simd_abi::fixed_size<16 + ABITYPES>>,
