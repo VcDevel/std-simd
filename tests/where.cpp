@@ -81,9 +81,10 @@ TEST_TYPES(V, where, all_test_types)
     where(alternating_mask, x) -= Convertible<V>();
     COMPARE(alternating_mask, x == T(6));
     where(alternating_mask, x) /= T(2);
-    COMPARE(alternating_mask, x == T(3));
+    COMPARE(alternating_mask, x == T(3)) << x;
     where(alternating_mask, x) *= T(3);
     COMPARE(alternating_mask, x == T(9));
+    COMPARE(!alternating_mask, x == T(11));
 
     x = 10;
     where(alternating_mask, x)++;
