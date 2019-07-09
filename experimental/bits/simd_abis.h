@@ -6415,7 +6415,7 @@ public:
 #define _GLIBCXX_SIMD_FIXED_OP(name_, op_)                                     \
   template <typename _Tp, typename... _As>                                     \
   static inline constexpr _SimdTuple<_Tp, _As...> name_(                       \
-    const _SimdTuple<_Tp, _As...>& __x, const _SimdTuple<_Tp, _As...>& __y)    \
+    const _SimdTuple<_Tp, _As...> __x, const _SimdTuple<_Tp, _As...> __y)      \
   {                                                                            \
     return __x.__apply_per_chunk(                                              \
       [](auto __impl, auto __xx, auto __yy) constexpr {                        \
