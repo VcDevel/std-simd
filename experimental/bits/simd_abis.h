@@ -2833,12 +2833,12 @@ struct _SimdImplScalar : _SimdMathFallback<simd_abi::scalar> {
     }
 
     // __masked_cassign {{{2
-    template <template <typename> class _Op, typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC static void __masked_cassign(const bool __k, _Tp &__lhs, const _Tp __rhs)
+    template <typename _Op, typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static void
+      __masked_cassign(const bool __k, _Tp& __lhs, const _Tp __rhs, _Op __op)
     {
-        if (__k) {
-            __lhs = _Op<_Tp>{}(__lhs, __rhs);
-        }
+      if (__k)
+	__lhs = __op(_SimdImplScalar{}, __lhs, __rhs);
     }
 
     // __masked_unary {{{2
@@ -3808,18 +3808,28 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     }
 
     // __masked_cassign {{{2
-    template <template <typename> class _Op, class _Tp, class _K, size_t _N>
-    _GLIBCXX_SIMD_INTRINSIC static void __masked_cassign(const _SimdWrapper<_K, _N> __k, _SimdWrapper<_Tp, _N> &__lhs,
-                                            const __id<_SimdWrapper<_Tp, _N>> __rhs)
+    template <typename _Op, class _Tp, class _K, size_t _N>
+    _GLIBCXX_SIMD_INTRINSIC static void
+      __masked_cassign(const _SimdWrapper<_K, _N>        __k,
+		       _SimdWrapper<_Tp, _N>&            __lhs,
+		       const __id<_SimdWrapper<_Tp, _N>> __rhs,
+		       _Op                               __op)
     {
-        __lhs._M_data = __blend(__k._M_data, __lhs._M_data, _Op<void>{}(__lhs._M_data, __rhs._M_data));
+      __lhs._M_data =
+	__blend(__k._M_data, __lhs._M_data, __op(_SuperImpl{}, __lhs, __rhs));
     }
 
-    template <template <typename> class _Op, class _Tp, class _K, size_t _N>
-    _GLIBCXX_SIMD_INTRINSIC static void __masked_cassign(const _SimdWrapper<_K, _N> __k, _SimdWrapper<_Tp, _N> &__lhs,
-                                            const __id<_Tp> __rhs)
+    template <typename _Op, class _Tp, class _K, size_t _N>
+    _GLIBCXX_SIMD_INTRINSIC static void
+      __masked_cassign(const _SimdWrapper<_K, _N> __k,
+		       _SimdWrapper<_Tp, _N>&     __lhs,
+		       const __id<_Tp>            __rhs,
+		       _Op                        __op)
     {
-        __lhs._M_data = __blend(__k._M_data, __lhs._M_data, _Op<void>{}(__lhs._M_data, __vector_broadcast<_N>(__rhs)));
+      __lhs._M_data =
+	__blend(__k._M_data, __lhs._M_data,
+		__op(_SuperImpl{}, __lhs,
+		     _SimdWrapper<_Tp, _N>(__vector_broadcast<_N>(__rhs))));
     }
 
     // __masked_unary {{{2
@@ -6670,29 +6680,33 @@ public:
     }
 
     // __masked_cassign {{{2
-    template <template <typename> class _Op, typename _Tp, typename... _As>
-    static inline void __masked_cassign(const _MaskMember          __bits,
+    template <typename _Op, typename _Tp, typename... _As>
+    static inline void __masked_cassign(const _MaskMember              __bits,
 					_SimdTuple<_Tp, _As...>&       __lhs,
-					const _SimdTuple<_Tp, _As...>& __rhs)
+					const _SimdTuple<_Tp, _As...>& __rhs,
+					_Op                            __op)
     {
-      __for_each(__lhs, __rhs,
-		 [&](auto __meta, auto& __native_lhs, auto __native_rhs) constexpr {
-		   __meta.template __masked_cassign<_Op>(
-		     __meta.__make_mask(__bits), __native_lhs, __native_rhs);
-		 });
+      __for_each(
+	__lhs, __rhs,
+	[&](auto __meta, auto& __native_lhs, auto __native_rhs) constexpr {
+	  __meta.template __masked_cassign(__meta.__make_mask(__bits),
+					   __native_lhs, __native_rhs, __op);
+	});
     }
 
     // Optimization for the case where the RHS is a scalar. No need to broadcast
     // the scalar to a simd first.
-    template <template <typename> class _Op, typename _Tp, typename... _As>
-    static inline void __masked_cassign(const _MaskMember    __bits,
+    template <typename _Op, typename _Tp, typename... _As>
+    static inline void __masked_cassign(const _MaskMember        __bits,
 					_SimdTuple<_Tp, _As...>& __lhs,
-					const _Tp&                 __rhs)
+					const _Tp&               __rhs,
+					_Op                      __op)
     {
-      __for_each(__lhs, [&](auto __meta, auto& __native_lhs) constexpr {
-	__meta.template __masked_cassign<_Op>(__meta.__make_mask(__bits),
-					      __native_lhs, __rhs);
-      });
+      __for_each(
+	__lhs, [&](auto __meta, auto& __native_lhs) constexpr {
+	  __meta.template __masked_cassign(__meta.__make_mask(__bits),
+					   __native_lhs, __rhs, __op);
+	});
     }
 
     // __masked_unary {{{2

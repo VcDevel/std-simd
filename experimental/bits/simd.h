@@ -3548,22 +3548,26 @@ public:
             __to_value_type_or_member_type<_Tp>(std::forward<_U>(__x)));
     }
 
-#define _GLIBCXX_SIMD_OP_(op_, name_)                                                    \
-    template <class _U> _GLIBCXX_SIMD_INTRINSIC void operator op_##=(_U&& __x)&&         \
-    {                                                                                    \
-        std::experimental::__get_impl_t<_Tp>::template __masked_cassign<name_>(           \
-            __data(__k), __data(_M_value),                                               \
-            __to_value_type_or_member_type<_Tp>(std::forward<_U>(__x)));                  \
-    }                                                                                    \
-    static_assert(true)
-    _GLIBCXX_SIMD_OP_(+, std::plus);
-    _GLIBCXX_SIMD_OP_(-, std::minus);
-    _GLIBCXX_SIMD_OP_(*, std::multiplies);
-    _GLIBCXX_SIMD_OP_(/, std::divides);
-    _GLIBCXX_SIMD_OP_(%, std::modulus);
-    _GLIBCXX_SIMD_OP_(&, std::bit_and);
-    _GLIBCXX_SIMD_OP_(|, std::bit_or);
-    _GLIBCXX_SIMD_OP_(^, std::bit_xor);
+#define _GLIBCXX_SIMD_OP_(__op, __name)                                        \
+  template <class _U>                                                          \
+  _GLIBCXX_SIMD_INTRINSIC void operator __op##=(_U&& __x)&&                    \
+  {                                                                            \
+    std::experimental::__get_impl_t<_Tp>::template __masked_cassign(           \
+      __data(__k), __data(_M_value),                                           \
+      __to_value_type_or_member_type<_Tp>(std::forward<_U>(__x)),              \
+      [](auto __impl, auto __lhs, auto __rhs) constexpr {                      \
+	return __impl.__name(__lhs, __rhs);                                    \
+      });                                                                      \
+  }                                                                            \
+  static_assert(true)
+    _GLIBCXX_SIMD_OP_(+, __plus);
+    _GLIBCXX_SIMD_OP_(-, __minus);
+    _GLIBCXX_SIMD_OP_(*, __multiplies);
+    _GLIBCXX_SIMD_OP_(/, __divides);
+    _GLIBCXX_SIMD_OP_(%, __modulus);
+    _GLIBCXX_SIMD_OP_(&, __bit_and);
+    _GLIBCXX_SIMD_OP_(|, __bit_or);
+    _GLIBCXX_SIMD_OP_(^, __bit_xor);
     _GLIBCXX_SIMD_OP_(<<, __shift_left);
     _GLIBCXX_SIMD_OP_(>>, __shift_right);
 #undef _GLIBCXX_SIMD_OP_
