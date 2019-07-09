@@ -3230,7 +3230,17 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __divides(
         _SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
+      // Note that division by 0 is always UB, so we must ensure we avoid the
+      // case for partial registers
+      if constexpr (!_Abi::_S_is_partial)
         return __x._M_data / __y._M_data;
+      else
+	{
+	  constexpr auto __one =
+	    __andnot(_Abi::template __implicit_mask<_Tp>(),
+		  __vector_broadcast<_S_full_size<_Tp>>(_Tp(1)));
+	  return __as_vector(__x) / __or(__as_vector(__y), __one);
+	}
     }
     template <class _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __modulus(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
@@ -4284,42 +4294,44 @@ template <class _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __divides(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
-      if (__builtin_is_constant_evaluated())
-	return __x._M_data / __y._M_data;
-      else if constexpr (is_integral_v<_Tp> && sizeof(_Tp) <= 4)
-	{ // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
-	  using _Float = conditional_t<sizeof(_Tp) ==4, double, float>;
-	  constexpr size_t __n_intermediate = std::min(
-	    _N, (__have_avx512f ? 64 : __have_avx ? 32 : 16) / sizeof(_Float));
-	  using _FloatV = __vector_type_t<_Float, __n_intermediate>;
-	  constexpr size_t __n_floatv = __div_roundup(_N, __n_intermediate);
-	  using _R = __vector_type_t<_Tp, _N>;
-	  const auto __xf = __convert_all<_FloatV, __n_floatv>(__x);
-	  const auto __yf = __convert_all<_FloatV, __n_floatv>(__y);
-	  return __call_with_n_evaluations<__n_floatv>(
-	    [](auto... __quotients) {
-	      return __vector_convert<_R>(__quotients...);
-	    },
-	    [&__xf, &__yf](auto __i) { return __xf[__i] / __yf[__i]; });
-	}
-      /* 64-bit int division is potentially optimizable via double division if
-       * the value in __x is small enough and the conversion between
-       * int<->double is efficient enough:
-      else if constexpr (is_integral_v<_Tp> && is_unsigned_v<_Tp> &&
-			 sizeof(_Tp) == 8)
-	{
-	  if constexpr (__have_sse4_1 && sizeof(__x) == 16)
-	    {
-	      if (_mm_test_all_zeros(__x, __m128i{0xffe0'0000'0000'0000ull,
-						  0xffe0'0000'0000'0000ull}))
-		{
-		  __x._M_data | 0x __vector_convert<__m128d>(__x._M_data)
-		}
-	    }
-	}
-        */
-      else
-	return _Base::__divides(__x, __y);
+      if (!__builtin_is_constant_evaluated())
+	if constexpr (is_integral_v<_Tp> && sizeof(_Tp) <= 4)
+	  { // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
+	    using _Float = conditional_t<sizeof(_Tp) == 4, double, float>;
+	    constexpr size_t __n_intermediate =
+	      std::min(_N, (__have_avx512f ? 64 : __have_avx ? 32 : 16) /
+			     sizeof(_Float));
+	    using _FloatV = __vector_type_t<_Float, __n_intermediate>;
+	    constexpr size_t __n_floatv = __div_roundup(_N, __n_intermediate);
+	    using _R                    = __vector_type_t<_Tp, _N>;
+	    const auto __xf = __convert_all<_FloatV, __n_floatv>(__x);
+	    constexpr auto __one =
+	      ~_Abi::template __implicit_mask<_Tp>() & _Tp(1);
+	    const auto __yf =
+	      __convert_all<_FloatV, __n_floatv>(__as_vector(__y) | __one);
+	    return __call_with_n_evaluations<__n_floatv>(
+	      [](auto... __quotients) {
+		return __vector_convert<_R>(__quotients...);
+	      },
+	      [&__xf, &__yf](auto __i) { return __xf[__i] / __yf[__i]; });
+	  }
+	/* 64-bit int division is potentially optimizable via double division if
+	 * the value in __x is small enough and the conversion between
+	 * int<->double is efficient enough:
+	else if constexpr (is_integral_v<_Tp> && is_unsigned_v<_Tp> &&
+			   sizeof(_Tp) == 8)
+	  {
+	    if constexpr (__have_sse4_1 && sizeof(__x) == 16)
+	      {
+		if (_mm_test_all_zeros(__x, __m128i{0xffe0'0000'0000'0000ull,
+						    0xffe0'0000'0000'0000ull}))
+		  {
+		    __x._M_data | 0x __vector_convert<__m128d>(__x._M_data)
+		  }
+	      }
+	  }
+	  */
+      return _Base::__divides(__x, __y);
     }
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR90993
 
