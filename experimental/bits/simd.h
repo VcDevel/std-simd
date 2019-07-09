@@ -3621,14 +3621,16 @@ public:
     {
     }
 
-#define _GLIBCXX_SIMD_OP_(op_)                                                           \
-    template <class _U> _GLIBCXX_SIMD_INTRINSIC void operator op_(_U&& __x)&&            \
-    {                                                                                    \
-        if (__k) {                                                                       \
-            _M_value op_ std::forward<_U>(__x);                                          \
-        }                                                                                \
-    }                                                                                    \
-    static_assert(true)
+#define _GLIBCXX_SIMD_OP_(__op)                                                \
+  template <class _U>                                                          \
+  _GLIBCXX_SIMD_INTRINSIC void operator __op(_U&& __x)&&                       \
+  {                                                                            \
+    if (__k)                                                                   \
+      {                                                                        \
+	_M_value __op std::forward<_U>(__x);                                   \
+      }                                                                        \
+  }                                                                            \
+  static_assert(true)
     _GLIBCXX_SIMD_OP_(=);
     _GLIBCXX_SIMD_OP_(+=);
     _GLIBCXX_SIMD_OP_(-=);
@@ -4276,17 +4278,17 @@ public:
 
 // TODO: improve with operator.()
 
-#define _GLIBCXX_SIMD_OP_(op_)                                                 \
+#define _GLIBCXX_SIMD_OP_(__op)                                                \
   template <class _Tp,                                                         \
 	    class _TT =                                                        \
-	      decltype(std::declval<value_type>() op_ std::declval<_Tp>()),    \
+	      decltype(std::declval<value_type>() __op std::declval<_Tp>()),   \
 	    class = _ValuePreservingOrInt<__remove_cvref_t<_Tp>, _TT>,         \
-	    class = _ValuePreservingOrInt<_TT, value_type>>                \
-  _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator op_##=(          \
+	    class = _ValuePreservingOrInt<_TT, value_type>>                    \
+  _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator __op##=(         \
     _Tp&& __x)&&                                                               \
   {                                                                            \
     const value_type& __lhs = __read();                                        \
-    __write(__lhs op_ __x);                                                    \
+    __write(__lhs __op __x);                                                   \
     return {obj, index};                                                       \
   }
     _GLIBCXX_SIMD_ALL_ARITHMETICS(_GLIBCXX_SIMD_OP_);
