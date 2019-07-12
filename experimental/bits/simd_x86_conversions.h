@@ -42,13 +42,13 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
     constexpr size_t _M = _VectorTraits<_To>::_S_width;
 
     // [xyz]_to_[xyz] {{{2
-    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v) == 16 && sizeof(_To) == 16;
-    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v) == 16 && sizeof(_To) == 32;
-    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v) == 16 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v) == 32 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v) <= 16 && sizeof(_To) <= 16;
+    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v) <= 16 && sizeof(_To) == 32;
+    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v) <= 16 && sizeof(_To) == 64;
+    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v) == 32 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __y_to_y = sizeof(__v) == 32 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __y_to_z = sizeof(__v) == 32 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v) == 64 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v) == 64 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __z_to_y = sizeof(__v) == 64 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __z_to_z = sizeof(__v) == 64 && sizeof(_To) == 64;
 
@@ -432,9 +432,10 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
         if constexpr (__have_avx512vl && __x_to_x) {
             return __intrin_bitcast<_To>(_mm_cvttpd_epu32(__intrin));
         } else if constexpr (__have_sse4_1 && __x_to_x) {
-            return __vector_bitcast<_U>(_mm_cvttpd_epi32(_mm_floor_pd(__intrin) - 0x8000'0000u)) ^
-                   0x8000'0000u;
-        } else if constexpr (__x_to_x) {
+	    return __vector_bitcast<_U, _M>(
+		     _mm_cvttpd_epi32(_mm_floor_pd(__intrin) - 0x8000'0000u)) ^
+		   0x8000'0000u;
+	} else if constexpr (__x_to_x) {
             // use scalar fallback: it's only 2 values to convert, can't get much better
             // than scalar decomposition
         } else if constexpr (__have_avx512vl && __y_to_x) {
@@ -614,13 +615,13 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
         "__v1 would be discarded; use the one-argument __convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
-    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) == 16 && sizeof(_To) == 16;
-    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) == 16 && sizeof(_To) == 32;
-    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) == 16 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) <= 16 && sizeof(_To) <= 16;
+    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) <= 16 && sizeof(_To) == 32;
+    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) <= 16 && sizeof(_To) == 64;
+    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __y_to_y = sizeof(__v0) == 32 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __y_to_z = sizeof(__v0) == 32 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __z_to_y = sizeof(__v0) == 64 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __z_to_z = sizeof(__v0) == 64 && sizeof(_To) == 64;
 
@@ -890,7 +891,7 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
             // use concat fallback
         } else if constexpr (__f64_to_u32) {  //{{{2
             if constexpr (__x_to_x && __have_sse4_1) {
-                return __vector_bitcast<_U>(_mm_unpacklo_epi64(
+                return __vector_bitcast<_U, _M>(_mm_unpacklo_epi64(
                            _mm_cvttpd_epi32(_mm_floor_pd(__i0) - 0x8000'0000u),
                            _mm_cvttpd_epi32(_mm_floor_pd(__i1) - 0x8000'0000u))) ^
                        0x8000'0000u;
@@ -964,13 +965,13 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
         "__v2/__v3 would be discarded; use the two/one-argument __convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
-    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) == 16 && sizeof(_To) == 16;
-    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) == 16 && sizeof(_To) == 32;
-    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) == 16 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) <= 16 && sizeof(_To) <= 16;
+    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) <= 16 && sizeof(_To) == 32;
+    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) <= 16 && sizeof(_To) == 64;
+    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __y_to_y = sizeof(__v0) == 32 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __y_to_z = sizeof(__v0) == 32 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __z_to_y = sizeof(__v0) == 64 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __z_to_z = sizeof(__v0) == 64 && sizeof(_To) == 64;
 
@@ -1224,13 +1225,13 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
                               "__convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
-    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) == 16 && sizeof(_To) == 16;
-    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) == 16 && sizeof(_To) == 32;
-    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) == 16 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __x_to_x = sizeof(__v0) <= 16 && sizeof(_To) <= 16;
+    [[maybe_unused]] constexpr bool __x_to_y = sizeof(__v0) <= 16 && sizeof(_To) == 32;
+    [[maybe_unused]] constexpr bool __x_to_z = sizeof(__v0) <= 16 && sizeof(_To) == 64;
+    [[maybe_unused]] constexpr bool __y_to_x = sizeof(__v0) == 32 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __y_to_y = sizeof(__v0) == 32 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __y_to_z = sizeof(__v0) == 32 && sizeof(_To) == 64;
-    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) == 16;
+    [[maybe_unused]] constexpr bool __z_to_x = sizeof(__v0) == 64 && sizeof(_To) <= 16;
     [[maybe_unused]] constexpr bool __z_to_y = sizeof(__v0) == 64 && sizeof(_To) == 32;
     [[maybe_unused]] constexpr bool __z_to_z = sizeof(__v0) == 64 && sizeof(_To) == 64;
 
