@@ -209,7 +209,7 @@ TEST_TYPES(V, frexp, real_test_types)  //{{{1
                 expectedFraction[i] = std::frexp(input[i], &exp);
                 return exp;
             });
-            int_v exponent;
+            int_v exponent = {};
             const V fraction = frexp(input, &exponent);
             COMPARE(fraction, expectedFraction)
                 << ", input = " << input << ", delta: " << fraction - expectedFraction;
@@ -249,7 +249,7 @@ TEST_TYPES(V, frexp, real_test_types)  //{{{1
                 int exp;
                 return std::frexp(input[i], &exp);
             });
-            int_v exponent;
+            int_v exponent = {};
             const V fraction = frexp(input, &exponent);
             COMPARE(isnan(fraction), isnan(expectedFraction))
                 << fraction << ", input = " << input
