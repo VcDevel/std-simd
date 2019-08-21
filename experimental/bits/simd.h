@@ -1201,6 +1201,206 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
 	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...};
 }
 
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       _From __l,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])..., static_cast<_Tp>(__l[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       _From __l,
+						       _From __m,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])..., static_cast<_Tp>(__l[_I])...,
+	     static_cast<_Tp>(__m[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       _From __l,
+						       _From __m,
+						       _From __n,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])..., static_cast<_Tp>(__l[_I])...,
+	     static_cast<_Tp>(__m[_I])..., static_cast<_Tp>(__n[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       _From __l,
+						       _From __m,
+						       _From __n,
+						       _From __o,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])..., static_cast<_Tp>(__l[_I])...,
+	     static_cast<_Tp>(__m[_I])..., static_cast<_Tp>(__n[_I])...,
+	     static_cast<_Tp>(__o[_I])...};
+}
+
+template <typename _To, typename _From, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From __a,
+						       _From __b,
+						       _From __c,
+						       _From __d,
+						       _From __e,
+						       _From __f,
+						       _From __g,
+						       _From __h,
+						       _From __i,
+						       _From __j,
+						       _From __k,
+						       _From __l,
+						       _From __m,
+						       _From __n,
+						       _From __o,
+						       _From __p,
+						       index_sequence<_I...>)
+{
+  using _Tp = typename _VectorTraits<_To>::value_type;
+  return _To{static_cast<_Tp>(__a[_I])..., static_cast<_Tp>(__b[_I])...,
+	     static_cast<_Tp>(__c[_I])..., static_cast<_Tp>(__d[_I])...,
+	     static_cast<_Tp>(__e[_I])..., static_cast<_Tp>(__f[_I])...,
+	     static_cast<_Tp>(__g[_I])..., static_cast<_Tp>(__h[_I])...,
+	     static_cast<_Tp>(__i[_I])..., static_cast<_Tp>(__j[_I])...,
+	     static_cast<_Tp>(__k[_I])..., static_cast<_Tp>(__l[_I])...,
+	     static_cast<_Tp>(__m[_I])..., static_cast<_Tp>(__n[_I])...,
+	     static_cast<_Tp>(__o[_I])..., static_cast<_Tp>(__p[_I])...};
+}
+
 // Defer actual conversion to the overload that takes an index sequence. Note that this
 // function adds zeros or drops values off the end if you don't ensure matching width.
 template <typename _To, typename... _From, typename _ToT = _VectorTraits<_To>,
