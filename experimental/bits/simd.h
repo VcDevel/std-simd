@@ -794,41 +794,7 @@ template <typename _To, typename _From>
 inline _To __convert_mask(_From __k);
 
 // }}}
-// __shift_left, __shift_right, __increment, __decrement {{{
-template <typename _Tp = void>
-struct __shift_left
-{
-  constexpr _Tp operator()(const _Tp& __a, const _Tp& __b) const
-  {
-    return __a << __b;
-  }
-};
-template <>
-struct __shift_left<void>
-{
-  template <typename _L, typename _R>
-  constexpr auto operator()(_L&& __a, _R&& __b) const
-  {
-    return std::forward<_L>(__a) << std::forward<_R>(__b);
-  }
-};
-template <typename _Tp = void>
-struct __shift_right
-{
-  constexpr _Tp operator()(const _Tp& __a, const _Tp& __b) const
-  {
-    return __a >> __b;
-  }
-};
-template <>
-struct __shift_right<void>
-{
-  template <typename _L, typename _R>
-  constexpr auto operator()(_L&& __a, _R&& __b) const
-  {
-    return std::forward<_L>(__a) >> std::forward<_R>(__b);
-  }
-};
+// __increment, __decrement {{{
 template <typename _Tp = void>
 struct __increment
 {
