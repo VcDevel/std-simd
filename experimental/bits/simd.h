@@ -868,7 +868,6 @@ static inline constexpr int __min_vector_size = 8;
 template <typename _Tp = void>
 static inline constexpr int __min_vector_size = 2 * sizeof(_Tp);
 template <> inline constexpr int __min_vector_size<void> = 16;
-template <> inline constexpr int __min_vector_size<float> = 16;
 #endif
 
 // }}}
@@ -1398,14 +1397,16 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _To __vector_convert(_From... __xs)
 
 // }}}
 // __to_intrin {{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>,
-          typename _R = __intrinsic_type_t<typename _TVT::value_type, _TVT::_S_width>>
+template <
+  typename _Tp,
+  typename _TVT = _VectorTraits<_Tp>,
+  typename _R   = __intrinsic_type_t<typename _TVT::value_type, _TVT::_S_width>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _R __to_intrin(_Tp __x)
 {
+  static_assert(sizeof(__x) <= sizeof(_R),
+		"__to_intrin may never drop values off the end");
   if constexpr (sizeof(__x) == sizeof(_R))
     return reinterpret_cast<_R>(__as_vector(__x));
-  else if constexpr (sizeof(__x) > sizeof(_R))
-    __assert_unreachable<_Tp>();
   else
     {
       using _U = __int_for_sizeof_t<_Tp>;
@@ -2083,6 +2084,8 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
   constexpr bool __is_sse = __have_sse && sizeof(_Tp) <= 16;
   constexpr bool __is_avx = __have_avx && sizeof(_Tp) == 32;
   [[maybe_unused]] auto __intrin = __to_intrin(__x);
+  static_assert(sizeof(__intrin) == 16 || !__is_sse);
+  static_assert(sizeof(__intrin) == 32 || !__is_avx);
   if constexpr (__is_sse && __w == 1)
     {
       return _mm_movemask_epi8(__intrin);
@@ -2106,7 +2109,7 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
 	}
       else
 	{
-	  return _mm_movemask_ps(__vector_bitcast<float>(__x));
+	  return _mm_movemask_ps(__vector_bitcast<float>(__intrin));
 	}
     }
   else if constexpr (__is_sse && __w == 8)
@@ -2117,7 +2120,7 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
 	}
       else
 	{
-	  return _mm_movemask_pd(__vector_bitcast<double>(__x));
+	  return _mm_movemask_pd(__vector_bitcast<double>(__intrin));
 	}
     }
   else if constexpr (__is_avx && __w == 1)
@@ -2144,7 +2147,7 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
 	}
       else
 	{
-	  return _mm256_movemask_ps(__vector_bitcast<float>(__x));
+	  return _mm256_movemask_ps(__vector_bitcast<float>(__intrin));
 	}
     }
   else if constexpr (__is_avx && __w == 8)
@@ -2155,7 +2158,7 @@ _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
 	}
       else
 	{
-	  return _mm256_movemask_pd(__vector_bitcast<double>(__x));
+	  return _mm256_movemask_pd(__vector_bitcast<double>(__intrin));
 	}
     }
   else
@@ -2861,72 +2864,17 @@ template <> struct __bool_storage_member_type<64> { using type = __mmask64; };
 // __intrinsic_type (x86){{{
 // the following excludes bool via __is_vectorizable
 #if _GLIBCXX_SIMD_HAVE_SSE
-template <>
-struct __intrinsic_type<double, 64, void>
-{
-  using type [[__gnu__::__vector_size__(64)]] = double;
-};
-template <>
-struct __intrinsic_type<float, 64, void>
-{
-  using type [[__gnu__::__vector_size__(64)]] = float;
-};
-template <typename _Tp>
-struct __intrinsic_type<_Tp, 64, enable_if_t<is_integral_v<_Tp>>>
-{
-  using type [[__gnu__::__vector_size__(64)]] = long long int;
-};
-
-template <>
-struct __intrinsic_type<double, 32, void>
-{
-  using type [[__gnu__::__vector_size__(32)]] = double;
-};
-template <>
-struct __intrinsic_type<float, 32, void>
-{
-  using type [[__gnu__::__vector_size__(32)]] = float;
-};
-template <typename _Tp>
-struct __intrinsic_type<_Tp, 32, enable_if_t<is_integral_v<_Tp>>>
-{
-  using type [[__gnu__::__vector_size__(32)]] = long long int;
-};
 template <typename _Tp, size_t _Bytes>
 struct __intrinsic_type<
   _Tp,
   _Bytes,
-  std::enable_if_t<__is_vectorizable_v<_Tp> && (_Bytes > 16 && _Bytes < 32)>>
+  std::enable_if_t<__is_vectorizable_v<_Tp> && _Bytes <= 64>>
 {
-  using type [[__gnu__::__vector_size__(32)]] =
-    std::conditional_t<std::is_integral_v<_Tp>, long long int, _Tp>;
-};
-
-template <>
-struct __intrinsic_type<float, 16, void>
-{
-  using type [[__gnu__::__vector_size__(16)]] = float;
-};
-template <>
-struct __intrinsic_type<double, 16, void>
-{
-  using type [[__gnu__::__vector_size__(16)]] = double;
-};
-template <typename _Tp, size_t _Bytes>
-struct __intrinsic_type<
-  _Tp,
-  _Bytes,
-  enable_if_t<(_Bytes == 16 && is_integral_v<_Tp>)>>
-{
-  using type [[__gnu__::__vector_size__(16)]] = long long int;
-};
-template <typename _Tp, size_t _Bytes>
-struct __intrinsic_type<
-  _Tp,
-  _Bytes,
-  std::enable_if_t<__is_vectorizable_v<_Tp> && (_Bytes < 16)>>
-{
-  using type [[__gnu__::__vector_size__(16)]] =
+  static_assert(!std::is_same_v<_Tp, long double>,
+		"no __intrinsic_type support for long double on x86");
+  static constexpr std::size_t _VBytes =
+    _Bytes <= 16 ? 16 : _Bytes <= 32 ? 32 : 64;
+  using type [[__gnu__::__vector_size__(_VBytes)]] =
     std::conditional_t<std::is_integral_v<_Tp>, long long int, _Tp>;
 };
 #endif  // _GLIBCXX_SIMD_HAVE_SSE
