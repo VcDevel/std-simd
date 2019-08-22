@@ -87,7 +87,7 @@ TEST_TYPES(V, abs, all_test_types)  //{{{1
             {100, L::lowest(), L::max()},
             [](V input) {
                 const V expected([&](auto i) { return T(std::abs(T(input[i]))); });
-                COMPARE(abs(input), expected);
+                COMPARE(abs(input), expected) << "input: " << input;
             });
     } else {
         // VERIFY(!(sfinae_is_callable<V &, const int *>(call_memload())));
