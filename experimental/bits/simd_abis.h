@@ -1169,13 +1169,13 @@ _GLIBCXX_SIMD_INTRINSIC void
 	_mm_maskstore_epi32(reinterpret_cast<int*>(__mem), __ki, __vi);
       else if constexpr (__have_avx && sizeof(_Tp) == 4)
 	_mm_maskstore_ps(reinterpret_cast<float*>(__mem), __ki,
-			 __vector_bitcast<float>(__v));
+			 __vector_bitcast<float>(__vi));
       else if constexpr (__have_avx2 && sizeof(_Tp) == 8 &&
 			 std::is_integral_v<_Tp>)
 	_mm_maskstore_epi64(reinterpret_cast<_LLong*>(__mem), __ki, __vi);
       else if constexpr (__have_avx && sizeof(_Tp) == 8)
 	_mm_maskstore_pd(reinterpret_cast<double*>(__mem), __ki,
-			 __vector_bitcast<double>(__v));
+			 __vector_bitcast<double>(__vi));
       else if constexpr (__have_sse2)
 	_mm_maskmoveu_si128(__vi, __ki, reinterpret_cast<char*>(__mem));
     }
@@ -3402,7 +3402,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
     {
       constexpr size_t _N = simd_size_v<_Tp, _Abi>;
-      if constexpr (_Abi::_S_is_partial)
+      if constexpr (_Abi::_S_is_partial) //{{{
 	{
 	  [[maybe_unused]] constexpr auto __full_size =
 	    _Abi::template _S_full_size<_Tp>;
@@ -3451,17 +3451,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	      std::make_index_sequence<_N / 2>(),
 	      std::make_index_sequence<__full_size - _N / 2>(), __x,
 	      __binary_op);
-	}
-      else if constexpr (sizeof(__x) > __min_vector_size<_Tp> && _N > 2)
-	{
-	  using _A = simd_abi::deduce_t<_Tp, _N / 2>;
-	  using _V = std::experimental::simd<_Tp, _A>;
-	  return _A::_SimdImpl::__reduce(
-	    __binary_op(
-	      _V(__private_init, __extract<0, 2>(__data(__x)._M_data)),
-	      _V(__private_init, __extract<1, 2>(__data(__x)._M_data))),
-	    std::forward<_BinaryOperation>(__binary_op));
-	}
+	} //}}}
 #if _GLIBCXX_SIMD_HAVE_NEON // {{{
       else if constexpr (sizeof(__x) == 8 || sizeof(__x) == 16)
 	{
@@ -3498,7 +3488,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	    }
 	}
 #endif // _GLIBCXX_SIMD_HAVE_NEON }}}
-      else if constexpr (sizeof(__x) == 16)
+      else if constexpr (sizeof(__x) == 16) //{{{
 	{
 	  if constexpr (_N == 16)
 	    {
@@ -3533,9 +3523,21 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	  __x = __binary_op(__x, __make_simd<_Tp, _N>(__vector_bitcast<_Tp>(
 				   __vector_permute<1, 1>(__y))));
 	  return __x[0];
-	}
+	} //}}}
+      else if constexpr(_N == 2)
+	return __binary_op(__x, simd<_Tp, _Abi>(__x[1]))[0];
       else
-	__assert_unreachable<_Tp>();
+	{
+	  static_assert(sizeof(__x) > __min_vector_size<_Tp>);
+	  static_assert((_N & (_N - 1)) == 0); // _N must be a power of 2
+	  using _A = simd_abi::deduce_t<_Tp, _N / 2>;
+	  using _V = std::experimental::simd<_Tp, _A>;
+	  return _A::_SimdImpl::__reduce(
+	    __binary_op(
+	      _V(__private_init, __extract<0, 2>(__data(__x)._M_data)),
+	      _V(__private_init, __extract<1, 2>(__data(__x)._M_data))),
+	    std::forward<_BinaryOperation>(__binary_op));
+	}
     }
 
     // math {{{2

@@ -1485,7 +1485,7 @@ __vector_type_t<_Tp, _N> __vector_load(const void* __p, _F)
     is_integral_v<_Tp>,
     conditional_t<_M % 4 == 0, conditional_t<_M % 8 == 0, long long, int>,
 		  conditional_t<_M % 2 == 0, short, signed char>>,
-    conditional_t<(_M < 8 || _N % 2 == 1), float, double>>;
+    conditional_t<(_M < 8 || _N % 2 == 1 || _N == 2), _Tp, double>>;
   using _V = __vector_type_t<_U, _N * sizeof(_Tp) / sizeof(_U)>;
 #else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
   using _V                                     = __vector_type_t<_Tp, _N>;
@@ -2242,13 +2242,11 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST auto
 		_mm_mask_mov_epi64(__to_intrin(at0), mask, __to_intrin(at1)));
 	    }
 	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    {
-	      return __intrin_bitcast<_V>(_mm_mask_mov_ps(at0, mask, at1));
-	    }
+	    return __intrin_bitcast<_V>(
+	      _mm_mask_mov_ps(__to_intrin(at0), mask, __to_intrin(at1)));
 	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    {
-	      return __intrin_bitcast<_V>(_mm_mask_mov_pd(at0, mask, at1));
-	    }
+	    return __intrin_bitcast<_V>(
+	      _mm_mask_mov_pd(__to_intrin(at0), mask, __to_intrin(at1)));
 	}
       else if constexpr (sizeof(_V) <= 16 && __have_avx512f && sizeof(_Tp) > 2)
 	{

@@ -494,7 +494,7 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
                    _mm256_cvtepi32_ps(__to_intrin(__v & 0xffff));
         } // else use fallback (builtin conversion)
     } else if constexpr (__ibw_to_f32) {  //{{{2
-        if constexpr (_M == 4 || __have_avx2) {
+        if constexpr (_M <= 4 || __have_avx2) {
             return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _M>>(__v));
         } else {
             static_assert(__x_to_y);
