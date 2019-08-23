@@ -996,7 +996,7 @@ template <typename _To, typename _From> _GLIBCXX_SIMD_INTRINSIC constexpr _To __
     else if constexpr (sizeof(_From) > sizeof(_To))
       {
 	if constexpr (sizeof(_To) >= 16)
-	  return reinterpret_cast<const _To&>(__v);
+	  return reinterpret_cast<const __may_alias<_To>&>(__v);
 	else
 	  {
 	    _To __r;
