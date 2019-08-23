@@ -1548,12 +1548,6 @@ void __vector_store(const _B __v, void* __p, _F)
 }
 
 // }}}
-// __allbits{{{
-template <typename _V>
-inline constexpr _V __allbits = reinterpret_cast<_V>(
-  ~__intrinsic_type_t<_LLong, sizeof(_V) / sizeof(_LLong)>());
-
-// }}}
 // __xor{{{
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp

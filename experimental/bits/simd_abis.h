@@ -36,11 +36,22 @@
 #include <cstdlib>
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
+// _S_allbits{{{
+template <typename _V>
+static inline constexpr _V _S_allbits = reinterpret_cast<_V>(
+  ~std::conditional_t<
+    (sizeof(_V) < sizeof(__intrinsic_type_t<_LLong, 2>)),
+    __vector_type_t<int, sizeof(_V) / sizeof(int)>,
+    __intrinsic_type_t<_LLong, sizeof(_V) / sizeof(_LLong)>>());
+
+// }}}
+// _S_signmask, _S_absmask{{{
 template <typename _V, typename = _VectorTraits<_V>>
 static inline constexpr _V _S_signmask = __xor(_V() + 1, _V() - 1);
 template <typename _V, typename = _VectorTraits<_V>>
-static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, __allbits<_V>);
+static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, _S_allbits<_V>);
 
+//}}}
 // __simd_tuple_element {{{1
 template <size_t _I, typename _Tp> struct __simd_tuple_element;
 template <typename _Tp, typename _A0, typename... _As>
