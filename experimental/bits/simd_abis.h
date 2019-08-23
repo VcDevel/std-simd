@@ -3580,6 +3580,18 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	// ~(-0.) & v would be easy, but breaks with fno-signed-zeros
 	return __and(_S_absmask<__vector_type_t<_Tp, _N>>, __x._M_data);
       else
+#ifdef _GLIBCXX_SIMD_WORKAROUND_PR91533
+	if constexpr (sizeof(__x) < 16 && std::is_signed_v<_Tp>)
+	{
+	  if constexpr (sizeof(_Tp) == 4)
+	    return __auto_bitcast(_mm_abs_epi32(__to_intrin(__x)));
+	  else if constexpr (sizeof(_Tp) == 2)
+	    return __auto_bitcast(_mm_abs_epi16(__to_intrin(__x)));
+	  else
+	    return __auto_bitcast(_mm_abs_epi8(__to_intrin(__x)));
+	}
+      else
+#endif //_GLIBCXX_SIMD_WORKAROUND_PR91533
 	return __x._M_data < 0 ? -__x._M_data : __x._M_data;
     }
 

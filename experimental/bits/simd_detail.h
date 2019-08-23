@@ -352,6 +352,12 @@ template <class _Tp, class _Abi> struct simd_size;
 // bad codegen for integer division
 #define _GLIBCXX_SIMD_WORKAROUND_XXX_4 1
 
+// abs pattern may generate MMX instructions without EMMS cleanup (This only happens with SSSE3
+// because pabs[bwd] is part of SSSE3.)
+#if __GNUC__ < 10 && defined __SSSE3__
+#define _GLIBCXX_SIMD_WORKAROUND_PR91533 1
+#endif
+
 // https://github.com/cplusplus/parallelism-ts/issues/65 (incorrect return type of
 // static_simd_cast)
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE65 1
