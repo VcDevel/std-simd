@@ -594,9 +594,9 @@ _GLIBCXX_SIMD_MATH_CALL_(expm1)
 template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getexp(_SimdWrapper<_Tp, _N> __x)
 {
     if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
-        return _mm_getexp_ps(__x);
+        return __auto_bitcast(_mm_getexp_ps(__to_intrin(__x)));
     } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>()) {
-        return __lo128(_mm512_getexp_ps(__auto_bitcast(__x)));
+        return __auto_bitcast(_mm512_getexp_ps(__auto_bitcast(__to_intrin(__x))));
     } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>()) {
         return _mm_getexp_pd(__x);
     } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>()) {
@@ -622,10 +622,12 @@ template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getexp(_SimdWrapper<_Tp,
 template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getmant_avx512(_SimdWrapper<_Tp, _N> __x)
 {
     if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
-        return _mm_getmant_ps(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
+	return __auto_bitcast(_mm_getmant_ps(
+	  __to_intrin(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
     } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>()) {
-        return __lo128(
-            _mm512_getmant_ps(__auto_bitcast(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
+	return __auto_bitcast(
+	  _mm512_getmant_ps(__auto_bitcast(__to_intrin(__x)),
+			    _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
     } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>()) {
         return _mm_getmant_pd(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
     } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>()) {
@@ -751,7 +753,8 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
       }
     else if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>())
       {
-	return {__private_init, _mm_getexp_ps(__data(__x))};
+	return {__private_init,
+		__auto_bitcast(_mm_getexp_ps(__to_intrin(__as_vector(__x))))};
       }
     else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>())
       {

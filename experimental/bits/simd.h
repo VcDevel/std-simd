@@ -2656,14 +2656,14 @@ _GLIBCXX_SIMD_INTRINSIC constexpr bool __is_zero(_Tp __a)
     {
       if constexpr (__have_avx)
 	{
-	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	  if constexpr (_TVT::template __is<float, 8>)
 	    return _mm256_testz_ps(__a, __a);
-	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	  else if constexpr (_TVT::template __is<double, 4>)
 	    return _mm256_testz_pd(__a, __a);
 	  else if constexpr (sizeof(_Tp) == 32)
 	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__a));
-	  else if constexpr (_TVT::template __is<float, 4>)
-	    return _mm_testz_ps(__a, __a);
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testz_ps(__to_intrin(__a), __to_intrin(__a));
 	  else if constexpr (_TVT::template __is<double, 2>)
 	    return _mm_testz_pd(__a, __a);
 	  else
@@ -2740,14 +2740,14 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
     {
       if constexpr (__have_avx)
 	{
-	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	  if constexpr (_TVT::template __is<float, 8>)
 	    return _mm256_testz_ps(__a, __b);
-	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	  else if constexpr (_TVT::template __is<double, 4>)
 	    return _mm256_testz_pd(__a, __b);
 	  else if constexpr (sizeof(_Tp) == 32)
 	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__b));
-	  else if constexpr (_TVT::template __is<float, 4>)
-	    return _mm_testz_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testz_ps(__to_intrin(__a), __to_intrin(__b));
 	  else if constexpr (_TVT::template __is<double, 2>)
 	    return _mm_testz_pd(__a, __b);
 	  else
@@ -2774,14 +2774,14 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
     {
       if constexpr (__have_avx)
 	{
-	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	  if constexpr (_TVT::template __is<float, 8>)
 	    return _mm256_testc_ps(__a, __b);
-	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	  else if constexpr (_TVT::template __is<double, 4>)
 	    return _mm256_testc_pd(__a, __b);
 	  else if constexpr (sizeof(_Tp) == 32)
 	    return _mm256_testc_si256(__to_intrin(__a), __to_intrin(__b));
-	  else if constexpr (_TVT::template __is<float, 4>)
-	    return _mm_testc_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testc_ps(__to_intrin(__a), __to_intrin(__b));
 	  else if constexpr (_TVT::template __is<double, 2>)
 	    return _mm_testc_pd(__a, __b);
 	  else
@@ -2976,41 +2976,40 @@ struct _SimdWrapper<
 };
 
 // _SimdWrapperBase{{{1
-template <
-  typename _Tp,
-  size_t _Width,
-  typename _RegisterType = __vector_type_t<_Tp, _Width>,
-  bool                   = std::disjunction_v<
-    std::is_same<__vector_type_t<_Tp, _Width>, __intrinsic_type_t<_Tp, _Width>>,
-    std::is_same<_RegisterType, __intrinsic_type_t<_Tp, _Width>>>>
+template <typename _Tp,
+	  size_t _Width,
+	  bool = std::is_same_v<__vector_type_t<_Tp, _Width>,
+				__intrinsic_type_t<_Tp, _Width>> ||
+		 sizeof(__vector_type_t<_Tp, _Width>) !=
+		   sizeof(__intrinsic_type_t<_Tp, _Width>)>
 struct _SimdWrapperBase;
 
-template <typename _Tp, size_t _Width, typename _RegisterType>
-struct _SimdWrapperBase<_Tp, _Width, _RegisterType, true>
+template <typename _Tp, size_t _Width>
+struct _SimdWrapperBase<_Tp, _Width, true>
 {
-  _RegisterType _M_data;
+  __vector_type_t<_Tp, _Width> _M_data;
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase() = default;
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase(
     __vector_type_t<_Tp, _Width> __x)
-  : _M_data(reinterpret_cast<_RegisterType>(__x))
+  : _M_data(reinterpret_cast<__vector_type_t<_Tp, _Width>>(__x))
   {
   }
 };
 
-template <typename _Tp, size_t _Width, typename _RegisterType>
-struct _SimdWrapperBase<_Tp, _Width, _RegisterType, false>
+template <typename _Tp, size_t _Width>
+struct _SimdWrapperBase<_Tp, _Width, false>
 {
   using _IntrinType = __intrinsic_type_t<_Tp, _Width>;
-  _RegisterType _M_data;
+  __vector_type_t<_Tp, _Width> _M_data;
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase() = default;
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase(
     __vector_type_t<_Tp, _Width> __x)
-  : _M_data(reinterpret_cast<_RegisterType>(__x))
+  : _M_data(reinterpret_cast<__vector_type_t<_Tp, _Width>>(__x))
   {
   }
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase(_IntrinType __x)
-  : _M_data(reinterpret_cast<_RegisterType>(__x))
+  : _M_data(reinterpret_cast<__vector_type_t<_Tp, _Width>>(__x))
   {
   }
 };
@@ -4867,10 +4866,18 @@ struct _NeonAbi : _MixinImplicitMasking<_Bytes, _NeonAbi<_Bytes>> {
 template <int _Bytes>
 struct _SseAbi : _MixinImplicitMasking<_Bytes, _SseAbi<_Bytes>> {
     template <class _Tp> static constexpr size_t size = _Bytes / sizeof(_Tp);
+#if 0
     template <class _Tp>
-    static constexpr size_t
-			  _S_full_size = sizeof(__vector_type_t<_Tp, size<_Tp>>) / sizeof(_Tp);
+    static constexpr size_t _S_full_size = 16 / sizeof(_Tp);
     static constexpr bool _S_is_partial = _Bytes < 16;
+#else
+    //should _S_full_size rather be ``? That
+    //hides information about the SIMD register size. But then, the register size is sometimes
+    //irrelevant
+    template <class _Tp>
+    static constexpr size_t _S_full_size = sizeof(__vector_type_t<_Tp, size<_Tp>>) / sizeof(_Tp);
+    static constexpr bool _S_is_partial = (_Bytes & (_Bytes - 1)) != 0;
+#endif
 
     // validity traits {{{2
     struct _IsValidAbiTag : __bool_constant<(_Bytes > 0 && _Bytes <= 16)> {};
@@ -5546,9 +5553,13 @@ public :
         } else if constexpr (__have_avx512bw && __is_avx512() && size() <= 64) {
             return {__private_init, _knot_mask64(__builtin())};
         } else {
-            return {__private_init,
-                    _ToWrapper(~__vector_bitcast<_UInt>(__builtin()))};
-        }
+	    return {
+	      __private_init,
+	      _ToWrapper(
+		~__vector_bitcast<
+		  std::conditional_t<std::is_integral_v<_Tp>, _Tp, _UInt>>(
+		  __builtin()))};
+	}
     }
 
     // }}}
