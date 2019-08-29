@@ -3289,8 +3289,13 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
     template <class _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __modulus(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
-        static_assert(std::is_integral<_Tp>::value, "modulus is only supported for integral types");
-        return __x._M_data % __y._M_data;
+      static_assert(std::is_integral<_Tp>::value,
+		    "modulus is only supported for integral types");
+      if constexpr (!_Abi::_S_is_partial)
+	return __x._M_data % __y._M_data;
+      else
+	return __as_vector(__x) %
+	       (__as_vector(__y) | ~_Abi::template __implicit_mask<_Tp>());
     }
     template <class _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_and(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
