@@ -167,7 +167,6 @@ endif()#}}}
 # Unit tests#{{{
 ##################################################################
 include (CTest)
-configure_file(${CMAKE_SOURCE_DIR}/../scripts/CTestCustom.cmake ${CMAKE_BINARY_DIR}/CTestCustom.cmake COPYONLY)
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/virtest/vir/test.h")
    # first try to resolve the issue automatically
    message(STATUS "virtest missing: calling 'git submodule update --init'")

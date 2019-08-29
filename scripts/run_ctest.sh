@@ -19,4 +19,8 @@ case "$1" in
       ;;
 esac
 
+if [[ -x "$CXX" -a "${$(readlink $CXX)##*/}" = "icecc" ]]; then
+  export number_of_processors=80
+fi
+
 ctest -S "`dirname $0`/test.cmake"
