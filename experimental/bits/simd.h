@@ -4416,9 +4416,9 @@ simd<_Tp, simd_abi::deduce_t<_Tp, (simd_size_v<_Tp, _As> + ...)>> concat(
 
 // }}}
 
-// _Smart_reference {{{
+// _SmartReference {{{
 template <class _U, class _Accessor = _U, class _ValueType = typename _U::value_type>
-class _Smart_reference
+class _SmartReference
 {
     friend _Accessor;
     int index;
@@ -4440,20 +4440,20 @@ class _Smart_reference
     }
 
 public:
-    _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference(_U& __o, int __i) noexcept
+    _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference(_U& __o, int __i) noexcept
         : index(__i), obj(__o)
     {
     }
 
     using value_type = _ValueType;
 
-    _GLIBCXX_SIMD_INTRINSIC _Smart_reference(const _Smart_reference &) = delete;
+    _GLIBCXX_SIMD_INTRINSIC _SmartReference(const _SmartReference &) = delete;
 
     _GLIBCXX_SIMD_INTRINSIC constexpr operator value_type() const noexcept { return __read(); }
 
     template <class _Tp,
               class = _ValuePreservingOrInt<__remove_cvref_t<_Tp>, value_type>>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator=(_Tp &&__x) &&
+    _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator=(_Tp &&__x) &&
     {
         __write(std::forward<_Tp>(__x));
         return {obj, index};
@@ -4467,7 +4467,7 @@ public:
 	      decltype(std::declval<value_type>() __op std::declval<_Tp>()),   \
 	    class = _ValuePreservingOrInt<__remove_cvref_t<_Tp>, _TT>,         \
 	    class = _ValuePreservingOrInt<_TT, value_type>>                    \
-  _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator __op##=(         \
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator __op##=(         \
     _Tp&& __x)&&                                                               \
   {                                                                            \
     const value_type& __lhs = __read();                                        \
@@ -4482,7 +4482,7 @@ public:
     template <class _Tp = void,
               class = decltype(
                   ++std::declval<std::conditional_t<true, value_type, _Tp> &>())>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator++() &&
+    _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator++() &&
     {
         value_type __x = __read();
         __write(++__x);
@@ -4503,7 +4503,7 @@ public:
     template <class _Tp = void,
               class = decltype(
                   --std::declval<std::conditional_t<true, value_type, _Tp> &>())>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _Smart_reference operator--() &&
+    _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator--() &&
     {
         value_type __x = __read();
         __write(--__x);
@@ -4521,32 +4521,32 @@ public:
         return __r;
     }
 
-    _GLIBCXX_SIMD_INTRINSIC friend void swap(_Smart_reference &&__a, _Smart_reference &&__b) noexcept(
-        conjunction<std::is_nothrow_constructible<value_type, _Smart_reference &&>,
-            std::is_nothrow_assignable<_Smart_reference &&, value_type &&>>::value)
+    _GLIBCXX_SIMD_INTRINSIC friend void swap(_SmartReference &&__a, _SmartReference &&__b) noexcept(
+        conjunction<std::is_nothrow_constructible<value_type, _SmartReference &&>,
+            std::is_nothrow_assignable<_SmartReference &&, value_type &&>>::value)
     {
-        value_type __tmp = static_cast<_Smart_reference &&>(__a);
-        static_cast<_Smart_reference &&>(__a) = static_cast<value_type>(__b);
-        static_cast<_Smart_reference &&>(__b) = std::move(__tmp);
+        value_type __tmp = static_cast<_SmartReference &&>(__a);
+        static_cast<_SmartReference &&>(__a) = static_cast<value_type>(__b);
+        static_cast<_SmartReference &&>(__b) = std::move(__tmp);
     }
 
-    _GLIBCXX_SIMD_INTRINSIC friend void swap(value_type &__a, _Smart_reference &&__b) noexcept(
+    _GLIBCXX_SIMD_INTRINSIC friend void swap(value_type &__a, _SmartReference &&__b) noexcept(
         conjunction<std::is_nothrow_constructible<value_type, value_type &&>,
             std::is_nothrow_assignable<value_type &, value_type &&>,
-            std::is_nothrow_assignable<_Smart_reference &&, value_type &&>>::value)
+            std::is_nothrow_assignable<_SmartReference &&, value_type &&>>::value)
     {
         value_type __tmp(std::move(__a));
         __a = static_cast<value_type>(__b);
-        static_cast<_Smart_reference &&>(__b) = std::move(__tmp);
+        static_cast<_SmartReference &&>(__b) = std::move(__tmp);
     }
 
-    _GLIBCXX_SIMD_INTRINSIC friend void swap(_Smart_reference &&__a, value_type &__b) noexcept(
-        conjunction<std::is_nothrow_constructible<value_type, _Smart_reference &&>,
+    _GLIBCXX_SIMD_INTRINSIC friend void swap(_SmartReference &&__a, value_type &__b) noexcept(
+        conjunction<std::is_nothrow_constructible<value_type, _SmartReference &&>,
             std::is_nothrow_assignable<value_type &, value_type &&>,
-            std::is_nothrow_assignable<_Smart_reference &&, value_type &&>>::value)
+            std::is_nothrow_assignable<_SmartReference &&, value_type &&>>::value)
     {
         value_type __tmp(__a);
-        static_cast<_Smart_reference &&>(__a) = std::move(__b);
+        static_cast<_SmartReference &&>(__a) = std::move(__b);
         __b = std::move(__tmp);
     }
 };
@@ -5275,7 +5275,7 @@ template <class _Tp, class _Abi> class simd_mask : public _SimdTraits<_Tp, _Abi>
 public:
     // member types {{{
     using value_type = bool;
-    using reference = _Smart_reference<__member_type, __impl, value_type>;
+    using reference = _SmartReference<__member_type, __impl, value_type>;
     using simd_type = simd<_Tp, _Abi>;
     using abi_type = _Abi;
 
@@ -6319,7 +6319,7 @@ class simd
 
 public:
     using value_type = _Tp;
-    using reference = _Smart_reference<__member_type, __impl, value_type>;
+    using reference = _SmartReference<__member_type, __impl, value_type>;
     using mask_type = simd_mask<_Tp, _Abi>;
     using abi_type = _Abi;
 
