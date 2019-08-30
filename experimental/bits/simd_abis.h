@@ -993,7 +993,7 @@ _GLIBCXX_SIMD_INTRINSIC void
 {
   [[maybe_unused]] const auto __vi = __to_intrin(__v);
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-  if constexpr (sizeof(_V) == 64)
+  if constexpr (sizeof(__vi) == 64)
     {
       static_assert(sizeof(__v) == 64 && __have_avx512f);
       if constexpr (__have_avx512bw && sizeof(_Tp) == 1)
@@ -1047,7 +1047,7 @@ _GLIBCXX_SIMD_INTRINSIC void
       else
 	__assert_unreachable<_Tp>();
     }
-  else if constexpr (sizeof(_V) == 32)
+  else if constexpr (sizeof(__vi) == 32)
     {
       if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
 	_mm256_mask_storeu_epi8(__mem, __k, __vi);
@@ -1100,18 +1100,24 @@ _GLIBCXX_SIMD_INTRINSIC void
     }
   else
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
-    if constexpr (sizeof(_V) == 16)
+    if constexpr (sizeof(__vi) == 16)
     {
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
+      // the store is aligned if _F is overaligned_tag<16> (or higher) or _F
+      // is vector_aligned_tag while __v is actually a 16-Byte vector (could
+      // be 2/4/8 as well)
+      [[maybe_unused]] constexpr bool __aligned =
+	__is_aligned_v<_F, 16> &&
+	(sizeof(__v) == 16 || !std::is_same_v<_F, vector_aligned_tag>);
       if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
 	_mm_mask_storeu_epi8(__mem, __k, __vi);
       else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
 	_mm_mask_storeu_epi16(__mem, __k, __vi);
       else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
 	{
-	  if constexpr (__is_aligned_v<_F, 16> && std::is_integral_v<_Tp>)
+	  if constexpr (__aligned && std::is_integral_v<_Tp>)
 	    _mm_mask_store_epi32(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 16> &&
+	  else if constexpr (__aligned &&
 			     std::is_floating_point_v<_Tp>)
 	    _mm_mask_store_ps(__mem, __k, __vi);
 	  else if constexpr (std::is_integral_v<_Tp>)
@@ -1121,9 +1127,9 @@ _GLIBCXX_SIMD_INTRINSIC void
 	}
       else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
 	{
-	  if constexpr (__is_aligned_v<_F, 16> && std::is_integral_v<_Tp>)
+	  if constexpr (__aligned && std::is_integral_v<_Tp>)
 	    _mm_mask_store_epi64(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 16> &&
+	  else if constexpr (__aligned &&
 			     std::is_floating_point_v<_Tp>)
 	    _mm_mask_store_pd(__mem, __k, __vi);
 	  else if constexpr (std::is_integral_v<_Tp>)
@@ -1142,7 +1148,7 @@ _GLIBCXX_SIMD_INTRINSIC void
 	    // careful, vector_aligned has a stricter meaning in the 512-bit
 	    // maskstore:
 	    std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
-			       overaligned_tag<16>, _F>(),
+			       overaligned_tag<sizeof(__v)>, _F>(),
 	    _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
 	}
       else
@@ -2133,24 +2139,24 @@ inline _To __convert_mask(_From __k)
         else if constexpr (cvt_id ==  4'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__zero_extend(__intrin_bitcast<__m128i>(__k))); }
         else if constexpr (cvt_id ==  4'4 && __have_avx512vl   ) { return    _mm_cmp_epi32_mask(__intrin_bitcast<__m128i>(__k), __m128i(), _MM_CMPINT_LT); }
         else if constexpr (cvt_id ==  4'4 && __have_avx512_int ) { return _mm512_cmp_epi32_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'4                      ) { return    _mm_movemask_ps(__k); }
+        else if constexpr (cvt_id ==  4'4                      ) { return    _mm_movemask_ps(__intrin); }
         else if constexpr (cvt_id ==  8'4 && __have_avx512dq_vl) { return _mm256_movepi32_mask(__vector_bitcast<_LLong>(__k)); }
         else if constexpr (cvt_id ==  8'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__zero_extend(__vector_bitcast<_LLong>(__k))); }
         else if constexpr (cvt_id ==  8'4 && __have_avx512vl   ) { return _mm256_cmp_epi32_mask(__vector_bitcast<_LLong>(__k), __m256i(), _MM_CMPINT_LT); }
         else if constexpr (cvt_id ==  8'4 && __have_avx512_int ) { return _mm512_cmp_epi32_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  8'4                      ) { return _mm256_movemask_ps(__k); }
+        else if constexpr (cvt_id ==  8'4                      ) { return _mm256_movemask_ps(__intrin); }
         else if constexpr (cvt_id == 16'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__vector_bitcast<_LLong>(__k)); }
         else if constexpr (cvt_id == 16'4                      ) { return _mm512_cmp_epi32_mask(__vector_bitcast<_LLong>(__k), __m512i(), _MM_CMPINT_LT); }
         else if constexpr (cvt_id ==  2'8 && __have_avx512dq_vl) { return    _mm_movepi64_mask(__intrin_bitcast<__m128i>(__k)); }
         else if constexpr (cvt_id ==  2'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__zero_extend(__intrin_bitcast<__m128i>(__k))); }
         else if constexpr (cvt_id ==  2'8 && __have_avx512vl   ) { return    _mm_cmp_epi64_mask(__intrin_bitcast<__m128i>(__k), __m128i(), _MM_CMPINT_LT); }
         else if constexpr (cvt_id ==  2'8 && __have_avx512_int ) { return _mm512_cmp_epi64_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  2'8                      ) { return    _mm_movemask_pd(__k); }
+        else if constexpr (cvt_id ==  2'8                      ) { return    _mm_movemask_pd(__intrin); }
         else if constexpr (cvt_id ==  4'8 && __have_avx512dq_vl) { return _mm256_movepi64_mask(__vector_bitcast<_LLong>(__k)); }
         else if constexpr (cvt_id ==  4'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__zero_extend(__vector_bitcast<_LLong>(__k))); }
         else if constexpr (cvt_id ==  4'8 && __have_avx512vl   ) { return _mm256_cmp_epi64_mask(__vector_bitcast<_LLong>(__k), __m256i(), _MM_CMPINT_LT); }
         else if constexpr (cvt_id ==  4'8 && __have_avx512_int ) { return _mm512_cmp_epi64_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'8                      ) { return _mm256_movemask_pd(__k); }
+        else if constexpr (cvt_id ==  4'8                      ) { return _mm256_movemask_pd(__intrin); }
         else if constexpr (cvt_id ==  8'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__vector_bitcast<_LLong>(__k)); }
         else if constexpr (cvt_id ==  8'8                      ) { return _mm512_cmp_epi64_mask(__vector_bitcast<_LLong>(__k), __m512i(), _MM_CMPINT_LT); }
         else
@@ -3066,9 +3072,6 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       else if constexpr (std::is_same_v<_U, _Tp>)
 	return __vector_load<_Tp, _S_full_size<_Tp>, _N * sizeof(_Tp)>(__mem,
 								       _F());
-      else if constexpr (__bytes_to_load < 16)
-	return __convert<_SimdMember<_Tp>>(
-	  __vector_load16<_U, __bytes_to_load>(__mem, _F()));
       else if constexpr (__bytes_to_load <= __max_load_size)
 	return __convert<_SimdMember<_Tp>>(__vector_load<_U, _N>(__mem, _F()));
       else if constexpr(__bytes_to_load % __max_load_size == 0)
@@ -3139,7 +3142,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       else if constexpr (std::is_same_v<_U, _Tp>)
 	__vector_store<sizeof(_Tp) * _N, _N>(__v._M_data, __mem, _F());
       else if constexpr (sizeof(_U) * _N < 16)
-	__vector_store<sizeof(_U) * _N>(__convert<__vector_type16_t<_U>>(__v),
+	__vector_store<sizeof(_U) * _N>(__convert<_U>(__v),
 					__mem, _F());
       else if constexpr (sizeof(_U) * _N <= __max_store_size)
 	__vector_store<0, _N>(__convert<__vector_type_t<_U, _N>>(__v), __mem, _F());
@@ -3172,67 +3175,83 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       __masked_store(const _V __v, _U* __mem, _F, const _MaskMember<_Tp> __k)
 	_GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
     {
-      constexpr size_t _N = _S_size<_Tp>;
-        [[maybe_unused]] const auto __vi = __to_intrin(__v);
-        constexpr size_t __max_store_size =
-            (sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
-                ? 64
-                : (std::is_floating_point_v<_U> && __have_avx) || __have_avx2 ? 32 : 16;
-        if constexpr (std::is_same_v<_Tp, _U> ||
-                      (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
-                       sizeof(_Tp) == sizeof(_U))) {
-            // bitwise or no conversion, reinterpret:
-            const auto __kk = [&]() {
-                if constexpr (__is_bitmask_v<decltype(__k)>) {
-                    return _MaskMember<_U>(__k._M_data);
-                } else {
-                    return __wrapper_bitcast<_U>(__k);
-                }
-            }();
-            __maskstore(__wrapper_bitcast<_U>(__v), __mem, _F(), __kk);
-        } else if constexpr (sizeof(_U) <= 8 &&  // no long double
-                             !__converts_via_decomposition_v<
-                                 _Tp, _U, __max_store_size>  // conversion via decomposition
-                                                          // is better handled via the
-                                                          // bit_iteration fallback below
-        ) {
-            using _UV = __vector_type_t<_U, std::clamp(_N, 16 / sizeof(_U), __max_store_size / sizeof(_U))>;
-            constexpr size_t _VN = _VectorTraits<_UV>::_S_width;
-            using _VV = _SimdWrapper<_U, _VN>;
-            constexpr bool __prefer_bitmask =
-                (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw;
-            using _M = _SimdWrapper<std::conditional_t<__prefer_bitmask, bool, _U>, _VN>;
-
-            if constexpr (_VN >= _N) {
-                __maskstore(_VV(__convert<_UV>(__v)), __mem,
-                               // careful, if _UV has more elements than the input __v (_N),
-                               // vector_aligned is incorrect:
-                               std::conditional_t<(_VectorTraits<_UV>::_S_width > _N),
-                                                  overaligned_tag<sizeof(_U) * _N>, _F>(),
-                               __convert_mask<_M>(__k));
-	      }
+      constexpr size_t            _V_size = _S_size<_Tp>;
+      [[maybe_unused]] const auto __vi    = __to_intrin(__v);
+      constexpr size_t            __max_store_size =
+	(sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
+	  ? 64
+	  : (std::is_floating_point_v<_U> && __have_avx) || __have_avx2 ? 32
+									: 16;
+      if constexpr (std::is_same_v<_Tp, _U> ||
+		    (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
+		     sizeof(_Tp) == sizeof(_U)))
+	{
+	  // bitwise or no conversion, reinterpret:
+	  const auto __kk = [&]() {
+	    if constexpr (__is_bitmask_v<decltype(__k)>)
+	      return _MaskMember<_U>(__k._M_data);
 	    else
-	      {
-		constexpr size_t _NFullStores = _N / _VN;
-		constexpr size_t _NAllStores  = __div_roundup(_N, _VN);
-		constexpr size_t _NParts = _S_full_size<_Tp> / _VN;
-		const std::array<_UV, _NAllStores> __converted =
-		  __convert_all<_UV, _NAllStores>(__v);
-		__execute_n_times<_NFullStores>([&](auto __i) {
+	      return __wrapper_bitcast<_U>(__k);
+	  }();
+	  __maskstore(__wrapper_bitcast<_U>(__v), __mem, _F(), __kk);
+	}
+      else if constexpr (sizeof(_U) <= 8 && // no long double
+			 !__converts_via_decomposition_v<
+			   _Tp, _U,
+			   __max_store_size> // conversion via decomposition
+					     // is better handled via the
+					     // bit_iteration fallback below
+      )
+	{
+	  using _UV = __vector_type_t<_U, std::min(_V_size, __max_store_size /
+							      sizeof(_U))>;
+	  constexpr size_t _UV_size = _VectorTraits<_UV>::_S_width;
+	  constexpr bool __prefer_bitmask =
+	    (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw;
+	  using _M =
+	    _SimdWrapper<std::conditional_t<__prefer_bitmask, bool, _U>,
+			 _UV_size>;
+
+	  if constexpr (_UV_size >= _V_size)
+	    {
+	      _SimdWrapper<_U, _UV_size> __converted(__convert<_UV>(__v));
+	      // if _UV has more elements than the input (_V_size),
+	      // vector_aligned is incorrect:
+	      std::conditional_t<(_UV_size > _V_size),
+				 overaligned_tag<sizeof(_U) * _V_size>, _F>
+		__flag;
+	      __maskstore(__converted, __mem, __flag, __convert_mask<_M>(__k));
+	    }
+	  else
+	    {
+	      constexpr size_t _NFullStores = _V_size / _UV_size;
+	      constexpr size_t _NAllStores  = __div_roundup(_V_size, _UV_size);
+	      constexpr size_t _NParts      = _S_full_size<_Tp> / _UV_size;
+	      const std::array<_UV, _NAllStores> __converted =
+		__convert_all<_UV, _NAllStores>(__v);
+	      __execute_n_times<_NFullStores>(
+		[&](auto __i) {
 		  __maskstore(
-		    __converted[__i], __mem + __i * _VN, _F(),
+		    __converted[__i], __mem + __i * _UV_size, _F(),
 		    __convert_mask<_M>(__extract_part<__i, _NParts>(__k.__as_full_vector())));
 		});
-		if constexpr (_NAllStores > _NFullStores) // one partial at the end
-		  __maskstore(__converted[_NFullStores],
-			      __mem + _NFullStores * _VN, _F(),
-			      __convert_mask<_M>(
-				__extract_part<_NFullStores, _NParts>(__k.__as_full_vector())));
-	      }
-	} else {
-            __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(),
-                            [&](auto __i) constexpr { __mem[__i] = static_cast<_U>(__v[__i]); });
-        }
+	      if constexpr (_NAllStores >
+			    _NFullStores) // one partial at the end
+		__maskstore(
+		  __converted[_NFullStores], __mem + _NFullStores * _UV_size,
+		  _F(),
+		  __convert_mask<_M>(__extract_part<_NFullStores, _NParts>(
+		    __k.__as_full_vector())));
+	    }
+	}
+      else
+	{
+	  __bit_iteration(
+	    __vector_to_bitset(__k._M_data).to_ullong(), [&](
+							   auto __i) constexpr {
+	      __mem[__i] = static_cast<_U>(__v[__i]);
+	    });
+	}
     }
 
     // __complement {{{2

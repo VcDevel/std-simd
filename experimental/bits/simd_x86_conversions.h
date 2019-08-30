@@ -375,33 +375,41 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
         }
     } else if constexpr (__f32_to_u32) {  //{{{2
         // the __builtin_constant_p hack enables constant propagation
-        if constexpr (__have_avx512vl && __x_to_x) {
-            const __vector_type_t<float, 4> __x = __v;
-            return __builtin_constant_p(__x) ? __make_vector<_U>(__x[0], __x[1], __x[2], __x[3])
-                                           : __vector_bitcast<_U>(_mm_cvttps_epu32(__intrin));
-        } else if constexpr (__have_avx512f && __x_to_x) {
-            const __vector_type_t<float, 4> __x = __v;
-            return __builtin_constant_p(__x)
-                       ? __make_vector<_U>(__x[0], __x[1], __x[2], __x[3])
-                       : __vector_bitcast<_U>(__lo128(_mm512_cvttps_epu32(__auto_bitcast(__v))));
-        } else if constexpr (__have_avx512vl && __y_to_y) {
-            const __vector_type_t<float, 8> __x = __v;
-            return __builtin_constant_p(__x) ? __make_vector<_U>(__x[0], __x[1], __x[2], __x[3],
-                                                                __x[4], __x[5], __x[6], __x[7])
-                                           : __vector_bitcast<_U>(_mm256_cvttps_epu32(__intrin));
-        } else if constexpr (__have_avx512f && __y_to_y) {
-            const __vector_type_t<float, 8> __x = __v;
-            return __builtin_constant_p(__x)
-                       ? __make_vector<_U>(__x[0], __x[1], __x[2], __x[3], __x[4], __x[5], __x[6],
-                                            __x[7])
-                       : __vector_bitcast<_U>(__lo256(_mm512_cvttps_epu32(__auto_bitcast(__v))));
-        } else if constexpr (__x_to_x || __y_to_y || __z_to_z) {
-            // go to fallback, it does the right thing. We can't use the _mm_floor_ps -
-            // 0x8000'0000 trick for f32->u32 because it would discard small input values
-            // (only 24 mantissa bits)
-        } else {
-            __assert_unreachable<_Tp>();
-        }
+	if (__builtin_constant_p(__v))
+	  {
+	    if constexpr (_N == 2)
+	      return __make_vector<_U>(__v[0], __v[1]);
+	    else if constexpr (_N == 4)
+	      return __make_vector<_U>(__v[0], __v[1], __v[2], __v[3]);
+	    else if constexpr (_N == 8)
+	      return __make_vector<_U>(__v[0], __v[1], __v[2], __v[3], __v[4],
+				       __v[5], __v[6], __v[7]);
+	    else if constexpr (_N == 16)
+	      return __make_vector<_U>(__v[0], __v[1], __v[2], __v[3], __v[4],
+				       __v[5], __v[6], __v[7], __v[8], __v[9],
+				       __v[10], __v[11], __v[12], __v[13],
+				       __v[14], __v[15]);
+	    else
+	      __assert_unreachable<_Tp>();
+	  }
+	else if constexpr (__have_avx512vl && __x_to_x)
+	  return __auto_bitcast(_mm_cvttps_epu32(__intrin));
+	else if constexpr (__have_avx512f && __x_to_x)
+	  return __auto_bitcast(
+	    __lo128(_mm512_cvttps_epu32(__auto_bitcast(__v))));
+	else if constexpr (__have_avx512vl && __y_to_y)
+	  return __vector_bitcast<_U>(_mm256_cvttps_epu32(__intrin));
+	else if constexpr (__have_avx512f && __y_to_y)
+	  return __vector_bitcast<_U>(
+	    __lo256(_mm512_cvttps_epu32(__auto_bitcast(__v))));
+	else if constexpr (__x_to_x || __y_to_y || __z_to_z)
+	  {
+	    // go to fallback, it does the right thing. We can't use the
+	    // _mm_floor_ps - 0x8000'0000 trick for f32->u32 because it would
+	    // discard small input values (only 24 mantissa bits)
+	  }
+	else
+	  __assert_unreachable<_Tp>();
     } else if constexpr (__f32_to_ibw) {  //{{{2
         return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N>>(__v));
     } else if constexpr (__f64_to_s64) {  //{{{2
@@ -482,8 +490,8 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
             return __intrin_bitcast<_To>(__lo128(_mm512_cvtepu32_ps(__auto_bitcast(__v))));
         } else if constexpr(__x_to_x && (__have_fma || __have_fma4)) {
             // work around PR85819
-            return 0x10000 * _mm_cvtepi32_ps(__to_intrin(__v >> 16)) +
-                   _mm_cvtepi32_ps(__to_intrin(__v & 0xffff));
+            return __auto_bitcast(0x10000 * _mm_cvtepi32_ps(__to_intrin(__v >> 16)) +
+                   _mm_cvtepi32_ps(__to_intrin(__v & 0xffff)));
         } else if constexpr(__y_to_y && __have_avx512vl) {
             // use fallback
         } else if constexpr(__y_to_y && __have_avx512f) {
