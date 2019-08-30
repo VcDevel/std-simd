@@ -3627,22 +3627,22 @@ template <class _M, class _Tp> class const_where_expression  //{{{2
 protected:
     using value_type =
         typename std::conditional_t<std::is_arithmetic<_V>::value, Wrapper, _V>::value_type;
-    _GLIBCXX_SIMD_INTRINSIC friend const _M &__get_mask(const const_where_expression &__x) { return __x.__k; }
+    _GLIBCXX_SIMD_INTRINSIC friend const _M &__get_mask(const const_where_expression &__x) { return __x._M_k; }
     _GLIBCXX_SIMD_INTRINSIC friend const _Tp &__get_lvalue(const const_where_expression &__x) { return __x._M_value; }
-    const _M &__k;
+    const _M &_M_k;
     _Tp &_M_value;
 
 public:
     const_where_expression(const const_where_expression &) = delete;
     const_where_expression &operator=(const const_where_expression &) = delete;
 
-    _GLIBCXX_SIMD_INTRINSIC const_where_expression(const _M &__kk, const _Tp &dd) : __k(__kk), _M_value(const_cast<_Tp &>(dd)) {}
+    _GLIBCXX_SIMD_INTRINSIC const_where_expression(const _M &__kk, const _Tp &dd) : _M_k(__kk), _M_value(const_cast<_Tp &>(dd)) {}
 
     _GLIBCXX_SIMD_INTRINSIC _V operator-() const &&
     {
         return {__private_init,
                 __get_impl_t<_V>::template __masked_unary<std::negate>(
-                    __data(__k), __data(_M_value))};
+                    __data(_M_k), __data(_M_value))};
     }
 
     template <class _U, class _Flags>
@@ -3650,14 +3650,14 @@ public:
     copy_from(const _LoadStorePtr<_U, value_type> *__mem, _Flags __f) const &&
     {
         return {__private_init, __get_impl_t<_V>::__masked_load(
-                                          __data(_M_value), __data(__k), __mem, __f)};
+                                          __data(_M_value), __data(_M_k), __mem, __f)};
     }
 
     template <class _U, class _Flags>
     _GLIBCXX_SIMD_INTRINSIC void copy_to(_LoadStorePtr<_U, value_type> *__mem,
                               _Flags __f) const &&
     {
-        __get_impl_t<_V>::__masked_store(__data(_M_value), __mem, __f, __data(__k));
+        __get_impl_t<_V>::__masked_store(__data(_M_value), __mem, __f, __data(_M_k));
     }
 };
 
@@ -3673,31 +3673,31 @@ template <class _Tp> class const_where_expression<bool, _Tp>  //{{{2
 protected:
     using value_type =
         typename std::conditional_t<std::is_arithmetic<_V>::value, Wrapper, _V>::value_type;
-    _GLIBCXX_SIMD_INTRINSIC friend const _M &__get_mask(const const_where_expression &__x) { return __x.__k; }
+    _GLIBCXX_SIMD_INTRINSIC friend const _M &__get_mask(const const_where_expression &__x) { return __x._M_k; }
     _GLIBCXX_SIMD_INTRINSIC friend const _Tp &__get_lvalue(const const_where_expression &__x) { return __x._M_value; }
-    const bool __k;
+    const bool _M_k;
     _Tp &_M_value;
 
 public:
     const_where_expression(const const_where_expression &) = delete;
     const_where_expression &operator=(const const_where_expression &) = delete;
 
-    _GLIBCXX_SIMD_INTRINSIC const_where_expression(const bool __kk, const _Tp &dd) : __k(__kk), _M_value(const_cast<_Tp &>(dd)) {}
+    _GLIBCXX_SIMD_INTRINSIC const_where_expression(const bool __kk, const _Tp &dd) : _M_k(__kk), _M_value(const_cast<_Tp &>(dd)) {}
 
-    _GLIBCXX_SIMD_INTRINSIC _V operator-() const && { return __k ? -_M_value : _M_value; }
+    _GLIBCXX_SIMD_INTRINSIC _V operator-() const && { return _M_k ? -_M_value : _M_value; }
 
     template <class _U, class _Flags>
     [[nodiscard]] _GLIBCXX_SIMD_INTRINSIC _V
     copy_from(const _LoadStorePtr<_U, value_type> *__mem, _Flags) const &&
     {
-        return __k ? static_cast<_V>(__mem[0]) : _M_value;
+        return _M_k ? static_cast<_V>(__mem[0]) : _M_value;
     }
 
     template <class _U, class _Flags>
     _GLIBCXX_SIMD_INTRINSIC void copy_to(_LoadStorePtr<_U, value_type> *__mem,
                               _Flags) const &&
     {
-        if (__k) {
+        if (_M_k) {
             __mem[0] = _M_value;
         }
     }
@@ -3709,7 +3709,7 @@ class where_expression : public const_where_expression<_M, _Tp>
 {
     static_assert(!std::is_const<_Tp>::value, "where_expression may only be instantiated with __a non-const _Tp parameter");
     using typename const_where_expression<_M, _Tp>::value_type;
-    using const_where_expression<_M, _Tp>::__k;
+    using const_where_expression<_M, _Tp>::_M_k;
     using const_where_expression<_M, _Tp>::_M_value;
     static_assert(std::is_same<typename _M::abi_type, typename _Tp::abi_type>::value, "");
     static_assert(_M::size() == _Tp::size(), "");
@@ -3727,7 +3727,7 @@ public:
     template <class _U> _GLIBCXX_SIMD_INTRINSIC void operator=(_U &&__x) &&
     {
         std::experimental::__get_impl_t<_Tp>::__masked_assign(
-            __data(__k), __data(_M_value),
+            __data(_M_k), __data(_M_value),
             __to_value_type_or_member_type<_Tp>(std::forward<_U>(__x)));
     }
 
@@ -3736,7 +3736,7 @@ public:
   _GLIBCXX_SIMD_INTRINSIC void operator __op##=(_U&& __x)&&                    \
   {                                                                            \
     std::experimental::__get_impl_t<_Tp>::template __masked_cassign(           \
-      __data(__k), __data(_M_value),                                           \
+      __data(_M_k), __data(_M_value),                                           \
       __to_value_type_or_member_type<_Tp>(std::forward<_U>(__x)),              \
       [](auto __impl, auto __lhs, auto __rhs) constexpr {                      \
 	return __impl.__name(__lhs, __rhs);                                    \
@@ -3758,22 +3758,22 @@ public:
     _GLIBCXX_SIMD_INTRINSIC void operator++() &&
     {
         __data(_M_value) = __get_impl_t<_Tp>::template __masked_unary<__increment>(
-            __data(__k), __data(_M_value));
+            __data(_M_k), __data(_M_value));
     }
     _GLIBCXX_SIMD_INTRINSIC void operator++(int) &&
     {
         __data(_M_value) = __get_impl_t<_Tp>::template __masked_unary<__increment>(
-            __data(__k), __data(_M_value));
+            __data(_M_k), __data(_M_value));
     }
     _GLIBCXX_SIMD_INTRINSIC void operator--() &&
     {
         __data(_M_value) = __get_impl_t<_Tp>::template __masked_unary<__decrement>(
-            __data(__k), __data(_M_value));
+            __data(_M_k), __data(_M_value));
     }
     _GLIBCXX_SIMD_INTRINSIC void operator--(int) &&
     {
         __data(_M_value) = __get_impl_t<_Tp>::template __masked_unary<__decrement>(
-            __data(__k), __data(_M_value));
+            __data(_M_k), __data(_M_value));
     }
 
     // intentionally hides const_where_expression::copy_from
@@ -3782,7 +3782,7 @@ public:
                                 _Flags __f) &&
     {
         __data(_M_value) =
-            __get_impl_t<_Tp>::__masked_load(__data(_M_value), __data(__k), __mem, __f);
+            __get_impl_t<_Tp>::__masked_load(__data(_M_value), __data(_M_k), __mem, __f);
     }
 };
 
@@ -3792,7 +3792,7 @@ class where_expression<bool, _Tp> : public const_where_expression<bool, _Tp>
 {
     using _M = bool;
     using typename const_where_expression<_M, _Tp>::value_type;
-    using const_where_expression<_M, _Tp>::__k;
+    using const_where_expression<_M, _Tp>::_M_k;
     using const_where_expression<_M, _Tp>::_M_value;
 
 public:
@@ -3808,7 +3808,7 @@ public:
   template <class _U>                                                          \
   _GLIBCXX_SIMD_INTRINSIC void operator __op(_U&& __x)&&                       \
   {                                                                            \
-    if (__k)                                                                   \
+    if (_M_k)                                                                   \
       {                                                                        \
 	_M_value __op std::forward<_U>(__x);                                   \
       }                                                                        \
@@ -3826,17 +3826,17 @@ public:
     _GLIBCXX_SIMD_OP_(<<=);
     _GLIBCXX_SIMD_OP_(>>=);
 #undef _GLIBCXX_SIMD_OP_
-    _GLIBCXX_SIMD_INTRINSIC void operator++()    && { if (__k) { ++_M_value; } }
-    _GLIBCXX_SIMD_INTRINSIC void operator++(int) && { if (__k) { ++_M_value; } }
-    _GLIBCXX_SIMD_INTRINSIC void operator--()    && { if (__k) { --_M_value; } }
-    _GLIBCXX_SIMD_INTRINSIC void operator--(int) && { if (__k) { --_M_value; } }
+    _GLIBCXX_SIMD_INTRINSIC void operator++()    && { if (_M_k) { ++_M_value; } }
+    _GLIBCXX_SIMD_INTRINSIC void operator++(int) && { if (_M_k) { ++_M_value; } }
+    _GLIBCXX_SIMD_INTRINSIC void operator--()    && { if (_M_k) { --_M_value; } }
+    _GLIBCXX_SIMD_INTRINSIC void operator--(int) && { if (_M_k) { --_M_value; } }
 
     // intentionally hides const_where_expression::copy_from
     template <class _U, class _Flags>
     _GLIBCXX_SIMD_INTRINSIC void copy_from(const _LoadStorePtr<_U, value_type> *__mem,
                                 _Flags) &&
     {
-        if (__k) {
+        if (_M_k) {
             _M_value = __mem[0];
         }
     }
