@@ -4421,27 +4421,27 @@ template <class _U, class _Accessor = _U, class _ValueType = typename _U::value_
 class _SmartReference
 {
     friend _Accessor;
-    int index;
-    _U &obj;
+    int _M_index;
+    _U &_M_obj;
 
     _GLIBCXX_SIMD_INTRINSIC constexpr _ValueType __read() const noexcept
     {
         if constexpr (std::is_arithmetic_v<_U>) {
-            _GLIBCXX_DEBUG_ASSERT(index == 0);
-            return obj;
+            _GLIBCXX_DEBUG_ASSERT(_M_index == 0);
+            return _M_obj;
         } else {
-            return obj[index];
+            return _M_obj[_M_index];
         }
     }
 
     template <class _Tp> _GLIBCXX_SIMD_INTRINSIC constexpr void __write(_Tp &&__x) const
     {
-        _Accessor::__set(obj, index, std::forward<_Tp>(__x));
+        _Accessor::__set(_M_obj, _M_index, std::forward<_Tp>(__x));
     }
 
 public:
     _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference(_U& __o, int __i) noexcept
-        : index(__i), obj(__o)
+        : _M_index(__i), _M_obj(__o)
     {
     }
 
@@ -4456,7 +4456,7 @@ public:
     _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator=(_Tp &&__x) &&
     {
         __write(std::forward<_Tp>(__x));
-        return {obj, index};
+        return {_M_obj, _M_index};
     }
 
 // TODO: improve with operator.()
@@ -4472,7 +4472,7 @@ public:
   {                                                                            \
     const value_type& __lhs = __read();                                        \
     __write(__lhs __op __x);                                                   \
-    return {obj, index};                                                       \
+    return {_M_obj, _M_index};                                                       \
   }
     _GLIBCXX_SIMD_ALL_ARITHMETICS(_GLIBCXX_SIMD_OP_);
     _GLIBCXX_SIMD_ALL_SHIFTS(_GLIBCXX_SIMD_OP_);
@@ -4486,7 +4486,7 @@ public:
     {
         value_type __x = __read();
         __write(++__x);
-        return {obj, index};
+        return {_M_obj, _M_index};
     }
 
     template <class _Tp = void,
@@ -4507,7 +4507,7 @@ public:
     {
         value_type __x = __read();
         __write(--__x);
-        return {obj, index};
+        return {_M_obj, _M_index};
     }
 
     template <class _Tp = void,
