@@ -49,16 +49,38 @@
     }
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
+// __next_power_of_2{{{
+/**
+ * \internal
+ * Returns the next power of 2 larger than or equal to \p __x.
+ */
+constexpr std::size_t __next_power_of_2(std::size_t __x)
+{
+  return (__x & (__x - 1)) == 0 ? __x
+				: __next_power_of_2((__x | (__x >> 1)) + 1);
+}
+
+// }}}
 namespace simd_abi  // {{{
 {
 // implementation details:
 struct _ScalarAbi;
 template <int _N> struct _FixedAbi;
 
-template <int _Bytes = 16> struct _SseAbi;
-template <int _Bytes = 32> struct _AvxAbi;
-template <int _Bytes = 64> struct _Avx512Abi;
-template <int _Bytes = 16> struct _NeonAbi;
+template <int _UsedBytes>
+struct _VecBuiltinAbi;
+
+template <typename _Tp, int _N>
+using _VecNAbi = _VecBuiltinAbi<sizeof(_Tp) * _N>;
+
+template <int _UsedBytes = 16>
+using _SseAbi = _VecBuiltinAbi<_UsedBytes>;
+template <int _UsedBytes = 32>
+using _AvxAbi = _VecBuiltinAbi<_UsedBytes>;
+template <int _UsedBytes = 64>
+struct _Avx512Abi;
+template <int _UsedBytes = 16>
+using _NeonAbi = _VecBuiltinAbi<_UsedBytes>;
 
 template <int _N, class _Abi> struct _CombineAbi;
 

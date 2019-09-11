@@ -474,8 +474,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
   cos(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
-  if constexpr (__is_abi<_Abi, simd_abi::scalar>() ||
-		__is_fixed_size_abi_v<_Abi>)
+  if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init, _Abi::_SimdImpl::__cos(__data(__x))};
     }
@@ -528,8 +527,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
   sin(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
-  if constexpr (__is_abi<_Abi, simd_abi::scalar>() ||
-		__is_fixed_size_abi_v<_Abi>)
+  if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init, _Abi::_SimdImpl::__sin(__data(__x))};
     }
@@ -709,7 +707,12 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
                                                        __exp_adjust);
             return __mant;
         }
-        const auto __iszero_inf_nan = isunordered(__x * _Limits::infinity(), __x * _V());
+
+	// can't use isunordered(x*inf, x*0) because inf*0 raises invalid
+	const auto __as_int = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
+	const auto __inf = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(_V(std::numeric_limits<_Tp>::infinity()));
+	const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(__as_int == 0 || __as_int > __inf);
+
         const _V __scaled_subnormal = __x * __subnorm_scale;
         const _V __mant_subnormal = __p5_1_exponent & (__exponent_mask | __scaled_subnormal);
         where(!isnormal(__x), __mant) = __mant_subnormal;
