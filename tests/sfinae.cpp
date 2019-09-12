@@ -64,36 +64,65 @@ using std::experimental::simd_abi::__avx512;
 using std::experimental::__fixed_size_storage_t;
 using std::experimental::_SimdTuple;
 
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 1>, _SimdTuple<float, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<int, 1>, _SimdTuple<int, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<char16_t, 1>, _SimdTuple<char16_t, scalar>>);
+template <class A, class B>
+constexpr int assert_equal()
+{
+  static_assert(std::is_same_v<A, B>);
+  return 0;
+}
 
+int tmp[] = {
+  assert_equal<__fixed_size_storage_t<float, 1>, _SimdTuple<float, scalar>>(),
+  assert_equal<__fixed_size_storage_t<int, 1>, _SimdTuple<int, scalar>>(),
+  assert_equal<__fixed_size_storage_t<char16_t, 1>, _SimdTuple<char16_t, scalar>>(),
+#if _GLIBCXX_SIMD_HAVE_AVX512VL
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Avx512Abi<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Avx512Abi<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, _Avx512Abi<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, _Avx512Abi<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _Avx512Abi<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  8>, _SimdTuple<float, _Avx512Abi<32>>>(),
+  assert_equal<__fixed_size_storage_t<float, 12>, _SimdTuple<float, _Avx512Abi<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 13>, _SimdTuple<float, _Avx512Abi<52>>>(),
+  assert_equal<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>(),
+  assert_equal<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, _Avx512Abi<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, _Avx512Abi<32>>>(),
+  assert_equal<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, _Avx512Abi<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, _Avx512Abi<52>>>(),
+#else
 #if _GLIBCXX_SIMD_HAVE_SSE_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _SseAbi<8>>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _SseAbi<12>>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __sse>>);
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _SseAbi<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _SseAbi<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __sse>>(),
 #if !_GLIBCXX_SIMD_HAVE_AVX_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __sse, scalar>>);
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __sse, scalar>>(),
 #endif
 #elif _GLIBCXX_SIMD_HAVE_NEON_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _NeonAbi<8>>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _NeonAbi<8>, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __neon128>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __neon128, scalar>>);
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _NeonAbi<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _NeonAbi<8>, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __neon128>>(),
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __neon128, scalar>>(),
 #endif  // _GLIBCXX_SIMD_HAVE_SSE_ABI
 #if _GLIBCXX_SIMD_HAVE_AVX_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _AvxAbi<20>>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float,  8>, _SimdTuple<float, __avx>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 12>, _SimdTuple<float, __avx, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 13>, _SimdTuple<float, __avx, _AvxAbi<20>>>);
+  assert_equal<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _AvxAbi<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  8>, _SimdTuple<float, __avx>>(),
+#if !_GLIBCXX_SIMD_HAVE_AVX512F
+  assert_equal<__fixed_size_storage_t<float, 12>, _SimdTuple<float, __avx, __sse>>(),
+  assert_equal<__fixed_size_storage_t<float, 13>, _SimdTuple<float, __avx, _AvxAbi<20>>>(),
+  assert_equal<__fixed_size_storage_t<float, 32>, _SimdTuple<float, __avx, __avx, __avx, __avx>>(),
 #endif
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, __avx>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, __avx, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, __avx, _AvxAbi<20>>>);
 #endif
+#if _GLIBCXX_SIMD_HAVE_AVX512F && !_GLIBCXX_SIMD_HAVE_AVX512VL
+  assert_equal<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>(),
+  assert_equal<__fixed_size_storage_t<float, 17>, _SimdTuple<float, __avx512, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, __sse>>(),
+  assert_equal<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, __avx>>(),
+  assert_equal<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, _Avx512Abi<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, _Avx512Abi<52>>>(),
+#endif
+#endif
+};
+
 }  // namespace assertions
 
 // type lists {{{1
@@ -263,17 +292,15 @@ TEST_TYPES(V, is_usable,  //{{{1
 }
 
 using unusable_abis = Typelist<
-#if !_GLIBCXX_SIMD_HAVE_SSE_ABI
-    Template<simd, std::experimental::simd_abi::__sse>, Template<simd_mask, std::experimental::simd_abi::__sse>,
+#if !(_GLIBCXX_SIMD_HAVE_SSE_ABI || _GLIBCXX_SIMD_HAVE_NEON_ABI)
+    Template<simd, std::experimental::simd_abi::_VecBuiltinAbi<16>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltinAbi<16>>,
 #endif
 #if !_GLIBCXX_SIMD_HAVE_AVX_ABI
-    Template<simd, std::experimental::simd_abi::__avx>, Template<simd_mask, std::experimental::simd_abi::__avx>,
+    Template<simd, std::experimental::simd_abi::_VecBuiltinAbi<32>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltinAbi<32>>,
 #endif
 #if !_GLIBCXX_SIMD_HAVE_AVX512_ABI
-    Template<simd, std::experimental::simd_abi::__avx512>, Template<simd_mask, std::experimental::simd_abi::__avx512>,
-#endif
-#if !_GLIBCXX_SIMD_HAVE_NEON_ABI
-    Template<simd, std::experimental::simd_abi::__neon>, Template<simd_mask, std::experimental::simd_abi::__neon>,
+    Template<simd, std::experimental::simd_abi::_VecBuiltinAbi<64>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltinAbi<64>>,
+    Template<simd, std::experimental::simd_abi::_Avx512Abi<64>>, Template<simd_mask, std::experimental::simd_abi::_Avx512Abi<64>>,
 #endif
     Template<simd, int>, Template<simd_mask, int>>;
 
@@ -439,7 +466,19 @@ TEST_TYPES(V, deduce_from_list, all_test_types)
     if constexpr (std::experimental::__is_fixed_size_abi_v<A>) {
         VERIFY((V::size() == std::experimental::simd_size_v<T, W>)) << vir::typeToString<W>();
     } else {
-        VERIFY((std::is_same_v<A, W>)) << vir::typeToString<W>();
+#ifdef __AVX512VL__
+        // with AVX512VL <float, 8> deduces to simd<float, _Avx512Abi<32>>
+        if (sizeof(V) > 32) {
+            COMPARE(typeid(A), typeid(W));
+        } else if (V::size() == 1) {
+            COMPARE(typeid(A), typeid(std::experimental::simd_abi::scalar));
+        } else {
+            COMPARE(V::size(), (std::experimental::simd_size_v<T, W>)) << vir::typeToString<W>();
+            COMPARE(typeid(W), typeid(std::experimental::simd_abi::_Avx512Abi<V::size() * sizeof(T)>));
+        }
+#else
+        COMPARE(typeid(A), typeid(W));
+#endif
     }
 }
 
