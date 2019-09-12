@@ -6471,27 +6471,27 @@ public:
     // compares [simd.comparison]
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator==(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__equal_to(__x._M_data, __y._M_data));
+        return simd::__make_mask(__impl::__equal_to(__x._M_data, __y._M_data));
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator!=(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__not_equal_to(__x._M_data, __y._M_data));
+        return simd::__make_mask(__impl::__not_equal_to(__x._M_data, __y._M_data));
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator<(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__less(__x._M_data, __y._M_data));
+        return simd::__make_mask(__impl::__less(__x._M_data, __y._M_data));
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator<=(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__less_equal(__x._M_data, __y._M_data));
+        return simd::__make_mask(__impl::__less_equal(__x._M_data, __y._M_data));
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator>(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__less(__y._M_data, __x._M_data));
+        return simd::__make_mask(__impl::__less(__y._M_data, __x._M_data));
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator>=(const simd &__x, const simd &__y)
     {
-        return simd::make_mask(__impl::__less_equal(__y._M_data, __x._M_data));
+        return simd::__make_mask(__impl::__less_equal(__y._M_data, __x._M_data));
     }
 
     // "private" because of the first arguments's namespace
@@ -6510,7 +6510,7 @@ private:
     static constexpr bool __is_scalar() { return std::is_same_v<abi_type, simd_abi::scalar>; }
     static constexpr bool __is_fixed() { return __is_fixed_size_abi_v<abi_type>; }
 
-    _GLIBCXX_SIMD_INTRINSIC static mask_type make_mask(typename mask_type::__member_type __k)
+    _GLIBCXX_SIMD_INTRINSIC static mask_type __make_mask(typename mask_type::__member_type __k)
     {
         return {__private_init, __k};
     }
