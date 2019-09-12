@@ -4616,8 +4616,8 @@ public:
 // abi impl fwd decls {{{
 template <typename _Abi> struct _SimdImplBuiltin;
 template <typename _Abi> struct _MaskImplBuiltin;
-template <typename _Abi> struct __x86_simd_impl;
-template <typename _Abi> struct __x86_mask_impl;
+template <typename _Abi> struct _SimdImplX86;
+template <typename _Abi> struct _MaskImplX86;
 template <typename _Abi> struct _SimdImplNeon;
 template <typename _Abi> struct _MaskImplNeon;
 struct _SimdImplScalar;
@@ -4885,8 +4885,8 @@ struct _VecBuiltinAbi
 
   // _SimdImpl/_MaskImpl {{{2
 #if _GLIBCXX_SIMD_HAVE_SSE
-  using _SimdImpl = __x86_simd_impl<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = __x86_mask_impl<_VecBuiltinAbi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplX86<_VecBuiltinAbi<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_VecBuiltinAbi<_UsedBytes>>;
 #elif _GLIBCXX_SIMD_HAVE_NEON
   using _SimdImpl = _SimdImplNeon<_VecBuiltinAbi<_UsedBytes>>;
   using _MaskImpl = _SimdImplNeon<_VecBuiltinAbi<_UsedBytes>>;
@@ -5026,8 +5026,8 @@ public:
   }
 
   // simd/_MaskImpl {{{2
-  using _SimdImpl = __x86_simd_impl<_Avx512Abi<_UsedBytes>>;
-  using _MaskImpl = __x86_mask_impl<_Avx512Abi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplX86<_Avx512Abi<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_Avx512Abi<_UsedBytes>>;
 
   // __traits {{{2
   template <class _Tp>

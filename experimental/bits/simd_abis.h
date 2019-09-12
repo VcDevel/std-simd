@@ -4041,8 +4041,8 @@ template <class _Abi> struct _MaskImplBuiltin {
 //}}}1
 
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-// __x86_simd_impl {{{1
-template <typename _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
+// _SimdImplX86 {{{1
+template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi> {
   using _Base = _SimdImplBuiltin<_Abi>;
   template <typename _Tp>
   using _MaskMember = typename _Base::template _MaskMember<_Tp>;
@@ -6223,9 +6223,9 @@ template <typename _Abi> struct __x86_simd_impl : _SimdImplBuiltin<_Abi> {
     //}}}2
 };
 
-// __x86_mask_impl {{{1
+// _MaskImplX86 {{{1
 template <typename _Abi>
-struct __x86_mask_impl : _MaskImplBuiltin<_Abi>
+struct _MaskImplX86 : _MaskImplBuiltin<_Abi>
 {
   using _Base = _MaskImplBuiltin<_Abi>;
 
