@@ -4192,7 +4192,7 @@ _GLIBCXX_SIMD_INTRINSIC _SimdWrapper<_Tp, _N / 2>
   static_assert(_N >= 4);
   static_assert(_N % 4 == 0); // x0 - x1 - x2 - x3 -> return {x1, x2}
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-  if constexpr (__have_avx512f && sizeof(__x) == 64)
+  if constexpr (__have_avx512f && sizeof(_Tp) * _N == 64)
     {
       const auto __intrin = __to_intrin(__x);
       if constexpr (std::is_integral_v<_Tp>)
@@ -4984,8 +4984,10 @@ public:
   template <class _Tp>
   static constexpr _ImplicitMask<_Tp> __implicit_mask()
   {
-    return _S_is_partial
-	     ? (_ImplicitMask<_Tp>(1) << size<_Tp>) - 1
+    return _S_is_partial ||
+	       size<_Tp> < 8 // e.g. <int, 2> or <int, 4> are !_S_is_partial but
+			     // still require implicit masking
+	     ? _ImplicitMask<_Tp>((1ULL << size<_Tp>)-1)
 	     : ~_ImplicitMask<_Tp>();
   }
 
