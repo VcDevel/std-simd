@@ -2986,11 +2986,18 @@ struct _SimdWrapper<
 // _SimdWrapperBase{{{1
 template <typename _Tp,
 	  size_t _Width,
-	  bool = sizeof(_Tp) * _Width == sizeof(__vector_type_t<_Tp, _Width>)>
+	  bool =
+#ifdef __SUPPORT_SNAN__
+	    !std::numeric_limits<_Tp>::has_signaling_NaN ||
+	    sizeof(_Tp) * _Width == sizeof(__vector_type_t<_Tp, _Width>)
+#else
+	    true
+#endif
+	  >
 struct _SimdWrapperBase;
 
 template <typename _Tp, size_t _Width>
-struct _SimdWrapperBase<_Tp, _Width, true> // no padding
+struct _SimdWrapperBase<_Tp, _Width, true> // no padding or no SNaNs
 {
   __vector_type_t<_Tp, _Width> _M_data;
 
@@ -3006,8 +3013,9 @@ struct _SimdWrapperBase<_Tp, _Width, true> // no padding
   }
 };
 
+#ifdef __SUPPORT_SNAN__
 template <typename _Tp, size_t _Width>
-struct _SimdWrapperBase<_Tp, _Width, false> // with padding
+struct _SimdWrapperBase<_Tp, _Width, false> // with padding that needs to never become SNaN
 {
   __vector_type_t<_Tp, _Width> _M_data;
 
@@ -3022,6 +3030,7 @@ struct _SimdWrapperBase<_Tp, _Width, false> // with padding
   {
   }
 };
+#endif // __SUPPORT_SNAN__
 
 // }}}
 // _SimdWrapper{{{
@@ -3045,6 +3054,11 @@ struct _SimdWrapper<
   }
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper() = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(const _SimdWrapper &) = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(_SimdWrapper &&) = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper &operator=(const _SimdWrapper &) = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper &operator=(_SimdWrapper &&) = default;
+
   template <
     typename _U,
     typename = decltype(_SimdWrapperBase<_Tp, _Width>(std::declval<_U>()))>
@@ -6340,9 +6354,9 @@ public:
     static constexpr size_t size() { return __size_or_zero_v<_Tp, _Abi>; }
     constexpr simd() = default;
     constexpr simd(const simd &) = default;
-    constexpr simd(simd &&) = default;
+    constexpr simd(simd &&) noexcept = default;
     constexpr simd &operator=(const simd &) = default;
-    constexpr simd &operator=(simd &&) = default;
+    constexpr simd &operator=(simd &&) noexcept = default;
 
     // implicit broadcast constructor
     template <class _U, class = _ValuePreservingOrInt<_U, value_type>>

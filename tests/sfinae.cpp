@@ -235,6 +235,12 @@ template <class T, int N> constexpr bool is_fixed_size_mask(std::experimental::f
     return true;
 }
 
+template <class T> constexpr bool is_fixed_size_simd(T) { return false; }
+template <class T, int N> constexpr bool is_fixed_size_simd(std::experimental::fixed_size_simd<T, N>)
+{
+    return true;
+}
+
 TEST_TYPES(V, is_usable,  //{{{1
            concat<all_valid_scalars, all_valid_simd, all_valid_fixed_size>)
 {
@@ -243,7 +249,13 @@ TEST_TYPES(V, is_usable,  //{{{1
         // constructible
         // Actually, is_trivially_constructible is not a hard requirement by the spec, but
         // something we want to support AFAIP.
-        VERIFY(std::is_trivially_constructible<V>::value);
+#ifndef __SUPPORT_SNAN__
+        VERIFY(std::is_trivially_default_constructible<V>::value);
+#endif
+        // fixed_size must always pass via the stack, therefore not trivially
+        // copyable. All others preferably should be trivially copyable, though
+        // this is not required by the spec.
+        COMPARE(std::is_trivially_copyable<V>::value, !is_fixed_size_simd(V()));
     }
     VERIFY(std::is_destructible<V>::value);
     VERIFY(std::is_copy_constructible<V>::value);

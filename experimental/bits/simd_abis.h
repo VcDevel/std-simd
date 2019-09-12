@@ -297,7 +297,9 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   using _Base::first;
   using _Base::second;
 
-  _SimdTuple() = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple() = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(const _SimdTuple&) = default;
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple& operator=(const _SimdTuple&) = default;
 
   _GLIBCXX_SIMD_INTRINSIC char* __as_charptr()
   {
