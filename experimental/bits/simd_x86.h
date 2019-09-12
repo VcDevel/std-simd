@@ -65,7 +65,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     __masked_load(_SimdWrapper<_Tp, _N> __merge,
 		  _MaskMember<_Tp>      __k,
 		  const _U*             __mem,
-		  _F) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+		  _F) noexcept
   {
     static_assert(_N == size<_Tp>);
     if constexpr (std::is_same_v<_Tp, _U> || // no conversion

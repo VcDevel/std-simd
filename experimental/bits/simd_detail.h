@@ -305,12 +305,6 @@ template <class _Tp, class _Abi> struct simd_size;
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)
 
-#ifdef COMPILE_FOR_UNIT_TESTS
-#define _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
-#else
-#define _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST noexcept
-#endif
-
 #define _GLIBCXX_SIMD_LIST_BINARY(macro) macro(|) macro(&) macro(^)
 #define _GLIBCXX_SIMD_LIST_SHIFTS(macro) macro(<<) macro(>>)
 #define _GLIBCXX_SIMD_LIST_ARITHMETICS(macro) macro(+) macro(-) macro(*) macro(/) macro(%)

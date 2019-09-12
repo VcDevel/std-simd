@@ -2759,9 +2759,7 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
     // __load {{{2
     template <class _Tp, class _U, class _F>
     _GLIBCXX_SIMD_INTRINSIC static _SimdMember<_Tp>
-      __load(const _U* __mem,
-	     _F,
-	     _TypeTag<_Tp>) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+      __load(const _U* __mem, _F, _TypeTag<_Tp>) noexcept
     {
       constexpr size_t _N = _S_size<_Tp>;
       constexpr size_t __max_load_size =
@@ -2820,7 +2818,7 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
     static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
                                                 _MaskMember<_Tp> __k,
                                                 const _U *__mem,
-                                                _F) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+                                                _F) noexcept
     {
       __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) {
 		      __merge.__set(__i, static_cast<_Tp>(__mem[__i]));
@@ -2831,8 +2829,7 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
     // __store {{{2
     template <class _Tp, class _U, class _F>
     _GLIBCXX_SIMD_INTRINSIC static void
-      __store(_SimdMember<_Tp> __v, _U* __mem, _F, _TypeTag<_Tp>)
-	_GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+      __store(_SimdMember<_Tp> __v, _U* __mem, _F, _TypeTag<_Tp>) noexcept
     {
       // TODO: converting int -> "smaller int" can be optimized with AVX512
       constexpr size_t _N = _S_size<_Tp>;
@@ -4072,8 +4069,8 @@ template <int _N> struct _SimdImplFixedSize {
 
     // __load {{{2
     template <class _Tp, class _U, class _F>
-    static inline _SimdMember<_Tp> __load(const _U *__mem, _F __f,
-                                              _TypeTag<_Tp>) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+    static inline _SimdMember<_Tp>
+      __load(const _U* __mem, _F __f, _TypeTag<_Tp>) noexcept
     {
         return _SimdMember<_Tp>::__generate(
             [&](auto __meta) { return __meta.__load(&__mem[__meta._S_offset], __f, _TypeTag<_Tp>()); });
@@ -4083,9 +4080,9 @@ template <int _N> struct _SimdImplFixedSize {
     template <class _Tp, class... _As, class _U, class _F>
     static inline _SimdTuple<_Tp, _As...>
       __masked_load(const _SimdTuple<_Tp, _As...>& __old,
-		  const _MaskMember          __bits,
-		  const _U*                        __mem,
-		  _F __f) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+		    const _MaskMember              __bits,
+		    const _U*                      __mem,
+		    _F                             __f) noexcept
     {
       auto __merge = __old;
       __for_each(__merge, [&](auto __meta, auto& __native) {
@@ -4098,9 +4095,9 @@ template <int _N> struct _SimdImplFixedSize {
     // __store {{{2
     template <class _Tp, class _U, class _F>
     static inline void __store(const _SimdMember<_Tp>& __v,
-			     _U*                           __mem,
-			     _F                            __f,
-			     _TypeTag<_Tp>) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+			       _U*                     __mem,
+			       _F                      __f,
+			       _TypeTag<_Tp>) noexcept
     {
       __for_each(__v, [&](auto __meta, auto __native) {
 	__meta.__store(__native, &__mem[__meta._S_offset], __f, _TypeTag<_Tp>());
@@ -4110,10 +4107,9 @@ template <int _N> struct _SimdImplFixedSize {
     // __masked_store {{{2
     template <class _Tp, class... _As, class _U, class _F>
     static inline void __masked_store(const _SimdTuple<_Tp, _As...>& __v,
-				    _U*                              __mem,
-				    _F                               __f,
-				    const _MaskMember          __bits)
-      _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+				      _U*                            __mem,
+				      _F                             __f,
+				      const _MaskMember __bits) noexcept
     {
       __for_each(__v, [&](auto __meta, auto __native) {
 	__meta.__masked_store(__native, &__mem[__meta._S_offset], __f,
