@@ -45,7 +45,6 @@
 #include <arm_neon.h>
 #endif
 
-#include "simd_debug.h"
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
 #if __GNUC__ < 9
@@ -1842,7 +1841,6 @@ struct _ZeroExtendProxy
 	    return __vector_bitcast<value_type>(
 	      _mm512_castsi128_si512(__to_intrin(__x)));
 #else
-              __tag<_Tp, _To>();
 	    return __vector_bitcast<value_type>(
 	      _mm512_inserti32x4(__m512i(), __to_intrin(__x), 0));
 #endif
