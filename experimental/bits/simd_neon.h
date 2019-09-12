@@ -43,6 +43,9 @@ template <int _Bytes>
 struct _SimdImplNeon : _SimdImplBuiltin<simd_abi::_VecBuiltinAbi<_Bytes>>
 {
   using _Base = _SimdImplBuiltin<simd_abi::_VecBuiltinAbi<_Bytes>>;
+  template <typename _Tp>
+  static constexpr size_t _S_max_store_size = 16;
+
   // math {{{
   // __sqrt {{{
   template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>

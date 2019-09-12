@@ -933,261 +933,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 }
 
 // }}}1
-// __maskstore (non-converting; with optimizations for SSE2-AVX512BWVL) {{{
-template <typename _Tp, std::size_t _N, class _F>
-_GLIBCXX_SIMD_INTRINSIC void __maskstore(_SimdWrapper<_Tp, _N> __v,
-					 _Tp*                  __mem,
-					 _F,
-					 _SimdWrapper<bool, _N> __k)
-{
-  [[maybe_unused]] const auto __vi = __to_intrin(__v);
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-  if constexpr (sizeof(__vi) == 64)
-    {
-      static_assert(sizeof(__v) == 64 && __have_avx512f);
-      if constexpr (__have_avx512bw && sizeof(_Tp) == 1)
-	_mm512_mask_storeu_epi8(__mem, __k, __vi);
-      else if constexpr (__have_avx512bw && sizeof(_Tp) == 2)
-	_mm512_mask_storeu_epi16(__mem, __k, __vi);
-      else if constexpr (__have_avx512f && sizeof(_Tp) == 4)
-	{
-	  if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
-	    _mm512_mask_store_epi32(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 64> &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm512_mask_store_ps(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm512_mask_storeu_epi32(__mem, __k, __vi);
-	  else
-	    _mm512_mask_storeu_ps(__mem, __k, __vi);
-	}
-      else if constexpr (__have_avx512f && sizeof(_Tp) == 8)
-	{
-	  if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
-	    _mm512_mask_store_epi64(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 64> &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm512_mask_store_pd(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm512_mask_storeu_epi64(__mem, __k, __vi);
-	  else
-	    _mm512_mask_storeu_pd(__mem, __k, __vi);
-	}
-      else if constexpr (__have_sse2)
-	{
-	  using _M   = __vector_type_t<_Tp, _N>;
-	  using _MVT =_VectorTraits<_M>;
-	  _mm_maskmoveu_si128(__auto_bitcast(__extract<0, 4>(__v._M_data)),
-			      __auto_bitcast(__convert_mask<_M>(__k._M_data)),
-			      reinterpret_cast<char*>(__mem));
-	  _mm_maskmoveu_si128(
-	    __auto_bitcast(__extract<1, 4>(__v._M_data)),
-	    __auto_bitcast(__convert_mask<_M>(__k._M_data >> 1 * _MVT::_S_width)),
-	    reinterpret_cast<char*>(__mem) + 1 * 16);
-	  _mm_maskmoveu_si128(
-	    __auto_bitcast(__extract<2, 4>(__v._M_data)),
-	    __auto_bitcast(__convert_mask<_M>(__k._M_data >> 2 * _MVT::_S_width)),
-	    reinterpret_cast<char*>(__mem) + 2 * 16);
-	  _mm_maskmoveu_si128(
-	    __auto_bitcast(__extract<3, 4>(__v._M_data)),
-	    __auto_bitcast(__convert_mask<_M>(__k._M_data >> 3 * _MVT::_S_width)),
-	    reinterpret_cast<char*>(__mem) + 3 * 16);
-	}
-      else
-	__assert_unreachable<_Tp>();
-    }
-  else if constexpr (sizeof(__vi) == 32)
-    {
-      if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
-	_mm256_mask_storeu_epi8(__mem, __k, __vi);
-      else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
-	_mm256_mask_storeu_epi16(__mem, __k, __vi);
-      else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
-	{
-	  if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
-	    _mm256_mask_store_epi32(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 32> &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm256_mask_store_ps(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm256_mask_storeu_epi32(__mem, __k, __vi);
-	  else
-	    _mm256_mask_storeu_ps(__mem, __k, __vi);
-	}
-      else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
-	{
-	  if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
-	    _mm256_mask_store_epi64(__mem, __k, __vi);
-	  else if constexpr (__is_aligned_v<_F, 32> &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm256_mask_store_pd(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm256_mask_storeu_epi64(__mem, __k, __vi);
-	  else
-	    _mm256_mask_storeu_pd(__mem, __k, __vi);
-	}
-      else if constexpr (__have_avx512f &&
-			 (sizeof(_Tp) >= 4 || __have_avx512bw))
-	{
-	  // use a 512-bit maskstore, using zero-extension of the bitmask
-	  __maskstore(_SimdWrapper64<_Tp>(
-			__intrin_bitcast<__vector_type64_t<_Tp>>(__v._M_data)),
-		      __mem,
-		      // careful, vector_aligned has a stricter meaning in the
-		      // 512-bit maskstore:
-		      std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
-					 overaligned_tag<32>, _F>(),
-		      _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
-	}
-      else
-	{
-	  __maskstore(
-	    __v, __mem, _F(),
-	    _SimdWrapper32<_Tp>(
-	      __convert_mask<__vector_type_t<_Tp, 32 / sizeof(_Tp)>>(__k)));
-	}
-    }
-  else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-    if constexpr (sizeof(__vi) == 16)
-    {
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-      // the store is aligned if _F is overaligned_tag<16> (or higher) or _F
-      // is vector_aligned_tag while __v is actually a 16-Byte vector (could
-      // be 2/4/8 as well)
-      [[maybe_unused]] constexpr bool __aligned =
-	__is_aligned_v<_F, 16> &&
-	(sizeof(__v) == 16 || !std::is_same_v<_F, vector_aligned_tag>);
-      if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
-	_mm_mask_storeu_epi8(__mem, __k, __vi);
-      else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
-	_mm_mask_storeu_epi16(__mem, __k, __vi);
-      else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
-	{
-	  if constexpr (__aligned && std::is_integral_v<_Tp>)
-	    _mm_mask_store_epi32(__mem, __k, __vi);
-	  else if constexpr (__aligned &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm_mask_store_ps(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm_mask_storeu_epi32(__mem, __k, __vi);
-	  else
-	    _mm_mask_storeu_ps(__mem, __k, __vi);
-	}
-      else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
-	{
-	  if constexpr (__aligned && std::is_integral_v<_Tp>)
-	    _mm_mask_store_epi64(__mem, __k, __vi);
-	  else if constexpr (__aligned &&
-			     std::is_floating_point_v<_Tp>)
-	    _mm_mask_store_pd(__mem, __k, __vi);
-	  else if constexpr (std::is_integral_v<_Tp>)
-	    _mm_mask_storeu_epi64(__mem, __k, __vi);
-	  else
-	    _mm_mask_storeu_pd(__mem, __k, __vi);
-	}
-      else if constexpr (__have_avx512f &&
-			 (sizeof(_Tp) >= 4 || __have_avx512bw))
-	{
-	  // use a 512-bit maskstore, using zero-extension of the bitmask
-	  __maskstore(
-	    _SimdWrapper64<_Tp>(
-	      __intrin_bitcast<__intrinsic_type64_t<_Tp>>(__v._M_data)),
-	    __mem,
-	    // careful, vector_aligned has a stricter meaning in the 512-bit
-	    // maskstore:
-	    std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
-			       overaligned_tag<sizeof(__v)>, _F>(),
-	    _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
-	}
-      else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-	{
-	  __maskstore(
-	    __v, __mem, _F(),
-	    _SimdWrapper16<_Tp>(
-	      __convert_mask<__vector_type_t<_Tp, 16 / sizeof(_Tp)>>(__k)));
-	}
-    }
-  else
-    __assert_unreachable<_Tp>();
-}
-
-template <typename _V,
-	  typename _VVT = _VectorTraits<_V>,
-	  typename _Tp  = typename _VVT::value_type,
-	  class _F>
-_GLIBCXX_SIMD_INTRINSIC void __maskstore(_V __v, _Tp* __mem, _F, _V __k)
-{
-  constexpr size_t _N = _VVT::_S_width;
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-  if constexpr (sizeof(_V) <= 16)
-    {
-      [[maybe_unused]] const auto __vi = __intrin_bitcast<__m128i>(__as_vector(__v));
-      [[maybe_unused]] const auto __ki = __intrin_bitcast<__m128i>(__as_vector(__k));
-      if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
-	_mm_mask_storeu_epi8(__mem, _mm_movepi8_mask(__ki), __vi);
-      else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
-	_mm_mask_storeu_epi16(__mem, _mm_movepi16_mask(__ki), __vi);
-      else if constexpr (__have_avx2 && sizeof(_Tp) == 4 &&
-			 std::is_integral_v<_Tp>)
-	_mm_maskstore_epi32(reinterpret_cast<int*>(__mem), __ki, __vi);
-      else if constexpr (__have_avx && sizeof(_Tp) == 4)
-	_mm_maskstore_ps(reinterpret_cast<float*>(__mem), __ki,
-			 __vector_bitcast<float>(__vi));
-      else if constexpr (__have_avx2 && sizeof(_Tp) == 8 &&
-			 std::is_integral_v<_Tp>)
-	_mm_maskstore_epi64(reinterpret_cast<_LLong*>(__mem), __ki, __vi);
-      else if constexpr (__have_avx && sizeof(_Tp) == 8)
-	_mm_maskstore_pd(reinterpret_cast<double*>(__mem), __ki,
-			 __vector_bitcast<double>(__vi));
-      else if constexpr (__have_sse2)
-	_mm_maskmoveu_si128(__vi, __ki, reinterpret_cast<char*>(__mem));
-    }
-  else if constexpr (sizeof(_V) == 32)
-    {
-      [[maybe_unused]] const auto __vi = __intrin_bitcast<__m256i>(__as_vector(__v));
-      [[maybe_unused]] const auto __ki = __intrin_bitcast<__m256i>(__as_vector(__k));
-      if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
-	_mm256_mask_storeu_epi8(__mem, _mm256_movepi8_mask(__ki), __vi);
-      else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
-	_mm256_mask_storeu_epi16(__mem, _mm256_movepi16_mask(__ki), __vi);
-      else if constexpr (__have_avx2 && sizeof(_Tp) == 4 &&
-			 std::is_integral_v<_Tp>)
-	_mm256_maskstore_epi32(reinterpret_cast<int*>(__mem), __ki, __vi);
-      else if constexpr (sizeof(_Tp) == 4)
-	_mm256_maskstore_ps(reinterpret_cast<float*>(__mem), __ki,
-			    __vector_bitcast<float>(__v));
-      else if constexpr (__have_avx2 && sizeof(_Tp) == 8 &&
-			 std::is_integral_v<_Tp>)
-	_mm256_maskstore_epi64(reinterpret_cast<_LLong*>(__mem), __ki, __vi);
-      else if constexpr (__have_avx && sizeof(_Tp) == 8)
-	_mm256_maskstore_pd(reinterpret_cast<double*>(__mem), __ki,
-			    __vector_bitcast<double>(__v));
-      else if constexpr (__have_sse2)
-	{
-	  _mm_maskmoveu_si128(__lo128(__vi), __lo128(__ki),
-			      reinterpret_cast<char*>(__mem));
-	  _mm_maskmoveu_si128(__hi128(__vi), __hi128(__ki),
-			      reinterpret_cast<char*>(__mem) + 16);
-	}
-    }
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-  if constexpr (_N <= sizeof(long) * CHAR_BIT)
-    __bit_iteration(
-      __vector_to_bitset(__k).to_ulong(), [&](auto __i) constexpr {
-	__mem[__i] = __v[__i];
-      });
-  else if constexpr (_N <= sizeof(long long) * CHAR_BIT)
-    __bit_iteration(
-      __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
-	__mem[__i] = __v[__i];
-      });
-  else
-    __assert_unreachable<_Tp>();
-}
-
-// }}}
 // __xzyw{{{
 // shuffles the complete vector, swapping the inner two quarters. Often useful for AVX for
 // fixing up a shuffle result.
@@ -2962,8 +2707,12 @@ template <class _Tp, size_t _N> constexpr bool __is_neon_pd()
 }
 
 // _SimdImplBuiltin {{{1
-template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
-    // member types {{{2
+template <class _Abi>
+struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
+{
+  // member types {{{2
+  template <typename _Tp>
+  static constexpr size_t _S_max_store_size = 16;
     using abi_type = _Abi;
     template <class _Tp> using _TypeTag = _Tp *;
     template <class _Tp>
@@ -3088,10 +2837,7 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
       // TODO: converting int -> "smaller int" can be optimized with AVX512
       constexpr size_t _N = _S_size<_Tp>;
       constexpr size_t __max_store_size =
-	(sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
-	  ? 64
-	  : (std::is_floating_point_v<_U> && __have_avx) || __have_avx2 ? 32
-									: 16;
+	_SuperImpl::template _S_max_store_size<_U>;
       if constexpr (sizeof(_U) > 8)
 	__execute_n_times<_N>([&](auto __i) constexpr {
 	  __mem[__i] = __v[__i];
@@ -3122,23 +2868,40 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	}
     }
 
-    // __masked_store {{{2
-    template <typename _V,
-	      typename _VVT = _VectorTraits<_V>,
-	      typename _Tp  = typename _VVT::value_type,
-	      class _U,
-	      class _F>
-    static inline void
-      __masked_store(const _V __v, _U* __mem, _F, const _MaskMember<_Tp> __k)
-	_GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
+    // __masked_store_nocvt {{{2
+    template <typename _Tp, std::size_t _N, typename _F>
+    _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
+      _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<_Tp, _N> __k)
     {
-      constexpr size_t            _V_size = _S_size<_Tp>;
-      [[maybe_unused]] const auto __vi    = __to_intrin(__v);
+      if constexpr (_N <= sizeof(long) * CHAR_BIT)
+	__bit_iteration(
+	  __vector_to_bitset(__k).to_ulong(), [&](auto __i) constexpr {
+	    __mem[__i] = __v[__i];
+	  });
+      else if constexpr (_N <= sizeof(long long) * CHAR_BIT)
+	__bit_iteration(
+	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
+	    __mem[__i] = __v[__i];
+	  });
+      else
+	__assert_unreachable<_Tp>();
+    }
+
+    // __masked_store {{{2
+    template <typename _TW,
+	      typename _TVT = _VectorTraits<_TW>,
+	      typename _Tp  = typename _TVT::value_type,
+	      typename _U,
+	      typename _F>
+    static inline void __masked_store(const _TW __v,
+				      _U*       __mem,
+				      _F,
+				      const _MaskMember<_Tp> __k) noexcept
+    {
+      constexpr size_t            _TV_size = _S_size<_Tp>;
+      [[maybe_unused]] const auto __vi     = __to_intrin(__v);
       constexpr size_t            __max_store_size =
-	(sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
-	  ? 64
-	  : (std::is_floating_point_v<_U> && __have_avx) || __have_avx2 ? 32
-									: 16;
+	_SuperImpl::template _S_max_store_size<_U>;
       if constexpr (std::is_same_v<_Tp, _U> ||
 		    (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
 		     sizeof(_Tp) == sizeof(_U)))
@@ -3150,7 +2913,8 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 	    else
 	      return __wrapper_bitcast<_U>(__k);
 	  }();
-	  __maskstore(__wrapper_bitcast<_U>(__v), __mem, _F(), __kk);
+	  _SuperImpl::__masked_store_nocvt(__wrapper_bitcast<_U>(__v), __mem,
+					   _F(), __kk);
 	}
       else if constexpr (sizeof(_U) <= 8 && // no long double
 			 !__converts_via_decomposition_v<
@@ -3160,56 +2924,53 @@ template <class _Abi> struct _SimdImplBuiltin : _SimdMathFallback<_Abi> {
 					     // bit_iteration fallback below
       )
 	{
-	  using _UV = __vector_type_t<_U, std::min(_V_size, __max_store_size /
-							      sizeof(_U))>;
+	  using _UV = __vector_type_t<_U, std::min(_TV_size, __max_store_size /
+							       sizeof(_U))>;
 	  constexpr size_t _UV_size = _VectorTraits<_UV>::_S_width;
-	  using _UW = _SimdWrapper<_U, _UV_size>;
+	  using _UW                 = _SimdWrapper<_U, _UV_size>;
 	  constexpr bool __prefer_bitmask =
 	    (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw;
 	  using _UM =
 	    _SimdWrapper<std::conditional_t<__prefer_bitmask, bool, _U>,
 			 _UV_size>;
-
-	  if constexpr (_UV_size >= _V_size)
+	  if constexpr (_UV_size >= _TV_size)
 	    {
 	      _UW __converted(__convert<_UV>(__v));
-	      // if _UV has more elements than the input (_V_size),
+	      // if _UV has more elements than the input (_TV_size),
 	      // vector_aligned is incorrect:
-	      std::conditional_t<(_UV_size > _V_size),
-				 overaligned_tag<sizeof(_U) * _V_size>, _F>
+	      std::conditional_t<(_UV_size > _TV_size),
+				 overaligned_tag<sizeof(_U) * _TV_size>, _F>
 		__flag;
-	      __maskstore(__converted, __mem, __flag, __convert_mask<_UM>(__k));
+	      _SuperImpl::__masked_store_nocvt(__converted, __mem, __flag,
+					       __convert_mask<_UM>(__k));
 	    }
 	  else
 	    {
-	      constexpr size_t _NFullStores = _V_size / _UV_size;
-	      constexpr size_t _NAllStores  = __div_roundup(_V_size, _UV_size);
+	      constexpr size_t _NFullStores = _TV_size / _UV_size;
+	      constexpr size_t _NAllStores  = __div_roundup(_TV_size, _UV_size);
 	      constexpr size_t _NParts      = _S_full_size<_Tp> / _UV_size;
 	      const std::array<_UV, _NAllStores> __converted =
 		__convert_all<_UV, _NAllStores>(__v);
-	      __execute_n_times<_NFullStores>(
-		[&](auto __i) {
-		  __maskstore(
-		    _UW(__converted[__i]), __mem + __i * _UV_size, _F(),
-		    __convert_mask<_UM>(__extract_part<__i, _NParts>(__k.__as_full_vector())));
-		});
+	      __execute_n_times<_NFullStores>([&](auto __i) {
+		_SuperImpl::__masked_store_nocvt(
+		  _UW(__converted[__i]), __mem + __i * _UV_size, _F(),
+		  __convert_mask<_UM>(
+		    __extract_part<__i, _NParts>(__k.__as_full_vector())));
+	      });
 	      if constexpr (_NAllStores >
 			    _NFullStores) // one partial at the end
-		__maskstore(
-		  _UW(__converted[_NFullStores]), __mem + _NFullStores * _UV_size,
-		  _F(),
+		_SuperImpl::__masked_store_nocvt(
+		  _UW(__converted[_NFullStores]),
+		  __mem + _NFullStores * _UV_size, _F(),
 		  __convert_mask<_UM>(__extract_part<_NFullStores, _NParts>(
 		    __k.__as_full_vector())));
 	    }
 	}
       else
-	{
-	  __bit_iteration(
-	    __vector_to_bitset(__k._M_data).to_ullong(), [&](
-							   auto __i) constexpr {
-	      __mem[__i] = static_cast<_U>(__v[__i]);
-	    });
-	}
+	__bit_iteration(
+	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
+	    __mem[__i] = static_cast<_U>(__v[__i]);
+	  });
     }
 
     // __complement {{{2

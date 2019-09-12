@@ -43,7 +43,9 @@ _GLIBCXX_SIMD_BEGIN_NAMESPACE
 #endif
 
 // _SimdImplX86 {{{1
-template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi> {
+template <typename _Abi>
+struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
+{
   using _Base = _SimdImplBuiltin<_Abi>;
   template <typename _Tp>
   using _MaskMember = typename _Base::template _MaskMember<_Tp>;
@@ -51,6 +53,11 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi> {
   static constexpr size_t _S_full_size = _Abi::template _S_full_size<_Tp>;
   template <typename _Tp>
   static constexpr size_t size = _Abi::template size<_Tp>;
+  template <typename _Tp>
+  static constexpr size_t _S_max_store_size =
+    (sizeof(_Tp) >= 4 && __have_avx512f) || __have_avx512bw
+      ? 64
+      : (std::is_floating_point_v<_Tp>&& __have_avx) || __have_avx2 ? 32 : 16;
 
   // __masked_load {{{2
   template <class _Tp, size_t _N, class _U, class _F>
@@ -279,78 +286,318 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi> {
     return __merge;
   }
 
-    // __masked_store {{{2
-    template <class _Tp, size_t _N, class _U, class _F>
-    static inline void __masked_store(const _SimdWrapper<_Tp, _N> __v, _U *__mem, _F,
-                                    const _MaskMember<_Tp> __k) _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
-    {
-      if constexpr (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
-		    sizeof(_Tp) > sizeof(_U) && __have_avx512f &&
-		    (sizeof(_Tp) >= 4 || __have_avx512bw) &&
-		    (sizeof(__v) == 64 || __have_avx512vl)) {  // truncating store
-	[[maybe_unused]] const auto __vi = __to_intrin(__v);
-	const auto __kk = [&]() {
-	  if constexpr (__is_bitmask_v<decltype(__k)>) {
-	    return __k;
-	  } else {
-	    return __convert_mask<_SimdWrapper<bool, _N>>(__k);
+  // __masked_store_nocvt {{{2
+  template <typename _Tp, std::size_t _N, class _F>
+  _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
+    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<bool, _N> __k)
+  {
+    [[maybe_unused]] const auto __vi = __to_intrin(__v);
+    if constexpr (sizeof(__vi) == 64)
+      {
+	static_assert(sizeof(__v) == 64 && __have_avx512f);
+	if constexpr (__have_avx512bw && sizeof(_Tp) == 1)
+	  _mm512_mask_storeu_epi8(__mem, __k, __vi);
+	else if constexpr (__have_avx512bw && sizeof(_Tp) == 2)
+	  _mm512_mask_storeu_epi16(__mem, __k, __vi);
+	else if constexpr (__have_avx512f && sizeof(_Tp) == 4)
+	  {
+	    if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
+	      _mm512_mask_store_epi32(__mem, __k, __vi);
+	    else if constexpr (__is_aligned_v<_F, 64> &&
+			       std::is_floating_point_v<_Tp>)
+	      _mm512_mask_store_ps(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm512_mask_storeu_epi32(__mem, __k, __vi);
+	    else
+	      _mm512_mask_storeu_ps(__mem, __k, __vi);
 	  }
-	}();
-	if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 4) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
+	else if constexpr (__have_avx512f && sizeof(_Tp) == 8)
+	  {
+	    if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
+	      _mm512_mask_store_epi64(__mem, __k, __vi);
+	    else if constexpr (__is_aligned_v<_F, 64> &&
+			       std::is_floating_point_v<_Tp>)
+	      _mm512_mask_store_pd(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm512_mask_storeu_epi64(__mem, __k, __vi);
+	    else
+	      _mm512_mask_storeu_pd(__mem, __k, __vi);
 	  }
-	} else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 2) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (__have_sse2)
+	  {
+	    using _M   = __vector_type_t<_Tp, _N>;
+	    using _MVT = _VectorTraits<_M>;
+	    _mm_maskmoveu_si128(__auto_bitcast(__extract<0, 4>(__v._M_data)),
+				__auto_bitcast(__convert_mask<_M>(__k._M_data)),
+				reinterpret_cast<char*>(__mem));
+	    _mm_maskmoveu_si128(__auto_bitcast(__extract<1, 4>(__v._M_data)),
+				__auto_bitcast(__convert_mask<_M>(
+				  __k._M_data >> 1 * _MVT::_S_width)),
+				reinterpret_cast<char*>(__mem) + 1 * 16);
+	    _mm_maskmoveu_si128(__auto_bitcast(__extract<2, 4>(__v._M_data)),
+				__auto_bitcast(__convert_mask<_M>(
+				  __k._M_data >> 2 * _MVT::_S_width)),
+				reinterpret_cast<char*>(__mem) + 2 * 16);
+	    _mm_maskmoveu_si128(__auto_bitcast(__extract<3, 4>(__v._M_data)),
+				__auto_bitcast(__convert_mask<_M>(
+				  __k._M_data >> 3 * _MVT::_S_width)),
+				reinterpret_cast<char*>(__mem) + 3 * 16);
 	  }
-	} else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 1) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
-	  }
-	} else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 2) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
-	  }
-	} else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 1) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
-	  }
-	} else if constexpr (sizeof(_Tp) == 2 && sizeof(_U) == 1) {
-	  if constexpr (sizeof(__vi) == 64) {
-	    _mm512_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 32) {
-	    _mm256_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
-	  } else if constexpr (sizeof(__vi) == 16) {
-	    _mm_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
-	  }
-	} else {
+	else
 	  __assert_unreachable<_Tp>();
-	}
-      } else {
-	_Base::__masked_store(__v,__mem,_F(),__k);
       }
-    }
+    else if constexpr (sizeof(__vi) == 32)
+      {
+	if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
+	  _mm256_mask_storeu_epi8(__mem, __k, __vi);
+	else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
+	  _mm256_mask_storeu_epi16(__mem, __k, __vi);
+	else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
+	  {
+	    if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
+	      _mm256_mask_store_epi32(__mem, __k, __vi);
+	    else if constexpr (__is_aligned_v<_F, 32> &&
+			       std::is_floating_point_v<_Tp>)
+	      _mm256_mask_store_ps(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm256_mask_storeu_epi32(__mem, __k, __vi);
+	    else
+	      _mm256_mask_storeu_ps(__mem, __k, __vi);
+	  }
+	else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
+	  {
+	    if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
+	      _mm256_mask_store_epi64(__mem, __k, __vi);
+	    else if constexpr (__is_aligned_v<_F, 32> &&
+			       std::is_floating_point_v<_Tp>)
+	      _mm256_mask_store_pd(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm256_mask_storeu_epi64(__mem, __k, __vi);
+	    else
+	      _mm256_mask_storeu_pd(__mem, __k, __vi);
+	  }
+	else if constexpr (__have_avx512f &&
+			   (sizeof(_Tp) >= 4 || __have_avx512bw))
+	  {
+	    // use a 512-bit maskstore, using zero-extension of the bitmask
+	    __masked_store_nocvt(
+	      _SimdWrapper64<_Tp>(
+		__intrin_bitcast<__vector_type64_t<_Tp>>(__v._M_data)),
+	      __mem,
+	      // careful, vector_aligned has a stricter meaning in the
+	      // 512-bit maskstore:
+	      std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
+				 overaligned_tag<32>, _F>(),
+	      _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
+	  }
+	else
+	  __masked_store_nocvt(
+	    __v, __mem, _F(),
+	    _SimdWrapper32<_Tp>(
+	      __convert_mask<__vector_type_t<_Tp, 32 / sizeof(_Tp)>>(__k)));
+      }
+    else if constexpr (sizeof(__vi) == 16)
+      {
+	// the store is aligned if _F is overaligned_tag<16> (or higher) or _F
+	// is vector_aligned_tag while __v is actually a 16-Byte vector (could
+	// be 2/4/8 as well)
+	[[maybe_unused]] constexpr bool __aligned =
+	  __is_aligned_v<_F, 16> &&
+	  (sizeof(__v) == 16 || !std::is_same_v<_F, vector_aligned_tag>);
+	if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
+	  _mm_mask_storeu_epi8(__mem, __k, __vi);
+	else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
+	  _mm_mask_storeu_epi16(__mem, __k, __vi);
+	else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
+	  {
+	    if constexpr (__aligned && std::is_integral_v<_Tp>)
+	      _mm_mask_store_epi32(__mem, __k, __vi);
+	    else if constexpr (__aligned && std::is_floating_point_v<_Tp>)
+	      _mm_mask_store_ps(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm_mask_storeu_epi32(__mem, __k, __vi);
+	    else
+	      _mm_mask_storeu_ps(__mem, __k, __vi);
+	  }
+	else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
+	  {
+	    if constexpr (__aligned && std::is_integral_v<_Tp>)
+	      _mm_mask_store_epi64(__mem, __k, __vi);
+	    else if constexpr (__aligned && std::is_floating_point_v<_Tp>)
+	      _mm_mask_store_pd(__mem, __k, __vi);
+	    else if constexpr (std::is_integral_v<_Tp>)
+	      _mm_mask_storeu_epi64(__mem, __k, __vi);
+	    else
+	      _mm_mask_storeu_pd(__mem, __k, __vi);
+	  }
+	else if constexpr (__have_avx512f &&
+			   (sizeof(_Tp) >= 4 || __have_avx512bw))
+	  {
+	    // use a 512-bit maskstore, using zero-extension of the bitmask
+	    __masked_store_nocvt(
+	      _SimdWrapper64<_Tp>(
+		__intrin_bitcast<__intrinsic_type64_t<_Tp>>(__v._M_data)),
+	      __mem,
+	      // careful, vector_aligned has a stricter meaning in the 512-bit
+	      // maskstore:
+	      std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
+				 overaligned_tag<sizeof(__v)>, _F>(),
+	      _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
+	  }
+	else
+	  __masked_store_nocvt(
+	    __v, __mem, _F(),
+	    _SimdWrapper16<_Tp>(
+	      __convert_mask<__vector_type_t<_Tp, 16 / sizeof(_Tp)>>(__k)));
+      }
+    else
+      __assert_unreachable<_Tp>();
+  }
+
+  template <typename _TW,
+	    typename _Tp = typename _VectorTraits<_TW>::value_type,
+	    typename _F>
+  _GLIBCXX_SIMD_INTRINSIC static void
+    __masked_store_nocvt(_TW __v, _Tp* __mem, _F, _TW __k)
+  {
+    if constexpr (sizeof(_TW) <= 16)
+      {
+	[[maybe_unused]] const auto __vi =
+	  __intrin_bitcast<__m128i>(__as_vector(__v));
+	[[maybe_unused]] const auto __ki =
+	  __intrin_bitcast<__m128i>(__as_vector(__k));
+	if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
+	  _mm_mask_storeu_epi8(__mem, _mm_movepi8_mask(__ki), __vi);
+	else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
+	  _mm_mask_storeu_epi16(__mem, _mm_movepi16_mask(__ki), __vi);
+	else if constexpr (__have_avx2 && sizeof(_Tp) == 4 &&
+			   std::is_integral_v<_Tp>)
+	  _mm_maskstore_epi32(reinterpret_cast<int*>(__mem), __ki, __vi);
+	else if constexpr (__have_avx && sizeof(_Tp) == 4)
+	  _mm_maskstore_ps(reinterpret_cast<float*>(__mem), __ki,
+			   __vector_bitcast<float>(__vi));
+	else if constexpr (__have_avx2 && sizeof(_Tp) == 8 &&
+			   std::is_integral_v<_Tp>)
+	  _mm_maskstore_epi64(reinterpret_cast<_LLong*>(__mem), __ki, __vi);
+	else if constexpr (__have_avx && sizeof(_Tp) == 8)
+	  _mm_maskstore_pd(reinterpret_cast<double*>(__mem), __ki,
+			   __vector_bitcast<double>(__vi));
+	else if constexpr (__have_sse2)
+	  _mm_maskmoveu_si128(__vi, __ki, reinterpret_cast<char*>(__mem));
+      }
+    else if constexpr (sizeof(_TW) == 32)
+      {
+	[[maybe_unused]] const auto __vi =
+	  __intrin_bitcast<__m256i>(__as_vector(__v));
+	[[maybe_unused]] const auto __ki =
+	  __intrin_bitcast<__m256i>(__as_vector(__k));
+	if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
+	  _mm256_mask_storeu_epi8(__mem, _mm256_movepi8_mask(__ki), __vi);
+	else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
+	  _mm256_mask_storeu_epi16(__mem, _mm256_movepi16_mask(__ki), __vi);
+	else if constexpr (__have_avx2 && sizeof(_Tp) == 4 &&
+			   std::is_integral_v<_Tp>)
+	  _mm256_maskstore_epi32(reinterpret_cast<int*>(__mem), __ki, __vi);
+	else if constexpr (sizeof(_Tp) == 4)
+	  _mm256_maskstore_ps(reinterpret_cast<float*>(__mem), __ki,
+			      __vector_bitcast<float>(__v));
+	else if constexpr (__have_avx2 && sizeof(_Tp) == 8 &&
+			   std::is_integral_v<_Tp>)
+	  _mm256_maskstore_epi64(reinterpret_cast<_LLong*>(__mem), __ki, __vi);
+	else if constexpr (__have_avx && sizeof(_Tp) == 8)
+	  _mm256_maskstore_pd(reinterpret_cast<double*>(__mem), __ki,
+			      __vector_bitcast<double>(__v));
+	else if constexpr (__have_sse2)
+	  {
+	    _mm_maskmoveu_si128(__lo128(__vi), __lo128(__ki),
+				reinterpret_cast<char*>(__mem));
+	    _mm_maskmoveu_si128(__hi128(__vi), __hi128(__ki),
+				reinterpret_cast<char*>(__mem) + 16);
+	  }
+      }
+    else
+      __assert_unreachable<_Tp>();
+  }
+
+  // __masked_store {{{2
+  template <class _Tp, size_t _N, class _U, class _F>
+  _GLIBCXX_SIMD_INTRINSIC static void
+    __masked_store(const _SimdWrapper<_Tp, _N> __v,
+		   _U*                         __mem,
+		   _F,
+		   const _MaskMember<_Tp> __k) noexcept
+  {
+    if constexpr (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
+		  sizeof(_Tp) > sizeof(_U) && __have_avx512f &&
+		  (sizeof(_Tp) >= 4 || __have_avx512bw) &&
+		  (sizeof(__v) == 64 || __have_avx512vl))
+      { // truncating store
+	const auto __vi = __to_intrin(__v);
+	const auto __kk = [&]() {
+	  if constexpr (__is_bitmask_v<decltype(__k)>)
+	    return __k;
+	  else
+	    return __convert_mask<_SimdWrapper<bool, _N>>(__k);
+	}();
+	if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 4 && sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 4 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 4 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi64_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi64_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 2 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi32_storeu_epi16(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi32_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 2 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 64)
+	  _mm512_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 2 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 32)
+	  _mm256_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
+	else if constexpr (sizeof(_Tp) == 2 && sizeof(_U) == 1 &&
+			   sizeof(__vi) == 16)
+	  _mm_mask_cvtepi16_storeu_epi8(__mem, __kk, __vi);
+	else
+	  __assert_unreachable<_Tp>();
+      }
+    else
+      _Base::__masked_store(__v, __mem, _F(), __k);
+  }
 
     // __multiplies {{{2
     template <typename _V, typename _VVT = _VectorTraits<_V>>
