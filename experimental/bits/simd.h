@@ -4759,14 +4759,14 @@ template <int _N, class _Abi> struct _CombineAbi {
     template <class _Tp>
     struct _IsValid : conjunction<_IsValidAbiTag, typename _Abi::template _IsValid<_Tp>> {
     };
-    template <class _Tp> static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
+    template <class _Tp> static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
     // _SimdImpl/_MaskImpl {{{2
     using _SimdImpl = _SimdImplCombine<_N, _Abi>;
     using _MaskImpl = _MaskImplCombine<_N, _Abi>;
 
     // __traits {{{2
-    template <class _Tp, bool = __is_valid_v<_Tp>> struct __traits : _InvalidTraits {
+    template <class _Tp, bool = _S_is_valid_v<_Tp>> struct __traits : _InvalidTraits {
     };
 
     template <class _Tp> struct __traits<_Tp, true> {
@@ -4881,7 +4881,7 @@ struct _VecBuiltinAbi
   {
   };
   template <class _Tp>
-  static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
   // _SimdImpl/_MaskImpl {{{2
 #if _GLIBCXX_SIMD_HAVE_SSE
@@ -4898,7 +4898,7 @@ struct _VecBuiltinAbi
   // __traits {{{2
   template <class _Tp>
   using __traits = std::conditional_t<
-    __is_valid_v<_Tp>,
+    _S_is_valid_v<_Tp>,
     _GnuTraits<_Tp, _Tp, _VecBuiltinAbi<_UsedBytes>, size<_Tp>>,
     _InvalidTraits>;
   //}}}2
@@ -4973,7 +4973,7 @@ template <int _UsedBytes> struct _Avx512Abi {
   {
   };
   template <class _Tp>
-  static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
   // implicit mask {{{2
 private:
@@ -5032,7 +5032,7 @@ public:
   // __traits {{{2
   template <class _Tp>
   using __traits =
-    std::conditional_t<__is_valid_v<_Tp>,
+    std::conditional_t<_S_is_valid_v<_Tp>,
 		       _GnuTraits<_Tp, bool, _Avx512Abi<_UsedBytes>, size<_Tp>>,
 		       _InvalidTraits>;
   //}}}2
@@ -5046,12 +5046,12 @@ struct _ScalarAbi {
     struct _IsValidAbiTag : true_type {};
     template <class _Tp> struct _IsValidSizeFor : true_type {};
     template <class _Tp> struct _IsValid : __is_vectorizable<_Tp> {};
-    template <class _Tp> static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
+    template <class _Tp> static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
     using _SimdImpl = _SimdImplScalar;
     using _MaskImpl = _MaskImplScalar;
 
-    template <class _Tp, bool = __is_valid_v<_Tp>> struct __traits : _InvalidTraits {
+    template <class _Tp, bool = _S_is_valid_v<_Tp>> struct __traits : _InvalidTraits {
     };
 
     template <class _Tp> struct __traits<_Tp, true> {
@@ -5086,27 +5086,27 @@ template <int _N> struct _FixedAbi {
     template <class _Tp>
     struct _IsValidSizeFor
         : __bool_constant<((_N <= simd_abi::max_fixed_size<_Tp>) ||
-                                 (simd_abi::__neon::__is_valid_v<char> &&
+                                 (simd_abi::__neon::_S_is_valid_v<char> &&
                                   _N == simd_size_v<char, simd_abi::__neon>) ||
-                                 (simd_abi::__sse::__is_valid_v<char> &&
+                                 (simd_abi::__sse::_S_is_valid_v<char> &&
                                   _N == simd_size_v<char, simd_abi::__sse>) ||
-                                 (simd_abi::__avx::__is_valid_v<char> &&
+                                 (simd_abi::__avx::_S_is_valid_v<char> &&
                                   _N == simd_size_v<char, simd_abi::__avx>) ||
-                                 (simd_abi::__avx512::__is_valid_v<char> &&
+                                 (simd_abi::__avx512::_S_is_valid_v<char> &&
                                   _N == simd_size_v<char, simd_abi::__avx512>))> {
     };
     template <class _Tp>
     struct _IsValid
         : conjunction<_IsValidAbiTag, __is_vectorizable<_Tp>, _IsValidSizeFor<_Tp>> {
     };
-    template <class _Tp> static constexpr bool __is_valid_v = _IsValid<_Tp>::value;
+    template <class _Tp> static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
     // simd/_MaskImpl {{{2
     using _SimdImpl = _SimdImplFixedSize<_N>;
     using _MaskImpl = _MaskImplFixedSize<_N>;
 
     // __traits {{{2
-    template <class _Tp, bool = __is_valid_v<_Tp>> struct __traits : _InvalidTraits {
+    template <class _Tp, bool = _S_is_valid_v<_Tp>> struct __traits : _InvalidTraits {
     };
 
     template <class _Tp> struct __traits<_Tp, true> {
@@ -5172,7 +5172,7 @@ template <int _N> struct _FixedAbi {
 // __scalar_abi_wrapper {{{1
 template <int _Bytes> struct __scalar_abi_wrapper : simd_abi::_ScalarAbi {
     template <class _Tp>
-    static constexpr bool __is_valid_v = simd_abi::_ScalarAbi::_IsValid<_Tp>::value &&
+    static constexpr bool _S_is_valid_v = simd_abi::_ScalarAbi::_IsValid<_Tp>::value &&
                                        sizeof(_Tp) == _Bytes;
 };
 
@@ -5194,7 +5194,7 @@ struct __full_abi
   static constexpr auto __choose()
   {
     using _High = _Abi<__next_power_of_2(_Bytes) / 2>;
-    if constexpr (_High::template __is_valid_v<_Tp> ||
+    if constexpr (_High::template _S_is_valid_v<_Tp> ||
 		  _Bytes <= sizeof(_Tp) * 2)
       return _High();
     else
@@ -5222,12 +5222,12 @@ struct _AbiList<_A0, _Rest...>
 {
   template <class _Tp, int _N>
   static constexpr bool _S_has_valid_abi =
-    _A0<sizeof(_Tp) * _N>::template __is_valid_v<_Tp> ||
+    _A0<sizeof(_Tp) * _N>::template _S_is_valid_v<_Tp> ||
     _AbiList<_Rest...>::template _S_has_valid_abi<_Tp, _N>;
 
   template <class _Tp, int _N>
   using _FirstValidAbi = std::conditional_t<
-    _A0<sizeof(_Tp) * _N>::template __is_valid_v<_Tp>,
+    _A0<sizeof(_Tp) * _N>::template _S_is_valid_v<_Tp>,
     typename __decay_abi<_A0<sizeof(_Tp) * _N>>::type,
     typename _AbiList<_Rest...>::template _FirstValidAbi<_Tp, _N>>;
 
@@ -5236,10 +5236,10 @@ struct _AbiList<_A0, _Rest...>
 	    int _Bytes  = sizeof(_Tp) * _N,
 	    typename _B = typename __full_abi<_A0, _Bytes, _Tp>::type>
   using _BestAbi = std::conditional_t<
-    _A0<_Bytes>::template __is_valid_v<_Tp>,
+    _A0<_Bytes>::template _S_is_valid_v<_Tp>,
     typename __decay_abi<_A0<_Bytes>>::type,
     std::conditional_t<
-      (_B::template __is_valid_v<_Tp> && _B::template size<_Tp> <= _N),
+      (_B::template _S_is_valid_v<_Tp> && _B::template size<_Tp> <= _N),
       _B,
       typename _AbiList<_Rest...>::template _BestAbi<_Tp, _N>>>;
 };
@@ -5271,7 +5271,7 @@ struct __deduce_impl<_Tp, _N,
 template <class _Tp, std::size_t _N, class = void> struct __deduce_fixed_size_fallback {};
 template <class _Tp, std::size_t _N>
 struct __deduce_fixed_size_fallback<
-    _Tp, _N, enable_if_t<simd_abi::fixed_size<_N>::template __is_valid_v<_Tp>>> {
+    _Tp, _N, enable_if_t<simd_abi::fixed_size<_N>::template _S_is_valid_v<_Tp>>> {
     using type = simd_abi::fixed_size<_N>;
 };
 template <class _Tp, std::size_t _N, class>
