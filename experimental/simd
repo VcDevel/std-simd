@@ -57,6 +57,11 @@
 #include "bits/simd_detail.h"
 #include "bits/simd.h"
 #include "bits/simd_abis.h"
+#if _GLIBCXX_SIMD_X86INTRIN
+#include "bits/simd_x86.h"
+#elif _GLIBCXX_SIMD_HAVE_NEON
+#include "bits/simd_neon.h"
+#endif
 #include "bits/simd_math.h"
 
 #pragma GCC diagnostic pop
