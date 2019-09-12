@@ -711,7 +711,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
 	// can't use isunordered(x*inf, x*0) because inf*0 raises invalid
 	const auto __as_int = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
 	const auto __inf = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(_V(std::numeric_limits<_Tp>::infinity()));
-	const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(__as_int == 0 || __as_int > __inf);
+	const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(__as_int == 0 || __as_int >= __inf);
 
         const _V __scaled_subnormal = __x * __subnorm_scale;
         const _V __mant_subnormal = __p5_1_exponent & (__exponent_mask | __scaled_subnormal);
