@@ -82,7 +82,7 @@ struct _Avx512Abi;
 template <int _UsedBytes = 16>
 using _NeonAbi = _VecBuiltinAbi<_UsedBytes>;
 
-template <int _N, class _Abi> struct _CombineAbi;
+template <int _N, typename _Abi> struct _CombineAbi;
 
 // implementation-defined:
 template <int _NRegisters> using __sse_x = _CombineAbi<_NRegisters, _SseAbi<>>;
@@ -90,10 +90,10 @@ template <int _NRegisters> using __avx_x = _CombineAbi<_NRegisters, _AvxAbi<>>;
 template <int _NRegisters> using __avx512_x = _CombineAbi<_NRegisters, _Avx512Abi<>>;
 template <int _NRegisters> using __neon_x = _CombineAbi<_NRegisters, _NeonAbi<>>;
 
-template <class _Tp, int _N> using __sse_n = _SseAbi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __avx_n = _AvxAbi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __avx512_n = _Avx512Abi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __neon_n = _NeonAbi<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __sse_n = _SseAbi<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __avx_n = _AvxAbi<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __avx512_n = _Avx512Abi<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __neon_n = _NeonAbi<sizeof(_Tp) * _N>;
 
 using __sse = _SseAbi<>;
 using __avx = _AvxAbi<>;
@@ -104,16 +104,16 @@ using __neon128 = _NeonAbi<16>;
 using __neon64 = _NeonAbi<8>;
 
 // standard:
-template <class _Tp, size_t _N, class... > struct deduce;
+template <typename _Tp, size_t _N, typename... > struct deduce;
 template <int _N> using fixed_size = _FixedAbi<_N>;
 using scalar = _ScalarAbi;
 }  // namespace simd_abi }}}
 // forward declarations is_simd(_mask), simd(_mask), simd_size {{{
-template <class _Tp> struct is_simd;
-template <class _Tp> struct is_simd_mask;
-template <class _Tp, class _Abi> class simd;
-template <class _Tp, class _Abi> class simd_mask;
-template <class _Tp, class _Abi> struct simd_size;
+template <typename _Tp> struct is_simd;
+template <typename _Tp> struct is_simd_mask;
+template <typename _Tp, typename _Abi> class simd;
+template <typename _Tp, typename _Abi> class simd_mask;
+template <typename _Tp, typename _Abi> struct simd_size;
 // }}}
 
 // On Windows (WIN32) we might see macros called min and max. Just undefine them and hope
