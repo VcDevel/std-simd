@@ -1555,12 +1555,6 @@ template <size_t _N> struct __is_bitset<std::bitset<_N>> : true_type {};
 template <class _Tp> inline constexpr bool __is_bitset_v = __is_bitset<_Tp>::value;
 
 // }}}
-// __is_storage {{{
-template <class _Tp> struct __is_storage : false_type {};
-template <class _Tp, size_t _N> struct __is_storage<_SimdWrapper<_Tp, _N>> : true_type {};
-template <class _Tp> inline constexpr bool __is_storage_v = __is_storage<_Tp>::value;
-
-// }}}
 // __convert_mask{{{
 template <class _To, class _From>
 inline _To __convert_mask(_From __k)
@@ -1589,9 +1583,9 @@ inline _To __convert_mask(_From __k)
             std::conditional_t<(_To().size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
         return __convert_mask<_Tp>(__k);
         // }}}
-    } else if constexpr (__is_storage_v<_From>) {
+    } else if constexpr (__is_simd_wrapper_v<_From>) {
         return __convert_mask<_To>(__k._M_data);
-    } else if constexpr (__is_storage_v<_To>) {
+    } else if constexpr (__is_simd_wrapper_v<_To>) {
         return __convert_mask<typename _To::_BuiltinType>(__k);
     } else if constexpr (std::is_unsigned_v<_From> && __is_vector_type_v<_To>) {
         // bits -> vector {{{

@@ -706,6 +706,19 @@ template <typename _Tp>
 using _SimdWrapper64 = _SimdWrapper<_Tp, 64 / sizeof(_Tp)>;
 
 // }}}
+// __is_simd_wrapper {{{
+template <typename _Tp>
+struct __is_simd_wrapper : false_type
+{
+};
+template <typename _Tp, size_t _N>
+struct __is_simd_wrapper<_SimdWrapper<_Tp, _N>> : true_type
+{
+};
+template <typename _Tp>
+inline constexpr bool __is_simd_wrapper_v = __is_simd_wrapper<_Tp>::value;
+
+// }}}
 // __bit_iteration{{{
 constexpr _UInt   __popcount(_UInt __x) { return __builtin_popcount(__x); }
 constexpr _ULong  __popcount(_ULong __x) { return __builtin_popcountl(__x); }
