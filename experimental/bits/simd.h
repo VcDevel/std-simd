@@ -1890,8 +1890,8 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _R __extract(_Tp __in)
 	  _mm512_extracti32x4_epi32(__intrin_bitcast<__m512i>(__in), _Offset));
     }
   else
-    {
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
+    {
 #ifdef _GLIBCXX_SIMD_WORKAROUND_XXX_1
       using _W = std::conditional_t<
 	std::is_floating_point_v<value_type>, double,
