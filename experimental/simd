@@ -56,6 +56,8 @@
 
 #include "bits/simd_detail.h"
 #include "bits/simd.h"
+#include "bits/simd_fixed_size.h"
+#include "bits/simd_scalar.h"
 #include "bits/simd_abis.h"
 #if _GLIBCXX_SIMD_X86INTRIN
 #include "bits/simd_x86.h"

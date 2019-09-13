@@ -366,28 +366,6 @@ inline constexpr std::size_t __div_roundup(std::size_t __a, std::size_t __b)
 }
 
 // }}}
-// __promote_preserving_unsigned{{{
-// work around crazy semantics of unsigned integers of lower rank than int:
-// Before applying an operator the operands are promoted to int. In which case
-// over- or underflow is UB, even though the operand types were unsigned.
-template <typename _Tp>
-_GLIBCXX_SIMD_INTRINSIC constexpr const _Tp&
-  __promote_preserving_unsigned(const _Tp& __x)
-{
-  return __x;
-}
-_GLIBCXX_SIMD_INTRINSIC constexpr unsigned int
-  __promote_preserving_unsigned(const unsigned char& __x)
-{
-  return __x;
-}
-_GLIBCXX_SIMD_INTRINSIC constexpr unsigned int
-  __promote_preserving_unsigned(const unsigned short& __x)
-{
-  return __x;
-}
-
-// }}}
 // _ExactBool{{{
 class _ExactBool
 {
@@ -719,13 +697,16 @@ template <typename _Tp>
 inline constexpr bool __is_simd_wrapper_v = __is_simd_wrapper<_Tp>::value;
 
 // }}}
-// _BitOps (__popcount, __ctz, __clz, __bit_iteration) {{{
+// _BitOps {{{
 struct _BitOps
 {
+  // __popcount {{{
   static constexpr _UInt   __popcount(_UInt __x)   { return __builtin_popcount  (__x); }
   static constexpr _ULong  __popcount(_ULong __x)  { return __builtin_popcountl (__x); }
   static constexpr _ULLong __popcount(_ULLong __x) { return __builtin_popcountll(__x); }
 
+  // }}}
+  // __ctz/__clz {{{
   static constexpr _UInt   __ctz(_UInt   __x) { return __builtin_ctz  (__x); }
   static constexpr _ULong  __ctz(_ULong  __x) { return __builtin_ctzl (__x); }
   static constexpr _ULLong __ctz(_ULLong __x) { return __builtin_ctzll(__x); }
@@ -733,6 +714,8 @@ struct _BitOps
   static constexpr _ULong  __clz(_ULong  __x) { return __builtin_clzl (__x); }
   static constexpr _ULLong __clz(_ULLong __x) { return __builtin_clzll(__x); }
 
+  // }}}
+  // __bit_iteration {{{
   template <typename _Tp, typename _F>
   static void __bit_iteration(_Tp __mask, _F&& __f)
   {
@@ -763,54 +746,49 @@ struct _BitOps
       case 0: break;
       }
   }
+
+  //}}}
+  // __firstbit{{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST static auto __firstbit(_Tp __bits)
+  {
+    static_assert(std::is_integral_v<_Tp>,
+		  "__firstbit requires an integral argument");
+    if constexpr (sizeof(_Tp) <= sizeof(int))
+      return __builtin_ctz(__bits);
+    else if constexpr (alignof(_ULLong) == 8)
+      return __builtin_ctzll(__bits);
+    else
+      {
+	_UInt __lo = __bits;
+	return __lo == 0 ? 32 + __builtin_ctz(__bits >> 32)
+			 : __builtin_ctz(__lo);
+      }
+  }
+
+  // }}}
+  // __lastbit{{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST static auto __lastbit(_Tp __bits)
+  {
+    static_assert(std::is_integral_v<_Tp>,
+		  "__lastbit requires an integral argument");
+    if constexpr (sizeof(_Tp) <= sizeof(int))
+      return 31 - __builtin_clz(__bits);
+    else if constexpr (alignof(_ULLong) == 8)
+      return 63 - __builtin_clzll(__bits);
+    else
+      {
+	_UInt __lo = __bits;
+	_UInt __hi = __bits >> 32u;
+	return __hi == 0 ? 31 - __builtin_clz(__lo) : 63 - __builtin_clz(__hi);
+      }
+  }
+
+  // }}}
 };
 
 //}}}
-// __firstbit{{{
-template <typename _Tp>
-_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST auto __firstbit(_Tp __bits)
-{
-  static_assert(std::is_integral_v<_Tp>,
-		"__firstbit requires an integral argument");
-  if constexpr (sizeof(_Tp) <= sizeof(int))
-    {
-      return __builtin_ctz(__bits);
-    }
-  else if constexpr (alignof(_ULLong) == 8)
-    {
-      return __builtin_ctzll(__bits);
-    }
-  else
-    {
-      _UInt __lo = __bits;
-      return __lo == 0 ? 32 + __builtin_ctz(__bits >> 32) : __builtin_ctz(__lo);
-    }
-}
-
-// }}}
-// __lastbit{{{
-template <typename _Tp>
-_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST auto __lastbit(_Tp __bits)
-{
-  static_assert(std::is_integral_v<_Tp>,
-		"__firstbit requires an integral argument");
-  if constexpr (sizeof(_Tp) <= sizeof(int))
-    {
-      return 31 - __builtin_clz(__bits);
-    }
-  else if constexpr (alignof(_ULLong) == 8)
-    {
-      return 63 - __builtin_clzll(__bits);
-    }
-  else
-    {
-      _UInt __lo = __bits;
-      _UInt __hi = __bits >> 32u;
-      return __hi == 0 ? 31 - __builtin_clz(__lo) : 63 - __builtin_clz(__hi);
-    }
-}
-
-// }}}
 // __convert_mask declaration {{{
 template <typename _To, typename _From>
 inline _To __convert_mask(_From __k);
@@ -6195,7 +6173,7 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC int __find
   if constexpr (__is_scalar_abi<_Abi>())
     return 0;
   else if constexpr (__is_fixed_size_abi_v<_Abi>)
-    return __firstbit(__k.to_ullong());
+    return _BitOps::__firstbit(__k.to_ullong());
   else if constexpr (__is_combined_abi<_Abi>())
     {
       using _A2 = typename _Abi::_MemberAbi;
@@ -6215,11 +6193,11 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC int __find
       if constexpr (simd_size_v<_Tp, _Abi> <= 32)
 	return _tzcnt_u32(__k._M_data);
       else
-	return __firstbit(__k._M_data);
+	return _BitOps::__firstbit(__k._M_data);
     }
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else
-    return __firstbit(__vector_to_bitset(__k._M_data).to_ullong());
+    return _BitOps::__firstbit(__vector_to_bitset(__k._M_data).to_ullong());
 }
 
 // }}}
@@ -6229,7 +6207,7 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC int __find
   if constexpr (__is_scalar_abi<_Abi>())
     return 0;
   else if constexpr (__is_fixed_size_abi_v<_Abi>)
-    return __lastbit(__k.to_ullong());
+    return _BitOps::__lastbit(__k.to_ullong());
   else if constexpr (__is_combined_abi<_Abi>())
     {
       using _A2 = typename _Abi::_MemberAbi;
@@ -6249,11 +6227,11 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC int __find
       if constexpr (simd_size_v<_Tp, _Abi> <= 32)
 	return 31 - _lzcnt_u32(__k._M_data);
       else
-	return __lastbit(__k._M_data);
+	return _BitOps::__lastbit(__k._M_data);
     }
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else
-    return __lastbit(__vector_to_bitset(__k._M_data).to_ullong());
+    return _BitOps::__lastbit(__vector_to_bitset(__k._M_data).to_ullong());
 }
 
 // }}}
