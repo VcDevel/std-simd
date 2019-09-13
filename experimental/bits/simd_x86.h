@@ -241,12 +241,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	      __assert_unreachable<_Tp>();
 	  }
 	else
-	  {
-	    __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(),
-			    [&](auto __i) {
-			      __merge.__set(__i, static_cast<_Tp>(__mem[__i]));
-			    });
-	  }
+	  _BitOps::__bit_iteration(
+	    __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) {
+	      __merge.__set(__i, static_cast<_Tp>(__mem[__i]));
+	    });
       }
     /* Very uncertain, that the following improves anything. Needs benchmarking
      * before it's activated.
@@ -2515,7 +2513,8 @@ struct _MaskImplX86 : _MaskImplBuiltin<_Abi>
 	  }
 	else
 	  {
-	    __bit_iteration(__mask, [&](auto __i) { __merge.__set(__i, __mem[__i]); });
+	    _BitOps::__bit_iteration(
+	      __mask, [&](auto __i) { __merge.__set(__i, __mem[__i]); });
 	    return __merge;
 	  }
       }

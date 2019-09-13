@@ -2814,9 +2814,9 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
                                                 const _U *__mem,
                                                 _F) noexcept
     {
-      __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) {
-		      __merge.__set(__i, static_cast<_Tp>(__mem[__i]));
-		      });
+      _BitOps::__bit_iteration(
+	__vector_to_bitset(__k._M_data).to_ullong(),
+	[&](auto __i) { __merge.__set(__i, static_cast<_Tp>(__mem[__i])); });
       return __merge;
     }
 
@@ -2865,12 +2865,12 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
       _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<_Tp, _N> __k)
     {
       if constexpr (_N <= sizeof(long) * CHAR_BIT)
-	__bit_iteration(
+	_BitOps::__bit_iteration(
 	  __vector_to_bitset(__k).to_ulong(), [&](auto __i) constexpr {
 	    __mem[__i] = __v[__i];
 	  });
       else if constexpr (_N <= sizeof(long long) * CHAR_BIT)
-	__bit_iteration(
+	_BitOps::__bit_iteration(
 	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
 	    __mem[__i] = __v[__i];
 	  });
@@ -2958,7 +2958,7 @@ struct _SimdImplBuiltin : _SimdMathFallback<_Abi>
 	    }
 	}
       else
-	__bit_iteration(
+	_BitOps::__bit_iteration(
 	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
 	    __mem[__i] = static_cast<_U>(__v[__i]);
 	  });
@@ -3682,8 +3682,9 @@ template <class _Abi> struct _MaskImplBuiltin {
     {
       // AVX(2) has 32/64 bit maskload, but nothing at 8 bit granularity
       auto __tmp = __wrapper_bitcast<__int_for_sizeof_t<_Tp>>(__merge);
-      __bit_iteration(__vector_to_bitset(__mask._M_data).to_ullong(),
-		      [&](auto __i) { __tmp.__set(__i, -__mem[__i]); });
+      _BitOps::__bit_iteration(
+	__vector_to_bitset(__mask._M_data).to_ullong(),
+	[&](auto __i) { __tmp.__set(__i, -__mem[__i]); });
       __merge = __wrapper_bitcast<_Tp>(__tmp);
       return __merge;
     }
@@ -3700,8 +3701,10 @@ template <class _Abi> struct _MaskImplBuiltin {
     static inline void __masked_store(const _SimdWrapper<_Tp, _N> __v, bool *__mem, _F,
                                     const _SimdWrapper<_Tp, _N> __k) noexcept
     {
-      __bit_iteration(__vector_to_bitset(__k._M_data).to_ullong(),
-		      [&](auto __i) constexpr { __mem[__i] = __v[__i]; });
+      _BitOps::__bit_iteration(
+	__vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
+	  __mem[__i] = __v[__i];
+	});
     }
 
     // __from_bitset{{{2
@@ -4547,8 +4550,9 @@ template <int _N> struct _MaskImplFixedSize {
                                                _MaskMember __mask, const bool *__mem,
                                                _F) noexcept
     {
-        __bit_iteration(__mask.to_ullong(), [&](auto __i) { __merge[__i] = __mem[__i]; });
-        return __merge;
+      _BitOps::__bit_iteration(__mask.to_ullong(),
+			       [&](auto __i) { __merge[__i] = __mem[__i]; });
+      return __merge;
     }
 
     // __store {{{2
@@ -4649,7 +4653,7 @@ template <int _N> struct _MaskImplFixedSize {
     static inline void __masked_store(const _MaskMember __v, bool *__mem, _F,
                                     const _MaskMember __k) noexcept
     {
-        __bit_iteration(__k, [&](auto __i) { __mem[__i] = __v[__i]; });
+      _BitOps::__bit_iteration(__k, [&](auto __i) { __mem[__i] = __v[__i]; });
     }
 
     // logical and bitwise operators {{{2

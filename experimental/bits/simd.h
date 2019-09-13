@@ -719,49 +719,51 @@ template <typename _Tp>
 inline constexpr bool __is_simd_wrapper_v = __is_simd_wrapper<_Tp>::value;
 
 // }}}
-// __bit_iteration{{{
-constexpr _UInt   __popcount(_UInt __x) { return __builtin_popcount(__x); }
-constexpr _ULong  __popcount(_ULong __x) { return __builtin_popcountl(__x); }
-constexpr _ULLong __popcount(_ULLong __x) { return __builtin_popcountll(__x); }
-
-constexpr _UInt   __ctz(_UInt __x) { return __builtin_ctz(__x); }
-constexpr _ULong  __ctz(_ULong __x) { return __builtin_ctzl(__x); }
-constexpr _ULLong __ctz(_ULLong __x) { return __builtin_ctzll(__x); }
-constexpr _UInt   __clz(_UInt __x) { return __builtin_clz(__x); }
-constexpr _ULong  __clz(_ULong __x) { return __builtin_clzl(__x); }
-constexpr _ULLong __clz(_ULLong __x) { return __builtin_clzll(__x); }
-
-template <typename _Tp, typename _F>
-void __bit_iteration(_Tp __mask, _F&& __f)
+// _BitOps (__popcount, __ctz, __clz, __bit_iteration) {{{
+struct _BitOps
 {
+  static constexpr _UInt   __popcount(_UInt __x)   { return __builtin_popcount  (__x); }
+  static constexpr _ULong  __popcount(_ULong __x)  { return __builtin_popcountl (__x); }
+  static constexpr _ULLong __popcount(_ULLong __x) { return __builtin_popcountll(__x); }
+
+  static constexpr _UInt   __ctz(_UInt   __x) { return __builtin_ctz  (__x); }
+  static constexpr _ULong  __ctz(_ULong  __x) { return __builtin_ctzl (__x); }
+  static constexpr _ULLong __ctz(_ULLong __x) { return __builtin_ctzll(__x); }
+  static constexpr _UInt   __clz(_UInt   __x) { return __builtin_clz  (__x); }
+  static constexpr _ULong  __clz(_ULong  __x) { return __builtin_clzl (__x); }
+  static constexpr _ULLong __clz(_ULLong __x) { return __builtin_clzll(__x); }
+
+  template <typename _Tp, typename _F>
+  static void __bit_iteration(_Tp __mask, _F&& __f)
+  {
     static_assert(sizeof(_ULLong) >= sizeof(_Tp));
     std::conditional_t<sizeof(_Tp) <= sizeof(_UInt), _UInt, _ULLong> __k;
-    if constexpr (std::is_convertible_v<_Tp, decltype(__k)>) {
-        __k = __mask;
-    } else {
-        __k = __mask.to_ullong();
-    }
-    switch (__popcount(__k)) {
-    default:
-        do {
-            __f(__ctz(__k));
-            __k &= (__k - 1);
-        } while (__k);
-        break;
-    /*case 3:
-        __f(__ctz(__k));
-        __k &= (__k - 1);
-        [[fallthrough]];*/
-    case 2:
-        __f(__ctz(__k));
-        [[fallthrough]];
-    case 1:
-        __f(__popcount(~decltype(__k)()) - 1 - __clz(__k));
-        [[fallthrough]];
-    case 0:
-        break;
-    }
-}
+    if constexpr (std::is_convertible_v<_Tp, decltype(__k)>)
+      __k = __mask;
+    else
+      __k = __mask.to_ullong();
+    switch (__popcount(__k))
+      {
+      default:
+	do
+	  {
+	    __f(__ctz(__k));
+	    __k &= (__k - 1);
+	  }
+	while (__k);
+	break;
+      /*case 3:
+	  __f(__ctz(__k));
+	  __k &= (__k - 1);
+	  [[fallthrough]];*/
+      case 2: __f(__ctz(__k)); [[fallthrough]];
+      case 1:
+	__f(__popcount(~decltype(__k)()) - 1 - __clz(__k));
+	[[fallthrough]];
+      case 0: break;
+      }
+  }
+};
 
 //}}}
 // __firstbit{{{
