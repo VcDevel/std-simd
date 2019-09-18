@@ -589,34 +589,33 @@ _GLIBCXX_SIMD_MATH_CALL_(exp2)
 _GLIBCXX_SIMD_MATH_CALL_(expm1)
 // }}}
 // frexp {{{
+#if _GLIBCXX_SIMD_X86INTRIN
 template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getexp(_SimdWrapper<_Tp, _N> __x)
 {
-    if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
-        return __auto_bitcast(_mm_getexp_ps(__to_intrin(__x)));
-    } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>()) {
-        return __auto_bitcast(_mm512_getexp_ps(__auto_bitcast(__to_intrin(__x))));
-    } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>()) {
-        return _mm_getexp_pd(__x);
-    } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>()) {
-        return __lo128(_mm512_getexp_pd(__auto_bitcast(__x)));
-    } else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _N>()) {
-        return _mm256_getexp_ps(__x);
-    } else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _N>()) {
-        return __lo256(_mm512_getexp_ps(__auto_bitcast(__x)));
-    } else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _N>()) {
-        return _mm256_getexp_pd(__x);
-    } else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _N>()) {
-        return __lo256(_mm512_getexp_pd(__auto_bitcast(__x)));
-    } else if constexpr (__is_avx512_ps<_Tp, _N>()) {
-        return _mm512_getexp_ps(__x);
-    } else if constexpr (__is_avx512_pd<_Tp, _N>()) {
-        return _mm512_getexp_pd(__x);
-    } else {
-        __assert_unreachable<_Tp>();
-    }
+  if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>())
+    return __auto_bitcast(_mm_getexp_ps(__to_intrin(__x)));
+  else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>())
+    return __auto_bitcast(_mm512_getexp_ps(__auto_bitcast(__to_intrin(__x))));
+  else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>())
+    return _mm_getexp_pd(__x);
+  else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>())
+    return __lo128(_mm512_getexp_pd(__auto_bitcast(__x)));
+  else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _N>())
+    return _mm256_getexp_ps(__x);
+  else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _N>())
+    return __lo256(_mm512_getexp_ps(__auto_bitcast(__x)));
+  else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _N>())
+    return _mm256_getexp_pd(__x);
+  else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _N>())
+    return __lo256(_mm512_getexp_pd(__auto_bitcast(__x)));
+  else if constexpr (__is_avx512_ps<_Tp, _N>())
+    return _mm512_getexp_ps(__x);
+  else if constexpr (__is_avx512_pd<_Tp, _N>())
+    return _mm512_getexp_pd(__x);
+  else
+    __assert_unreachable<_Tp>();
 }
 
-#if _GLIBCXX_SIMD_X86INTRIN
 template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getmant_avx512(_SimdWrapper<_Tp, _N> __x)
 {
     if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
@@ -754,6 +753,7 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 		    std::experimental::logb(_V(__private_init, __xx)));
 		})};
       }
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
     else if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>())
       {
 	return {__private_init,
@@ -789,6 +789,7 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
       {
 	return {__private_init, _mm512_getexp_pd(__data(__x))};
       }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
     else
       {
 	using _V = simd<_Tp, _Abi>;

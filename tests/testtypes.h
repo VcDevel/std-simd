@@ -48,12 +48,20 @@ namespace simd_abi = std::experimental::simd_abi;
 
 // all_native_abis {{{1
 using all_native_abis = vir::Typelist<simd_abi::scalar,
-				      simd_abi::_SseAbi<8>,
-				      simd_abi::__sse,
-				      simd_abi::__avx,
-				      simd_abi::__avx512,
-				      simd_abi::__neon64,
-				      simd_abi::__neon128>;
+				      simd_abi::_VecBuiltinAbi<8>,
+				      simd_abi::_VecBuiltinAbi<16>,
+				      simd_abi::_VecBuiltinAbi<24>,
+				      simd_abi::_VecBuiltinAbi<32>,
+				      simd_abi::_VecBuiltinAbi<48>,
+				      simd_abi::_VecBuiltinAbi<64>
+#ifdef _GLIBCXX_SIMD_X86INTRIN
+				      ,
+				      simd_abi::_Avx512Abi<8>,
+				      simd_abi::_Avx512Abi<16>,
+				      simd_abi::_Avx512Abi<32>,
+				      simd_abi::_Avx512Abi<64>
+#endif
+				      >;
 
 // (all_)arithmetic_types {{{1
 using all_arithmetic_types =
@@ -123,7 +131,7 @@ using current_native_mask_test_types =
 using native_test_types =
 #if !defined(ABITYPES) || ABITYPES == 0
   vir::concat<
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && !_GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI
+#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && !_GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
     vir::expand_one<vir::Template<base_template, simd_abi::__avx512>,
 		    testtypes_64_32>,
 #endif
@@ -137,7 +145,7 @@ using native_test_types =
 #endif
 #if _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
     vir::expand_list<vir::Typelist<
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI
+#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
 		       vir::Template<base_template, simd_abi::__avx512>,
 #endif
 #if _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
@@ -155,7 +163,7 @@ using native_test_types =
 using native_real_test_types =
 #if !defined(ABITYPES) || ABITYPES == 0
   vir::concat<
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI
+#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
     vir::expand_one<vir::Template<base_template, simd_abi::__avx512>,
 		    testtypes_fp>,
 #endif

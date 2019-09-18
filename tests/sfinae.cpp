@@ -75,7 +75,7 @@ int tmp[] = {
   assert_equal<__fixed_size_storage_t<float, 1>, _SimdTuple<float, scalar>>(),
   assert_equal<__fixed_size_storage_t<int, 1>, _SimdTuple<int, scalar>>(),
   assert_equal<__fixed_size_storage_t<char16_t, 1>, _SimdTuple<char16_t, scalar>>(),
-#if _GLIBCXX_SIMD_HAVE_AVX512VL
+#if _GLIBCXX_SIMD_HAVE_AVX512VL && _GLIBCXX_SIMD_X86INTRIN
   assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Avx512Abi<8>>>(),
   assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Avx512Abi<12>>>(),
   assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, _Avx512Abi<16>>>(),
@@ -112,7 +112,7 @@ int tmp[] = {
   assert_equal<__fixed_size_storage_t<float, 32>, _SimdTuple<float, __avx, __avx, __avx, __avx>>(),
 #endif
 #endif
-#if _GLIBCXX_SIMD_HAVE_AVX512F && !_GLIBCXX_SIMD_HAVE_AVX512VL
+#if _GLIBCXX_SIMD_HAVE_AVX512F && !_GLIBCXX_SIMD_HAVE_AVX512VL && _GLIBCXX_SIMD_X86INTRIN
   assert_equal<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>(),
   assert_equal<__fixed_size_storage_t<float, 17>, _SimdTuple<float, __avx512, scalar>>(),
   assert_equal<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, __sse>>(),
@@ -219,11 +219,11 @@ using all_valid_simd = concat<
                          Template<simd_mask, std::experimental::simd_abi::__avx>>,
                 testtypes_fp>,
 #endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI
+#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
     expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
                          Template<simd_mask, std::experimental::simd_abi::__avx512>>,
                 testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_AVX512_ABI
+#elif _GLIBCXX_SIMD_HAVE_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
     expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
                          Template<simd_mask, std::experimental::simd_abi::__avx512>>,
                 testtypes_64_32>,
@@ -474,7 +474,13 @@ TEST_TYPES(V, deduce_from_list, all_test_types)
             COMPARE(typeid(A), typeid(std::experimental::simd_abi::scalar));
         } else {
             COMPARE(V::size(), (std::experimental::simd_size_v<T, W>)) << vir::typeToString<W>();
-            COMPARE(typeid(W), typeid(std::experimental::simd_abi::_Avx512Abi<V::size() * sizeof(T)>));
+	    COMPARE(typeid(W), typeid(std::experimental::simd_abi::
+#if _GLIBCXX_SIMD_X86INTRIN
+                                      _Avx512Abi
+#else
+                                      _VecBuiltinAbi
+#endif
+                                      <V::size() * sizeof(T)>));
         }
 #else
         COMPARE(typeid(A), typeid(W));

@@ -2751,7 +2751,7 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int __testnzc(_Tp __a, _Tp
 // }}}
 #if _GLIBCXX_SIMD_HAVE_SSE_ABI
 // __bool_storage_member_type{{{
-#if _GLIBCXX_SIMD_HAVE_AVX512F
+#if _GLIBCXX_SIMD_HAVE_AVX512F && _GLIBCXX_SIMD_X86INTRIN
 template <size_t _Size>
 struct __bool_storage_member_type
 {
@@ -3094,38 +3094,37 @@ using compatible = scalar;
 
 // }}}
 // native {{{
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI
 template <typename _Tp>
-using native = __fallback_abi_for_long_double_t<_Tp, __avx512, scalar>;
-#elif _GLIBCXX_SIMD_HAVE_AVX512_ABI
+auto __determine_native_abi()
+{
+  if constexpr (sizeof(_Tp) > 8)
+    return static_cast<scalar*>(nullptr);
+  else if constexpr (__have_avx512bw_vl)
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+    return static_cast<_Avx512Abi<64>*>(nullptr);
+#else  // _GLIBCXX_SIMD_X86INTRIN
+    return static_cast<_VecBuiltinAbi<64>*>(nullptr);
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  else if constexpr (__have_avx512bw || (__have_avx512f && sizeof(_Tp) >= 4))
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+    return static_cast<_Avx512Abi<64>*>(nullptr);
+#else  // _GLIBCXX_SIMD_X86INTRIN
+    return static_cast<_VecBuiltinAbi<64>*>(nullptr);
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  else if constexpr (__have_avx2 ||
+		     (__have_avx && std::is_floating_point_v<_Tp>))
+    return static_cast<_VecBuiltinAbi<32>*>(nullptr);
+  else if constexpr (__have_neon || __have_sse2 ||
+		     (__have_sse && std::is_same_v<_Tp, float>))
+    return static_cast<_VecBuiltinAbi<16>*>(nullptr);
+  else if constexpr (__have_mmx && sizeof(_Tp) <= 4 && std::is_integral_v<_Tp>)
+    return static_cast<_VecBuiltinAbi<8>*>(nullptr);
+  else
+    return static_cast<scalar*>(nullptr);
+}
+
 template <typename _Tp>
-using native =
-  std::conditional_t<(sizeof(_Tp) >= 4),
-		     __fallback_abi_for_long_double_t<_Tp, __avx512, scalar>,
-		     __avx>;
-#elif _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-template <typename _Tp>
-using native = __fallback_abi_for_long_double_t<_Tp, __avx, scalar>;
-#elif _GLIBCXX_SIMD_HAVE_AVX_ABI
-template <typename _Tp>
-using native =
-  std::conditional_t<std::is_floating_point<_Tp>::value,
-		     __fallback_abi_for_long_double_t<_Tp, __avx, scalar>,
-		     __sse>;
-#elif _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-template <typename _Tp>
-using native = __fallback_abi_for_long_double_t<_Tp, __sse, scalar>;
-#elif _GLIBCXX_SIMD_HAVE_SSE_ABI
-template <typename _Tp>
-using native =
-  std::conditional_t<std::is_same<float, _Tp>::value, __sse, scalar>;
-#elif defined _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI
-template <typename _Tp>
-using native = __fallback_abi_for_long_double_t<_Tp, __neon, scalar>;
-#else
-template <typename>
-using native = scalar;
-#endif
+using native = std::remove_pointer_t<decltype(__determine_native_abi<_Tp>())>;
 
 // }}}
 // __default_abi {{{
@@ -4636,9 +4635,13 @@ template <class _Tp, class _MT, class _Abi, size_t _N> struct _GnuTraits {
 // __avx512_is_vectorizable {{{1
 template <class _Tp>
 struct __avx512_is_vectorizable
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
 : std::conditional_t<__have_avx512bw || (sizeof(_Tp) >= 4 && __have_avx512f),
 		     __is_vectorizable<_Tp>,
 		     std::false_type>
+#else
+: std::false_type
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
 {
 };
 template <>
@@ -4793,7 +4796,7 @@ struct _VecBuiltinAbi
   static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
   // _SimdImpl/_MaskImpl {{{2
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_SIMD_X86INTRIN
   using _SimdImpl = _SimdImplX86<_VecBuiltinAbi<_UsedBytes>>;
   using _MaskImpl = _MaskImplX86<_VecBuiltinAbi<_UsedBytes>>;
 #elif _GLIBCXX_SIMD_HAVE_NEON

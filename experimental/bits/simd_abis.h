@@ -253,7 +253,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr __bool_storage_member_type_t<_N / _Total>
 
 // }}}
 // _ToWrapper specializations for bitset and __mmask<_N> {{{
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI
+#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
 template <size_t _N> class _ToWrapper<std::bitset<_N>>
 {
     std::bitset<_N> _M_data;
@@ -1418,7 +1418,10 @@ struct _SimdImplBuiltin
 	  constexpr size_t _UV_size = _VectorTraits<_UV>::_S_width;
 	  using _UW                 = _SimdWrapper<_U, _UV_size>;
 	  constexpr bool __prefer_bitmask =
-	    (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw;
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+	    (__have_avx512f && sizeof(_U) >= 4) || __have_avx512bw ||
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+	    false;
 	  using _UM =
 	    _SimdWrapper<std::conditional_t<__prefer_bitmask, bool, _U>,
 			 _UV_size>;
@@ -2197,35 +2200,19 @@ struct _SimdImplBuiltin
 	  const auto __aslong = __vector_bitcast<_LLong>(__tmp);
 	  return {int(__aslong[0]), {int(__aslong[1])}};
 	}
+#if _GLIBCXX_SIMD_X86INTRIN
       else if constexpr (sizeof(_Tp) == 8 && sizeof(__tmp) == 32 &&
 			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
-	{
-#if _GLIBCXX_SIMD_X86INTRIN
 	  return {_mm_packs_epi32(__to_intrin(__lo128(__tmp)),
 				  __to_intrin(__hi128(__tmp)))};
-#else  // _GLIBCXX_SIMD_X86INTRIN
-	  const auto __aslong = __vector_bitcast<_LLong>(__tmp);
-	  return {__make_wrapper<int>(__aslong[0], __aslong[1], __aslong[2], __aslong[3])};
-#endif // _GLIBCXX_SIMD_X86INTRIN
-	}
       else if constexpr (sizeof(_Tp) == 8 && sizeof(__tmp) == 64 &&
 			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
-	{
-#if _GLIBCXX_SIMD_X86INTRIN
 	  return {_mm512_cvtepi64_epi32(__to_intrin(__tmp))};
-#else  // _GLIBCXX_SIMD_X86INTRIN
-	  const auto __aslong = __vector_bitcast<_LLong>(__tmp);
-	  return {__make_wrapper<int>(__aslong[0], __aslong[1], __aslong[2],
-				      __aslong[3], __aslong[4], __aslong[5],
-				      __aslong[6], __aslong[7])};
 #endif // _GLIBCXX_SIMD_X86INTRIN
-	}
-      else if constexpr (_N == 2 && sizeof(_Tp) == 8 &&
-			 __fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
-	{
-	  const auto __aslong = __vector_bitcast<_LLong>(__tmp);
-	  return {__make_wrapper<int>(__aslong[0], __aslong[1])};
-	}
+      else if constexpr(__fixed_size_storage_t<int, _N>::_S_tuple_size == 1)
+	return {__call_with_subscripts<_N>(
+	  __vector_bitcast<_LLong>(__tmp),
+	  [](auto... __l) { return __make_wrapper<int>(__l...); })};
       else
 	__assert_unreachable<_Tp>();
     }

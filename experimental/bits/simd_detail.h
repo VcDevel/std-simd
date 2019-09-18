@@ -370,7 +370,7 @@ template <typename _Tp, typename _Abi> struct simd_size;
 
 // abs pattern may generate MMX instructions without EMMS cleanup (This only happens with SSSE3
 // because pabs[bwd] is part of SSSE3.)
-#if __GNUC__ < 10 && defined __SSSE3__
+#if __GNUC__ < 10 && defined __SSSE3__ && _GLIBCXX_SIMD_X86INTRIN
 #define _GLIBCXX_SIMD_WORKAROUND_PR91533 1
 #endif
 
