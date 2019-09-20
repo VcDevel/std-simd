@@ -1558,7 +1558,12 @@ struct _SimdImplBuiltin
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_shift_right(_SimdWrapper<_Tp, _N> __x,
                                                                          int __y)
     {
-        return __x._M_data >> __y;
+      // work around PR91838
+      if (__builtin_constant_p(__y) &&
+	  __y >= static_cast<int>(sizeof(_Tp) * CHAR_BIT) && is_unsigned_v<_Tp>)
+	return _SimdWrapper<_Tp, _N>{};
+      else
+	return __x._M_data >> __y;
     }
 
     // compares {{{2
