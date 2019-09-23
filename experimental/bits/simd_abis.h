@@ -1907,42 +1907,42 @@ struct _SimdImplBuiltin
   template <typename _Tp>
   static constexpr auto __isgreater(_Tp __x, _Tp __y)
   {
-      return [=](auto __i) constexpr
-      {
+    return __data(simd_mask<typename _Tp::value_type, _Abi>(
+      __private_init, [=](auto __i) constexpr {
 	return std::isgreater(__x[__i], __y[__i]);
-      };
+      }));
   }
   template <typename _Tp>
   static constexpr auto __isgreaterequal(_Tp __x, _Tp __y)
   {
-      return [=](auto __i) constexpr
-      {
+    return __data(simd_mask<typename _Tp::value_type, _Abi>(
+      __private_init, [=](auto __i) constexpr {
 	return std::isgreaterequal(__x[__i], __y[__i]);
-      };
+      }));
   }
   template <typename _Tp>
   static constexpr auto __isless(_Tp __x, _Tp __y)
   {
-      return [=](auto __i) constexpr
-      {
+    return __data(simd_mask<typename _Tp::value_type, _Abi>(
+      __private_init, [=](auto __i) constexpr {
 	return std::isless(__x[__i], __y[__i]);
-      };
+      }));
   }
   template <typename _Tp>
   static constexpr auto __islessequal(_Tp __x, _Tp __y)
   {
-      return [=](auto __i) constexpr
-      {
+    return __data(simd_mask<typename _Tp::value_type, _Abi>(
+      __private_init, [=](auto __i) constexpr {
 	return std::islessequal(__x[__i], __y[__i]);
-      };
+      }));
   }
   template <typename _Tp>
   static constexpr auto __islessgreater(_Tp __x, _Tp __y)
   {
-      return [=](auto __i) constexpr
-      {
+    return __data(simd_mask<typename _Tp::value_type, _Abi>(
+      __private_init, [=](auto __i) constexpr {
 	return std::islessgreater(__x[__i], __y[__i]);
-      };
+      }));
   }
 
 #undef _GLIBCXX_SIMD_MATH_FALLBACK
@@ -2094,8 +2094,11 @@ struct _SimdImplBuiltin
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __isunordered(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
-      return _SuperImpl::__isless(__x, __y) ==
-	     _SuperImpl::__isgreaterequal(__x, __y);
+      return (simd_mask<_Tp, _Abi>(__private_init,
+				   _SuperImpl::__isless(__x, __y)) ==
+	      simd_mask<_Tp, _Abi>(__private_init,
+				   _SuperImpl::__isgreaterequal(__x, __y)))
+	._M_data;
     }
 
     // __signbit {{{3
