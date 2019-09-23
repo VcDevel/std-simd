@@ -64,49 +64,49 @@ constexpr std::size_t __next_power_of_2(std::size_t __x)
 namespace simd_abi  // {{{
 {
 // implementation details:
-struct _ScalarAbi;
-template <int _N> struct _FixedAbi;
+struct _Scalar;
+template <int _N> struct _Fixed;
 
 template <int _UsedBytes>
-struct _VecBuiltinAbi;
+struct _VecBuiltin;
 
 template <typename _Tp, int _N>
-using _VecNAbi = _VecBuiltinAbi<sizeof(_Tp) * _N>;
+using _VecN = _VecBuiltin<sizeof(_Tp) * _N>;
 
 template <int _UsedBytes = 16>
-using _SseAbi = _VecBuiltinAbi<_UsedBytes>;
+using _Sse = _VecBuiltin<_UsedBytes>;
 template <int _UsedBytes = 32>
-using _AvxAbi = _VecBuiltinAbi<_UsedBytes>;
+using _Avx = _VecBuiltin<_UsedBytes>;
 template <int _UsedBytes = 64>
-struct _Avx512Abi;
+struct _Avx512;
 template <int _UsedBytes = 16>
-using _NeonAbi = _VecBuiltinAbi<_UsedBytes>;
+using _Neon = _VecBuiltin<_UsedBytes>;
 
-template <int _N, typename _Abi> struct _CombineAbi;
+template <int _N, typename _Abi> struct _Combine;
 
 // implementation-defined:
-template <int _NRegisters> using __sse_x = _CombineAbi<_NRegisters, _SseAbi<>>;
-template <int _NRegisters> using __avx_x = _CombineAbi<_NRegisters, _AvxAbi<>>;
-template <int _NRegisters> using __avx512_x = _CombineAbi<_NRegisters, _Avx512Abi<>>;
-template <int _NRegisters> using __neon_x = _CombineAbi<_NRegisters, _NeonAbi<>>;
+template <int _NRegisters> using __sse_x = _Combine<_NRegisters, _Sse<>>;
+template <int _NRegisters> using __avx_x = _Combine<_NRegisters, _Avx<>>;
+template <int _NRegisters> using __avx512_x = _Combine<_NRegisters, _Avx512<>>;
+template <int _NRegisters> using __neon_x = _Combine<_NRegisters, _Neon<>>;
 
-template <typename _Tp, int _N> using __sse_n = _SseAbi<sizeof(_Tp) * _N>;
-template <typename _Tp, int _N> using __avx_n = _AvxAbi<sizeof(_Tp) * _N>;
-template <typename _Tp, int _N> using __avx512_n = _Avx512Abi<sizeof(_Tp) * _N>;
-template <typename _Tp, int _N> using __neon_n = _NeonAbi<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __sse_n = _Sse<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __avx_n = _Avx<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __avx512_n = _Avx512<sizeof(_Tp) * _N>;
+template <typename _Tp, int _N> using __neon_n = _Neon<sizeof(_Tp) * _N>;
 
-using __sse = _SseAbi<>;
-using __avx = _AvxAbi<>;
-using __avx512 = _Avx512Abi<>;
-using __neon = _NeonAbi<>;
+using __sse = _Sse<>;
+using __avx = _Avx<>;
+using __avx512 = _Avx512<>;
+using __neon = _Neon<>;
 
-using __neon128 = _NeonAbi<16>;
-using __neon64 = _NeonAbi<8>;
+using __neon128 = _Neon<16>;
+using __neon64 = _Neon<8>;
 
 // standard:
 template <typename _Tp, size_t _N, typename... > struct deduce;
-template <int _N> using fixed_size = _FixedAbi<_N>;
-using scalar = _ScalarAbi;
+template <int _N> using fixed_size = _Fixed<_N>;
+using scalar = _Scalar;
 }  // namespace simd_abi }}}
 // forward declarations is_simd(_mask), simd(_mask), simd_size {{{
 template <typename _Tp> struct is_simd;

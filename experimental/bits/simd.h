@@ -274,7 +274,7 @@ inline constexpr int
 template <typename _Abi> constexpr bool __is_sse_abi()
 {
   constexpr auto _Bytes = __abi_bytes_v<_Abi>;
-  return _Bytes <= 16 && std::is_same_v<simd_abi::_VecBuiltinAbi<_Bytes>, _Abi>;
+  return _Bytes <= 16 && std::is_same_v<simd_abi::_VecBuiltin<_Bytes>, _Abi>;
 }
 
 // }}}
@@ -283,7 +283,7 @@ template <typename _Abi> constexpr bool __is_avx_abi()
 {
   constexpr auto _Bytes = __abi_bytes_v<_Abi>;
   return _Bytes > 16 && _Bytes <= 32 &&
-	 std::is_same_v<simd_abi::_VecBuiltinAbi<_Bytes>, _Abi>;
+	 std::is_same_v<simd_abi::_VecBuiltin<_Bytes>, _Abi>;
 }
 
 // }}}
@@ -291,7 +291,7 @@ template <typename _Abi> constexpr bool __is_avx_abi()
 template <typename _Abi> constexpr bool __is_avx512_abi()
 {
   constexpr auto _Bytes = __abi_bytes_v<_Abi>;
-  return _Bytes <= 64 && std::is_same_v<simd_abi::_Avx512Abi<_Bytes>, _Abi>;
+  return _Bytes <= 64 && std::is_same_v<simd_abi::_Avx512<_Bytes>, _Abi>;
 }
 
 // }}}
@@ -299,7 +299,7 @@ template <typename _Abi> constexpr bool __is_avx512_abi()
 template <typename _Abi> constexpr bool __is_neon_abi()
 {
   constexpr auto _Bytes = __abi_bytes_v<_Abi>;
-  return _Bytes <= 16 && std::is_same_v<simd_abi::_VecBuiltinAbi<_Bytes>, _Abi>;
+  return _Bytes <= 16 && std::is_same_v<simd_abi::_VecBuiltin<_Bytes>, _Abi>;
 }
 
 // }}}
@@ -307,7 +307,7 @@ template <typename _Abi> constexpr bool __is_neon_abi()
 template <template <int, typename> class _Combine, int _N, typename _Abi>
 constexpr bool __is_combined_abi(_Combine<_N, _Abi>*)
 {
-  return std::is_same_v<_Combine<_N, _Abi>, simd_abi::_CombineAbi<_N, _Abi>>;
+  return std::is_same_v<_Combine<_N, _Abi>, simd_abi::_Combine<_N, _Abi>>;
 }
 template <typename _Abi>
 constexpr bool __is_combined_abi(_Abi*)
@@ -3101,24 +3101,24 @@ auto __determine_native_abi()
     return static_cast<scalar*>(nullptr);
   else if constexpr (__have_avx512bw_vl)
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-    return static_cast<_Avx512Abi<32>*>(nullptr);
+    return static_cast<_Avx512<32>*>(nullptr);
 #else  // _GLIBCXX_SIMD_X86INTRIN
-    return static_cast<_VecBuiltinAbi<32>*>(nullptr);
+    return static_cast<_VecBuiltin<32>*>(nullptr);
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else if constexpr (__have_avx512bw || (__have_avx512f && sizeof(_Tp) >= 4))
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-    return static_cast<_Avx512Abi<64>*>(nullptr);
+    return static_cast<_Avx512<64>*>(nullptr);
 #else  // _GLIBCXX_SIMD_X86INTRIN
-    return static_cast<_VecBuiltinAbi<64>*>(nullptr);
+    return static_cast<_VecBuiltin<64>*>(nullptr);
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else if constexpr (__have_avx2 ||
 		     (__have_avx && std::is_floating_point_v<_Tp>))
-    return static_cast<_VecBuiltinAbi<32>*>(nullptr);
+    return static_cast<_VecBuiltin<32>*>(nullptr);
   else if constexpr (__have_neon || __have_sse2 ||
 		     (__have_sse && std::is_same_v<_Tp, float>))
-    return static_cast<_VecBuiltinAbi<16>*>(nullptr);
+    return static_cast<_VecBuiltin<16>*>(nullptr);
   else if constexpr (__have_mmx && sizeof(_Tp) <= 4 && std::is_integral_v<_Tp>)
-    return static_cast<_VecBuiltinAbi<8>*>(nullptr);
+    return static_cast<_VecBuiltin<8>*>(nullptr);
   else
     return static_cast<scalar*>(nullptr);
 }
@@ -4653,8 +4653,8 @@ struct __avx512_is_vectorizable<long double> : false_type
 
 namespace simd_abi
 {
-// _CombineAbi {{{1
-template <int _N, class _Abi> struct _CombineAbi {
+// _Combine {{{1
+template <int _N, class _Abi> struct _Combine {
     template <class _Tp> static constexpr size_t size = _N *_Abi::template size<_Tp>;
     template <class _Tp> static constexpr size_t _S_full_size = size<_Tp>;
 
@@ -4700,7 +4700,7 @@ template <int _N, class _Abi> struct _CombineAbi {
         struct _SimdBase {
             explicit operator const _SimdMember &() const
             {
-                return static_cast<const simd<_Tp, _CombineAbi> *>(this)->_M_data;
+                return static_cast<const simd<_Tp, _Combine> *>(this)->_M_data;
             }
         };
 
@@ -4709,7 +4709,7 @@ template <int _N, class _Abi> struct _CombineAbi {
         struct _MaskBase {
             explicit operator const _MaskMember &() const
             {
-                return static_cast<const simd_mask<_Tp, _CombineAbi> *>(this)->_M_data;
+                return static_cast<const simd_mask<_Tp, _Combine> *>(this)->_M_data;
             }
         };
 
@@ -4763,9 +4763,9 @@ struct _SizeSupported<long double, _Bytes> : std::false_type
 {
 };
 
-// _VecBuiltinAbi {{{1
+// _VecBuiltin {{{1
 template <int _UsedBytes>
-struct _VecBuiltinAbi
+struct _VecBuiltin
 {
   template <class _Tp>
   static constexpr size_t size = _UsedBytes / sizeof(_Tp);
@@ -4797,21 +4797,21 @@ struct _VecBuiltinAbi
 
   // _SimdImpl/_MaskImpl {{{2
 #if _GLIBCXX_SIMD_X86INTRIN
-  using _SimdImpl = _SimdImplX86<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = _MaskImplX86<_VecBuiltinAbi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplX86<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_VecBuiltin<_UsedBytes>>;
 #elif _GLIBCXX_SIMD_HAVE_NEON
-  using _SimdImpl = _SimdImplNeon<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = _MaskImplNeon<_VecBuiltinAbi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplNeon<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplNeon<_VecBuiltin<_UsedBytes>>;
 #else
-  using _SimdImpl = _SimdImplBuiltin<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = _MaskImplBuiltin<_VecBuiltinAbi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplBuiltin<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplBuiltin<_VecBuiltin<_UsedBytes>>;
 #endif
 
   // __traits {{{2
   template <class _Tp>
   using __traits = std::conditional_t<
     _S_is_valid_v<_Tp>,
-    _GnuTraits<_Tp, _Tp, _VecBuiltinAbi<_UsedBytes>, size<_Tp>>,
+    _GnuTraits<_Tp, _Tp, _VecBuiltin<_UsedBytes>, size<_Tp>>,
     _InvalidTraits>;
   //}}}2
 
@@ -4859,8 +4859,8 @@ struct _VecBuiltinAbi
   }
 };
 
-// _Avx512Abi {{{1
-template <int _UsedBytes> struct _Avx512Abi {
+// _Avx512 {{{1
+template <int _UsedBytes> struct _Avx512 {
   template <class _Tp>
   static constexpr size_t size = _UsedBytes / sizeof(_Tp);
   template <class _Tp>
@@ -4939,20 +4939,20 @@ public:
   }
 
   // simd/_MaskImpl {{{2
-  using _SimdImpl = _SimdImplX86<_Avx512Abi<_UsedBytes>>;
-  using _MaskImpl = _MaskImplX86<_Avx512Abi<_UsedBytes>>;
+  using _SimdImpl = _SimdImplX86<_Avx512<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_Avx512<_UsedBytes>>;
 
   // __traits {{{2
   template <class _Tp>
   using __traits =
     std::conditional_t<_S_is_valid_v<_Tp>,
-		       _GnuTraits<_Tp, bool, _Avx512Abi<_UsedBytes>, size<_Tp>>,
+		       _GnuTraits<_Tp, bool, _Avx512<_UsedBytes>, size<_Tp>>,
 		       _InvalidTraits>;
   //}}}2
 };
 
-// _ScalarAbi {{{1
-struct _ScalarAbi {
+// _Scalar {{{1
+struct _Scalar {
     template <class _Tp> static constexpr size_t size = 1;
     template <class _Tp> static constexpr size_t _S_full_size = 1;
     static constexpr bool                        _S_is_partial = false;
@@ -4988,8 +4988,8 @@ struct _ScalarAbi {
     };
 };
 
-// _FixedAbi {{{1
-template <int _N> struct _FixedAbi {
+// _Fixed {{{1
+template <int _N> struct _Fixed {
     template <class _Tp> static constexpr size_t size = _N;
     template <class _Tp> static constexpr size_t _S_full_size = _N;
     // validity traits {{{2
@@ -5044,7 +5044,7 @@ template <int _N> struct _FixedAbi {
 
             explicit operator const _SimdMember &() const
             {
-                return static_cast<const simd<_Tp, _FixedAbi> *>(this)->_M_data;
+                return static_cast<const simd<_Tp, _Fixed> *>(this)->_M_data;
             }
             explicit operator std::array<_Tp, _N>() const
             {
@@ -5084,9 +5084,9 @@ template <int _N> struct _FixedAbi {
 }  // namespace simd_abi
 
 // __scalar_abi_wrapper {{{1
-template <int _Bytes> struct __scalar_abi_wrapper : simd_abi::_ScalarAbi {
+template <int _Bytes> struct __scalar_abi_wrapper : simd_abi::_Scalar {
     template <class _Tp>
-    static constexpr bool _S_is_valid_v = simd_abi::_ScalarAbi::_IsValid<_Tp>::value &&
+    static constexpr bool _S_is_valid_v = simd_abi::_Scalar::_IsValid<_Tp>::value &&
                                        sizeof(_Tp) == _Bytes;
 };
 
@@ -5163,8 +5163,8 @@ struct _AbiList<_A0, _Rest...>
 // the following lists all native ABIs, which makes them accessible to simd_abi::deduce
 // and select_best_vector_type_t (for fixed_size). Order matters: Whatever comes first has
 // higher priority.
-using _AllNativeAbis = _AbiList<simd_abi::_Avx512Abi,
-				simd_abi::_VecBuiltinAbi,
+using _AllNativeAbis = _AbiList<simd_abi::_Avx512,
+				simd_abi::_VecBuiltin,
 				__scalar_abi_wrapper>;
 
 // valid _SimdTraits specialization {{{1

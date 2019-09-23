@@ -48,18 +48,18 @@ namespace simd_abi = std::experimental::simd_abi;
 
 // all_native_abis {{{1
 using all_native_abis = vir::Typelist<simd_abi::scalar,
-				      simd_abi::_VecBuiltinAbi<8>,
-				      simd_abi::_VecBuiltinAbi<16>,
-				      simd_abi::_VecBuiltinAbi<24>,
-				      simd_abi::_VecBuiltinAbi<32>,
-				      simd_abi::_VecBuiltinAbi<48>,
-				      simd_abi::_VecBuiltinAbi<64>
+				      simd_abi::_VecBuiltin<8>,
+				      simd_abi::_VecBuiltin<16>,
+				      simd_abi::_VecBuiltin<24>,
+				      simd_abi::_VecBuiltin<32>,
+				      simd_abi::_VecBuiltin<48>,
+				      simd_abi::_VecBuiltin<64>
 #ifdef _GLIBCXX_SIMD_X86INTRIN
 				      ,
-				      simd_abi::_Avx512Abi<8>,
-				      simd_abi::_Avx512Abi<16>,
-				      simd_abi::_Avx512Abi<32>,
-				      simd_abi::_Avx512Abi<64>
+				      simd_abi::_Avx512<8>,
+				      simd_abi::_Avx512<16>,
+				      simd_abi::_Avx512<32>,
+				      simd_abi::_Avx512<64>
 #endif
 				      >;
 
