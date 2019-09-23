@@ -633,12 +633,12 @@ inline _To __convert_mask(_From __k)
     } else if constexpr (std::is_unsigned_v<_From> && __is_vector_type_v<_To>) {
         // bits -> vector {{{
         using _Trait = _VectorTraits<_To>;
-        constexpr size_t _N_in = sizeof(_From) * CHAR_BIT;
         using _ToT = typename _Trait::value_type;
         constexpr size_t _N_out = _Trait::_S_width;
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+        constexpr size_t _N_in = sizeof(_From) * CHAR_BIT;
         constexpr size_t _N = std::min(_N_in, _N_out);
         constexpr size_t __bytes_per_output_element = sizeof(_ToT);
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
         if constexpr (__have_avx512f) {
             if constexpr (__bytes_per_output_element == 1 && sizeof(_To) <= 16) {
                 if constexpr (__have_avx512bw_vl) {

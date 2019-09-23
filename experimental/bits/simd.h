@@ -2024,7 +2024,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr std::bitset<8 * sizeof(_Tp)>
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC std::bitset<_TVT::_S_width> __vector_to_bitset(_Tp __x)
 {
-  constexpr int __w = sizeof(typename _TVT::value_type);
+  [[maybe_unused]] constexpr int __w = sizeof(typename _TVT::value_type);
 
 #if _GLIBCXX_SIMD_HAVE_NEON // {{{
   using _I = __int_with_sizeof_t<__w>;
