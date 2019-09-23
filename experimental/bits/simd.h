@@ -4869,13 +4869,14 @@ template <int _UsedBytes> struct _Avx512Abi {
   static constexpr bool _S_is_partial = (_UsedBytes & (_UsedBytes - 1)) != 0;
 
   // validity traits {{{2
-  struct _IsValidAbiTag
-  : __bool_constant<(_UsedBytes > (__have_avx512vl ? 1 : 32) &&
-		     _UsedBytes <= 64)>
-  {};
+  struct _IsValidAbiTag : __bool_constant<(_UsedBytes > 1 && _UsedBytes <= 64)>
+  {
+  };
   template <class _Tp>
-  struct _IsValidSizeFor : __bool_constant<(_UsedBytes / sizeof(_Tp) > 1 &&
-					    _UsedBytes % sizeof(_Tp) == 0)>
+  struct _IsValidSizeFor
+  : __bool_constant<(_UsedBytes / sizeof(_Tp) > 1 &&
+		     _UsedBytes % sizeof(_Tp) == 0 &&
+		     (_UsedBytes > 32 || __have_avx512vl))>
   {
   };
   template <class _Tp>
@@ -4995,17 +4996,18 @@ template <int _N> struct _FixedAbi {
     struct _IsValidAbiTag
         : public __bool_constant<(_N > 0)> {
     };
-    template <class _Tp>
+    template <typename _Tp>
     struct _IsValidSizeFor
-        : __bool_constant<((_N <= simd_abi::max_fixed_size<_Tp>) ||
-                                 (simd_abi::__neon::_S_is_valid_v<char> &&
-                                  _N == simd_size_v<char, simd_abi::__neon>) ||
-                                 (simd_abi::__sse::_S_is_valid_v<char> &&
-                                  _N == simd_size_v<char, simd_abi::__sse>) ||
-                                 (simd_abi::__avx::_S_is_valid_v<char> &&
-                                  _N == simd_size_v<char, simd_abi::__avx>) ||
-                                 (simd_abi::__avx512::_S_is_valid_v<char> &&
-                                  _N == simd_size_v<char, simd_abi::__avx512>))> {
+    : __bool_constant<((_N <= simd_abi::max_fixed_size<_Tp>) ||
+		       (simd_abi::__neon::_S_is_valid_v<char> &&
+			_N == simd_size_v<char, simd_abi::__neon>) ||
+		       (simd_abi::__sse::_S_is_valid_v<char> &&
+			_N == simd_size_v<char, simd_abi::__sse>) ||
+		       (simd_abi::__avx::_S_is_valid_v<char> &&
+			_N == simd_size_v<char, simd_abi::__avx>) ||
+		       (simd_abi::__avx512::_S_is_valid_v<char> &&
+			_N == simd_size_v<char, simd_abi::__avx512>))>
+    {
     };
     template <class _Tp>
     struct _IsValid
