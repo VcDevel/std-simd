@@ -4801,10 +4801,10 @@ struct _VecBuiltinAbi
   using _MaskImpl = _MaskImplX86<_VecBuiltinAbi<_UsedBytes>>;
 #elif _GLIBCXX_SIMD_HAVE_NEON
   using _SimdImpl = _SimdImplNeon<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = _SimdImplNeon<_VecBuiltinAbi<_UsedBytes>>;
+  using _MaskImpl = _MaskImplNeon<_VecBuiltinAbi<_UsedBytes>>;
 #else
   using _SimdImpl = _SimdImplBuiltin<_VecBuiltinAbi<_UsedBytes>>;
-  using _MaskImpl = _SimdImplBuiltin<_VecBuiltinAbi<_UsedBytes>>;
+  using _MaskImpl = _MaskImplBuiltin<_VecBuiltinAbi<_UsedBytes>>;
 #endif
 
   // __traits {{{2
