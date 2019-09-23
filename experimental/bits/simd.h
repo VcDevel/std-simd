@@ -5871,64 +5871,6 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC bool __non
 }
 
 // }}}
-// __some_of {{{
-template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC bool __some_of(const _Data &__k)
-{
-  constexpr size_t _N = simd_size_v<_Tp, _Abi>;
-  if constexpr (_N == 1)
-    {
-      return false;
-    }
-  else if constexpr (__is_fixed_size_abi_v<_Abi>)
-    {
-      return __k.any() && !__k.all();
-    }
-  else if constexpr (__is_combined_abi<_Abi>())
-    {
-      return __any_of<_Tp, _Abi>(__k) && !__all_of<_Tp, _Abi>(__k);
-    }
-#if _GLIBCXX_SIMD_X86INTRIN
-  else if constexpr (__is_sse_abi<_Abi>() || __is_avx_abi<_Abi>())
-    {
-      if constexpr (__have_sse4_1)
-	{
-	  return 0 != __testnzc(__k._M_data, _Abi::template __implicit_mask<_Tp>());
-	}
-      else if constexpr (std::is_same_v<_Tp, float>)
-	{
-	  constexpr int __allbits = (1 << _N) - 1;
-	  const auto    __tmp = _mm_movemask_ps(__to_intrin(__k)) & __allbits;
-	  return __tmp > 0 && __tmp < __allbits;
-	}
-      else if constexpr (std::is_same_v<_Tp, double>)
-	{
-	  constexpr int __allbits = (1 << _N) - 1;
-	  const auto    __tmp = _mm_movemask_pd(__to_intrin(__k)) & __allbits;
-	  return __tmp > 0 && __tmp < __allbits;
-	}
-      else
-	{
-	  constexpr int __allbits = (1 << (_N * sizeof(_Tp))) - 1;
-	  const auto    __tmp = _mm_movemask_epi8(__to_intrin(__k)) & __allbits;
-	  return __tmp > 0 && __tmp < __allbits;
-	}
-    }
-  else if constexpr (__is_avx512_abi<_Abi>())
-    {
-      return __any_of<_Tp, _Abi>(__k) && !__all_of<_Tp, _Abi>(__k);
-    }
-#endif // _GLIBCXX_SIMD_X86INTRIN
-  else
-    {
-      int __n_false = __call_with_subscripts(
-	__vector_bitcast<__int_for_sizeof_t<_Tp>>(__k),
-	make_index_sequence<_N>(),
-	[](const auto... __ent) constexpr { return (... + (__ent == 0)); });
-      return __n_false > 0 && __n_false < _N;
-    }
-}
-
-// }}}
 // __popcount {{{
 template <class _Tp, class _Abi, class _Data>
 _GLIBCXX_SIMD_INTRINSIC int __popcount(const _Data& __k)
@@ -6085,7 +6027,62 @@ _GLIBCXX_SIMD_INTRINSIC int __popcount(const _Data& __k)
 #endif // _GLIBCXX_SIMD_HAVE_NEON }}}
   else
     {
-      __assert_unreachable<_Tp>();
+      using _I = __int_for_sizeof_t<_Tp>;
+      if constexpr (std::is_default_constructible_v<simd<_I, _Abi>>)
+	return -reduce(
+	  simd<_I, _Abi>(__private_init, __wrapper_bitcast<_I>(__k)));
+      else
+	return -reduce(
+	  __proposed::simd_reinterpret_cast<rebind_simd_t<_I, simd<_Tp, _Abi>>>(
+	    simd<_Tp, _Abi>(__private_init, __k)));
+    }
+}
+
+// }}}
+// __some_of {{{
+template <class _Tp, class _Abi, class _Data>
+_GLIBCXX_SIMD_INTRINSIC bool __some_of(const _Data& __k)
+{
+  constexpr size_t _N = simd_size_v<_Tp, _Abi>;
+  if constexpr (_N == 1)
+    return false;
+  else if constexpr (__is_fixed_size_abi_v<_Abi>)
+    return __k.any() && !__k.all();
+  else if constexpr (__is_combined_abi<_Abi>())
+    return __any_of<_Tp, _Abi>(__k) && !__all_of<_Tp, _Abi>(__k);
+#if _GLIBCXX_SIMD_X86INTRIN //{{{
+  else if constexpr (__is_sse_abi<_Abi>() || __is_avx_abi<_Abi>())
+    {
+      if constexpr (__have_sse4_1)
+	{
+	  return 0 != __testnzc(__k._M_data, _Abi::template __implicit_mask<_Tp>());
+	}
+      else if constexpr (std::is_same_v<_Tp, float>)
+	{
+	  constexpr int __allbits = (1 << _N) - 1;
+	  const auto    __tmp = _mm_movemask_ps(__to_intrin(__k)) & __allbits;
+	  return __tmp > 0 && __tmp < __allbits;
+	}
+      else if constexpr (std::is_same_v<_Tp, double>)
+	{
+	  constexpr int __allbits = (1 << _N) - 1;
+	  const auto    __tmp = _mm_movemask_pd(__to_intrin(__k)) & __allbits;
+	  return __tmp > 0 && __tmp < __allbits;
+	}
+      else
+	{
+	  constexpr int __allbits = (1 << (_N * sizeof(_Tp))) - 1;
+	  const auto    __tmp = _mm_movemask_epi8(__to_intrin(__k)) & __allbits;
+	  return __tmp > 0 && __tmp < __allbits;
+	}
+    }
+  else if constexpr (__is_avx512_abi<_Abi>())
+    return __any_of<_Tp, _Abi>(__k) && !__all_of<_Tp, _Abi>(__k);
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+  else
+    {
+      const int __n_true = __popcount<_Tp, _Abi>(__k);
+      return __n_true > 0 && __n_true < int(_N);
     }
 }
 
