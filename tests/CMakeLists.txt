@@ -93,6 +93,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/v
 # Look for the Intel SDE if we're running on x86 and Linux#{{{
 ##################################################################
 if(Vc_X86 AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+   find_program(RUN_ON_AVX512 run_on_avx512 DOC "Path to a script that runs the executable on a skylake-avx512 machine")
+
    macro(Vc_find_sde)
       find_program(INTEL_SDE sde64 ${ARGN} DOC "Path to the Intel Software Development Emulator")
       if(INTEL_SDE)
@@ -360,6 +362,9 @@ function(vc_add_test name) #{{{
          if((impl STREQUAL "KNL" AND HAVE_AVX512PF AND HAVE_AVX512ER) OR
             (impl STREQUAL "AVX512" AND HAVE_AVX512DQ AND HAVE_AVX512VL AND HAVE_AVX512BW))
             set(can_exec_test TRUE)
+         elseif(Vc_X86 AND RUN_ON_AVX512 AND "${impl}" MATCHES "^(avx512|knl)$")
+            set(can_exec_test TRUE)
+            set(emulator "${RUN_ON_AVX512}")
          elseif(Vc_X86 AND INTEL_SDE)
             set(can_exec_test TRUE)
             set(emulator "${INTEL_SDE};${sde_cpuid_${impl}};--")
