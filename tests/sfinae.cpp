@@ -126,115 +126,14 @@ int tmp[] = {
 }  // namespace assertions
 
 // type lists {{{1
-using all_valid_scalars = expand_list<Typelist<Template<simd, std::experimental::simd_abi::scalar>,
-                                               Template<simd_mask, std::experimental::simd_abi::scalar>>,
-                                      testtypes>;
+using all_valid_scalars =
+  vir::expand_one<Template<simd, std::experimental::simd_abi::scalar>, testtypes>;
 
-using all_valid_fixed_size = expand_list<
-    concat<
-        VIR_CHOOSE_ONE_RANDOMLY(Typelist<Template<simd, std::experimental::simd_abi::fixed_size<1>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<2>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<3>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<4>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<5>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<6>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<7>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<8>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<9>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<10>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<11>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<12>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<13>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<14>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<15>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<16>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(Typelist<Template<simd, std::experimental::simd_abi::fixed_size<17>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<18>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<19>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<20>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<21>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<22>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<23>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<24>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<25>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<26>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<27>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<28>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<29>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<30>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<31>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<32>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(
-            Typelist<Template<simd_mask, std::experimental::simd_abi::fixed_size<1>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<2>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<3>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<4>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<5>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<6>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<7>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<8>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<9>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<10>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<11>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<12>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<13>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<14>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<15>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<16>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(
-            Typelist<Template<simd_mask, std::experimental::simd_abi::fixed_size<17>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<18>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<19>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<20>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<21>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<22>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<23>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<24>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<25>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<26>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<27>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<28>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<29>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<30>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<31>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<32>>>)>,
-    testtypes>;
+using all_valid_fixed_size = expand_list<fixed_size_abi_list, testtypes>;
 
-using all_valid_simd = concat<
-#if _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
-                         Template<simd_mask, std::experimental::simd_abi::__sse>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_SSE_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
-                         Template<simd_mask, std::experimental::simd_abi::__sse>>,
-                testtypes_float>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_AVX_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx>>,
-                testtypes_fp>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx512>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx512>>,
-                testtypes_64_32>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__neon>,
-                         Template<simd_mask, std::experimental::simd_abi::__neon>>,
-                testtypes_wo_ldouble>,
-#endif
-    Typelist<>>;
+using all_valid_simd = native_test_types;
 
+#if ABITYPES == 0
 using all_native_simd_types = expand_list<
     Typelist<Template<simd, std::experimental::simd_abi::__sse>, Template<simd, std::experimental::simd_abi::__avx>,
              Template<simd, std::experimental::simd_abi::__avx512>, Template<simd, std::experimental::simd_abi::__neon>>,
@@ -257,6 +156,7 @@ TEST_TYPES(Tup, has_no_size,  //{{{1
             [](auto a, auto b) -> decltype(
                 std::experimental::simd_size<decltype(a), decltype(b)>::type) { return {}; })));
 }
+#endif
 
 template <class T> constexpr bool is_fixed_size_mask(T) { return false; }
 template <class T, int N> constexpr bool is_fixed_size_mask(std::experimental::fixed_size_simd_mask<T, N>)
@@ -273,22 +173,31 @@ template <class T, int N> constexpr bool is_fixed_size_simd(std::experimental::f
 TEST_TYPES(V, is_usable,  //{{{1
            concat<all_valid_scalars, all_valid_simd, all_valid_fixed_size>)
 {
-    if (!is_fixed_size_mask(V())) {
-        // fixed_size_simd_mask uses std::bitset for storage, which is not trivially
-        // constructible
-        // Actually, is_trivially_constructible is not a hard requirement by the spec, but
-        // something we want to support AFAIP.
+  using M = typename V::mask_type;
 #ifndef __SUPPORT_SNAN__
-        VERIFY(std::is_trivially_default_constructible<V>::value);
+  VERIFY(std::is_trivially_default_constructible<V>::value);
 #endif
-        // fixed_size must always pass via the stack, therefore not trivially
-        // copyable. All others preferably should be trivially copyable, though
-        // this is not required by the spec.
-        COMPARE(std::is_trivially_copyable<V>::value, !is_fixed_size_simd(V()));
+  // fixed_size must always pass via the stack, therefore not trivially
+  // copyable. All others preferably should be trivially copyable, though
+  // this is not required by the spec.
+  COMPARE(std::is_trivially_copyable<V>::value, !is_fixed_size_simd(V()));
+  if (!is_fixed_size_mask(M()))
+    {
+      // fixed_size_simd_mask uses std::bitset for storage, which is not
+      // trivially constructible Actually, is_trivially_constructible is not a
+      // hard requirement by the spec, but something we want to support AFAIP.
+#ifndef __SUPPORT_SNAN__
+      VERIFY(std::is_trivially_default_constructible<M>::value);
+#endif
+      VERIFY(std::is_trivially_copyable<M>::value);
     }
-    VERIFY(std::is_destructible<V>::value);
-    VERIFY(std::is_copy_constructible<V>::value);
-    VERIFY(std::is_copy_assignable<V>::value);
+
+  VERIFY(std::is_destructible<V>::value);
+  VERIFY(std::is_copy_constructible<V>::value);
+  VERIFY(std::is_copy_assignable<V>::value);
+  VERIFY(std::is_destructible<M>::value);
+  VERIFY(std::is_copy_constructible<M>::value);
+  VERIFY(std::is_copy_assignable<M>::value);
 }
 
 using unusable_abis = Typelist<
