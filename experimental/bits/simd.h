@@ -2826,8 +2826,7 @@ _GLIBCXX_SIMD_NEON_INTRIN(float64x2_t);
 template <typename _Tp, size_t _Bytes>
 struct __intrinsic_type<_Tp,
 			_Bytes,
-			enable_if_t<(_Bytes <= 16 && _Bytes >= sizeof(_Tp) &&
-				     ((_Bytes - 1) & _Bytes) == 0)>>
+			enable_if_t<__is_vectorizable_v<_Tp> && _Bytes <= 16>>
 {
   static constexpr int _VBytes = _Bytes <= 8 ? 8 : 16;
   using _Tmp =
