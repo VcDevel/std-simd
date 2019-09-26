@@ -1050,6 +1050,7 @@ template <typename _To,
 _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_To, _N>
   __vector_bitcast(const _SimdWrapper<_Tp, _Nx>& __x)
 {
+  static_assert(_N > 1);
   return __intrin_bitcast<__vector_type_t<_To, _N>>(__x._M_data);
 }
 
@@ -5750,12 +5751,16 @@ template <class _Tp, class _Abi, class _Data> _GLIBCXX_SIMD_INTRINSIC bool __all
 #if _GLIBCXX_SIMD_HAVE_NEON
     else if constexpr (__is_neon_abi<_Abi>())
       {
-	constexpr size_t _N  = simd_size_v<_Tp, _Abi>;
-	const auto       __x = __vector_bitcast<long long>(__k);
+	const auto __kk =
+	  __vector_bitcast<char>(__k) |
+	  ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
 	if constexpr (sizeof(__k) == 16)
-	  return __x[0] + __x[1] == -2;
-	else if constexpr (sizeof(__k) == 8)
-	  return __x == -1;
+	  {
+	    const auto __x = __vector_bitcast<long long>(__kk);
+	    return __x[0] + __x[1] == -2;
+	  }
+	else if constexpr (sizeof(__k) <= 8)
+	  return __bit_cast<__int_for_sizeof_t<_Data>>(__kk) == -1;
 	else
 	  __assert_unreachable<_Tp>();
       }
