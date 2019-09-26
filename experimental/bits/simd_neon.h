@@ -39,10 +39,10 @@
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
 // _SimdImplNeon {{{
-template <int _Bytes>
-struct _SimdImplNeon : _SimdImplBuiltin<simd_abi::_VecBuiltin<_Bytes>>
+template <typename _Abi>
+struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 {
-  using _Base = _SimdImplBuiltin<simd_abi::_VecBuiltin<_Bytes>>;
+  using _Base = _SimdImplBuiltin<_Abi>;
   template <typename _Tp>
   static constexpr size_t _S_max_store_size = 16;
 
@@ -114,8 +114,8 @@ struct _SimdImplNeon : _SimdImplBuiltin<simd_abi::_VecBuiltin<_Bytes>>
   //}}}
 }; // }}}
 // _MaskImplNeon {{{
-template <int _Bytes>
-struct _MaskImplNeon : _MaskImplBuiltin<simd_abi::_VecBuiltin<_Bytes>>
+template <typename _Abi>
+struct _MaskImplNeon : _MaskImplBuiltin<_Abi>
 {
 }; // }}}
 
