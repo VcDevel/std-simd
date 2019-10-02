@@ -4537,14 +4537,16 @@ template <int _N, typename _Abi> struct _MaskImplCombine;
 
 // }}}
 // _GnuTraits {{{1
-template <class _Tp, class _MT, class _Abi, size_t _N> struct _GnuTraits {
+template <typename _Tp, typename _Mp, typename _Abi, size_t _N>
+struct _GnuTraits
+{
     using _IsValid = true_type;
     using _SimdImpl = typename _Abi::_SimdImpl;
     using _MaskImpl = typename _Abi::_MaskImpl;
 
     // simd and simd_mask member types {{{2
     using _SimdMember = _SimdWrapper<_Tp, _N>;
-    using _MaskMember = _SimdWrapper<_MT, _N>;
+    using _MaskMember = _SimdWrapper<_Mp, _N>;
     static constexpr size_t _S_simd_align = alignof(_SimdMember);
     static constexpr size_t _S_mask_align = alignof(_MaskMember);
 
