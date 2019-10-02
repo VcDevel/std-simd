@@ -116,20 +116,6 @@ template <typename _Tp, typename _Abi> class simd_mask;
 template <typename _Tp, typename _Abi> struct simd_size;
 // }}}
 
-// On Windows (WIN32) we might see macros called min and max. Just undefine them and hope
-// noone (re)defines them (defining NOMINMAX should help).
-// {{{
-#ifdef WIN32
-#define NOMINMAX 1
-#if defined min
-#undef min
-#endif
-#if defined max
-#undef max
-#endif
-#endif  // WIN32
-// }}}
-
 // ISA extension detection. The following defines all the _GLIBCXX_SIMD_HAVE_XXX macros
 // ARM{{{
 #ifdef __aarch64__
