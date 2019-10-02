@@ -6,6 +6,8 @@ build_dir := $(shell sh -c $(tmp))
 build_dir := $(realpath $(build_dir))
 build_dir := build-$(subst /,-,$(build_dir:/%=%))
 cols := $(shell sh -c '{ stty size 2>/dev/null || echo 0 80; }|cut -d" " -f2')
+cores := $(shell sh -c 'grep -c processor /proc/cpuinfo')
+
 NINJA ?= $(shell which ninja)
 ifeq (,$(NINJA))
 	GENERATOR :=
@@ -14,7 +16,7 @@ ifeq (,$(NINJA))
 else
 	GENERATOR := -G Ninja
 	HELP_TARGET := -- -t targets all
-	BUILD_FLAGS := -j 100 -k 6
+	BUILD_FLAGS := -j 100 -k $(cores)
 endif
 CMAKE=cmake
 FIX_OUTPUT=sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
