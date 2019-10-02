@@ -26,7 +26,8 @@ else
 endif
 
 CMAKE=cmake
-FIX_OUTPUT=sed -u 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'|stdbuf -oL fold -s -w $(cols)
+BUILD_OUTPUT_TRANSFORMATION ?= -e 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'
+FIX_OUTPUT=sed -u $(BUILD_OUTPUT_TRANSFORMATION)|stdbuf -oL fold -s -w $(cols)
 
 test: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target all -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
