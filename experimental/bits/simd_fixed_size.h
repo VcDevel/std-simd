@@ -298,6 +298,22 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(const _SimdTuple&) = default;
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple& operator=(const _SimdTuple&) = default;
 
+  template <typename _Up>
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x)
+  : _Base{forward<_Up>(__x)}
+  {
+  }
+  template <typename _Up, typename _Up2>
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x, _Up2&& __y)
+  : _Base{forward<_Up>(__x), forward<_Up2>(__y)}
+  {
+  }
+  template <typename _Up>
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x, _SimdTuple<_Tp>)
+  : _Base{forward<_Up>(__x)}
+  {
+  }
+
   _GLIBCXX_SIMD_INTRINSIC char* __as_charptr()
   {
     return reinterpret_cast<char*>(this);
@@ -305,6 +321,32 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC const char* __as_charptr() const
   {
     return reinterpret_cast<const char*>(this);
+  }
+
+  template <size_t _N>
+  auto& __at()
+  {
+    if constexpr (_N == 0)
+      return first;
+    else
+      return second.template __at<_N - 1>();
+  }
+  template <size_t _N>
+  const auto& __at() const
+  {
+    if constexpr (_N == 0)
+      return first;
+    else
+      return second.template __at<_N - 1>();
+  }
+
+  template <size_t _N>
+  auto __simd_at() const
+  {
+    if constexpr (_N == 0)
+      return simd<_Tp, _Abi0>(__private_init, first);
+    else
+      return second.template __simd_at<_N - 1>();
   }
 
   template <size_t _Offset = 0, class _F>
@@ -777,60 +819,36 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
 {
     using _Tup = _SimdTuple<_Tp, _A0, _A1, _Abis...>;
     if constexpr (std::is_same_v<_R, _Tup>)
-      {
-	return __x;
-      }
-    else if constexpr (_R::_S_first_size == simd_size_v<_Tp, _A0>)
-      {
-	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_FirstAbi>{__x.first},
-                            __optimize_simd_tuple(__x.second));
-      }
+      return __x;
+    else if constexpr (is_same_v<typename _R::_FirstType,
+				 typename _Tup::_FirstType>)
+      return {__x.first, __optimize_simd_tuple(__x.second)};
+    else if constexpr (__is_scalar_abi<_A0>()) // implies all entries are scalar
+      return {
+	__generate_from_n_evaluations<_R::_S_first_size,
+				      typename _R::_FirstType>(
+	  [&](auto __i) { return __x[__i]; }),
+	__optimize_simd_tuple(__simd_tuple_pop_front<_R::_S_first_size>(__x))};
     else if constexpr (_R::_S_first_size ==
-		       simd_size_v<_Tp, _A0> + simd_size_v<_Tp, _A1>)
-      {
-	return __simd_tuple_concat(_SimdTuple<_Tp, typename _R::_FirstAbi>{__data(
-                                std::experimental::concat(__get_simd_at<0>(__x), __get_simd_at<1>(__x)))},
-                            __optimize_simd_tuple(__x.second.second));
-      }
-    else if constexpr (_R::_S_first_size ==
-		       4 * __simd_tuple_element_t<0, _Tup>::size())
-      {
-	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_FirstAbi>{
-	    __data(concat(__get_simd_at<0>(__x), __get_simd_at<1>(__x),
-			  __get_simd_at<2>(__x), __get_simd_at<3>(__x)))},
-	  __optimize_simd_tuple(__x.second.second.second.second));
-      }
-    else if constexpr (_R::_S_first_size ==
-		       8 * __simd_tuple_element_t<0, _Tup>::size())
-      {
-	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_FirstAbi>{__data(concat(
-	    __get_simd_at<0>(__x), __get_simd_at<1>(__x), __get_simd_at<2>(__x),
-	    __get_simd_at<3>(__x), __get_simd_at<4>(__x), __get_simd_at<5>(__x),
-	    __get_simd_at<6>(__x), __get_simd_at<7>(__x)))},
-	  __optimize_simd_tuple(
-	    __x.second.second.second.second.second.second.second.second));
-      }
-    else if constexpr (_R::_S_first_size ==
-		       16 * __simd_tuple_element_t<0, _Tup>::size())
-      {
-	return __simd_tuple_concat(
-	  _SimdTuple<_Tp, typename _R::_FirstAbi>{__data(concat(
-	    __get_simd_at<0>(__x), __get_simd_at<1>(__x), __get_simd_at<2>(__x),
-	    __get_simd_at<3>(__x), __get_simd_at<4>(__x), __get_simd_at<5>(__x),
-	    __get_simd_at<6>(__x), __get_simd_at<7>(__x), __get_simd_at<8>(__x),
-	    __get_simd_at<9>(__x), __get_simd_at<10>(__x),
-	    __get_simd_at<11>(__x), __get_simd_at<12>(__x),
-	    __get_simd_at<13>(__x), __get_simd_at<14>(__x),
-	    __get_simd_at<15>(__x)))},
-	  __optimize_simd_tuple(
-	    __x.second.second.second.second.second.second.second.second.second
-	      .second.second.second.second.second.second.second));
-      }
+			 simd_size_v<_Tp, _A0> + simd_size_v<_Tp, _A1> &&
+		       is_same_v<_A0, _A1>)
+      return {__concat(__x.template __at<0>(), __x.template __at<1>()),
+	      __optimize_simd_tuple(__x.second.second)};
+    else if constexpr (sizeof...(_Abis) >= 2 &&
+		       _R::_S_first_size == 4 * simd_size_v<_Tp, _A0> &&
+		       simd_size_v<_Tp, _A0> ==
+			 __simd_tuple_element_t<(sizeof...(_Abis) >= 2 ? 3 : 0),
+						_Tup>::size())
+      return {
+	__concat(__concat(__x.template __at<0>(), __x.template __at<1>()),
+		 __concat(__x.template __at<2>(), __x.template __at<3>())),
+	__optimize_simd_tuple(__x.second.second.second.second)};
     else
       {
-	return __x;
+	_R __r;
+	__builtin_memcpy(__r.__as_charptr(), __x.__as_charptr(),
+			 sizeof(_Tp) * _R::size());
+	return __r;
       }
 }
 

@@ -128,6 +128,10 @@ using current_native_mask_test_types =
     vir::expand_one<vir::Template1<stdx::native_simd_mask>, testtypes>;
 
 // native_test_types {{{1
+template <class T>
+struct sizeof8 : std::integral_constant<bool, sizeof(T) == 8>
+{
+};
 using native_test_types =
 #if !defined(ABITYPES) || ABITYPES == 0
   vir::concat<
@@ -154,6 +158,30 @@ using native_test_types =
 		       vir::Template<base_template, simd_abi::__sse>>,
 		     testtypes_wo_ldouble>,
 #endif
+#if _GLIBCXX_SIMD_HAVE_NEON
+# if _GLIBCXX_SIMD_HAVE_NEON_A32
+#  if _GLIBCXX_SIMD_HAVE_NEON_A64
+    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+		    typename vir::filter_list<vir::filter_predicate<sizeof8>,
+					      testtypes_wo_ldouble>::type>,
+    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
+		    testtypes_wo_ldouble>,
+#  else
+    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+		    typename vir::filter_list<vir::filter_predicate<sizeof8>,
+					      testtypes_wo_ldouble>::type>,
+    vir::expand_one<
+      vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
+      typename vir::filter_list<double, testtypes_wo_ldouble>::type>,
+#  endif
+# else
+    vir::expand_list<
+      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
+      typename vir::filter_list<vir::filter_predicate<sizeof8>,
+				testtypes_wo_ldouble>::type>,
+# endif
+#endif
     vir::expand_one<vir::Template<base_template, simd_abi::scalar>, testtypes>>;
 #else  // !defined(ABITYPES) || ABITYPES == 0
   vir::Typelist<>;
@@ -179,6 +207,26 @@ using native_real_test_types =
     vir::expand_one<vir::Template<base_template, simd_abi::__sse>,
 		    testtypes_float>,
 #endif
+#endif
+#if _GLIBCXX_SIMD_HAVE_NEON
+# if _GLIBCXX_SIMD_HAVE_NEON_A32
+#  if _GLIBCXX_SIMD_HAVE_NEON_A64
+    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+					      testtypes_float>,
+    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
+		    testtypes_fp>,
+#  else
+    vir::expand_list<
+      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
+      testtypes_float>,
+#  endif
+# else
+    vir::expand_list<
+      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
+		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
+      testtypes_float>,
+# endif
 #endif
     vir::expand_one<vir::Template<base_template, simd_abi::scalar>,
 		    testtypes_fp>>;

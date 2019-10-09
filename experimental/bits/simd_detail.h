@@ -118,19 +118,21 @@ template <typename _Tp, typename _Abi> struct simd_size;
 
 // ISA extension detection. The following defines all the _GLIBCXX_SIMD_HAVE_XXX macros
 // ARM{{{
-#ifdef __aarch64__
-#define _GLIBCXX_SIMD_IS_AARCH64 1
-#endif  // __aarch64__
-
-#ifdef __ARM_NEON
+#if defined __ARM_NEON
 #define _GLIBCXX_SIMD_HAVE_NEON 1
-#define _GLIBCXX_SIMD_HAVE_NEON_ABI 1
-#define _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI 1
 #else
 #define _GLIBCXX_SIMD_HAVE_NEON 0
-#define _GLIBCXX_SIMD_HAVE_NEON_ABI 0
-#define _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI 0
-#endif  // _GLIBCXX_SIMD_HAVE_NEON
+#endif
+#if defined __ARM_NEON && (__ARM_ARCH >= 8 || defined __aarch64__)
+#define _GLIBCXX_SIMD_HAVE_NEON_A32 1
+#else
+#define _GLIBCXX_SIMD_HAVE_NEON_A32 0
+#endif
+#if defined __ARM_NEON && defined __aarch64__
+#define _GLIBCXX_SIMD_HAVE_NEON_A64 1
+#else
+#define _GLIBCXX_SIMD_HAVE_NEON_A64 0
+#endif
 //}}}
 // x86{{{
 #ifdef __MMX__
@@ -358,6 +360,10 @@ template <typename _Tp, typename _Abi> struct simd_size;
 // because pabs[bwd] is part of SSSE3.)
 #if __GNUC__ < 10 && defined __SSSE3__ && _GLIBCXX_SIMD_X86INTRIN
 #define _GLIBCXX_SIMD_WORKAROUND_PR91533 1
+#endif
+
+#if __GNUC__ < 10 && defined __aarch64__
+#define _GLIBCXX_SIMD_WORKAROUND_XXX_5 1
 #endif
 
 // https://github.com/cplusplus/parallelism-ts/issues/65 (incorrect return type of

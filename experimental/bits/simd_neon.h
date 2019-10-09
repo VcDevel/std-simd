@@ -46,20 +46,98 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   template <typename _Tp>
   static constexpr size_t _S_max_store_size = 16;
 
+  // __masked_load {{{
+  template <typename _Tp, size_t _N, typename _Up, typename _Fp>
+  static inline _SimdWrapper<_Tp, _N>
+    __masked_load(_SimdWrapper<_Tp, _N> __merge,
+		  _SimdWrapper<_Tp, _N> __k,
+		  const _Up*            __mem,
+		  _Fp) noexcept
+  {
+    __execute_n_times<_N>([&](auto __i) {
+      if (__k[__i] != 0)
+	__merge.__set(__i, static_cast<_Tp>(__mem[__i]));
+    });
+    return __merge;
+  }
+
+  // }}}
+  // __masked_store_nocvt {{{
+  template <typename _Tp, std::size_t _N, typename _F>
+  _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
+    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<_Tp, _N> __k)
+  {
+    __execute_n_times<_N>([&](auto __i) {
+      if (__k[__i] != 0)
+	__mem[__i] = __v[__i];
+    });
+  }
+
+  // }}}
+  // __reduce {{{
+  template <typename _Tp, class _BinaryOperation>
+  _GLIBCXX_SIMD_INTRINSIC static _Tp
+    __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
+  {
+    constexpr size_t _N = __x.size();
+    if constexpr (sizeof(__x) == 16 && _N >= 4 && !_Abi::_S_is_partial)
+      {
+	const auto __halves = split<simd<_Tp, simd_abi::_Neon<8>>>(__x);
+	const auto __y      = __binary_op(__halves[0], __halves[1]);
+	return _SimdImplNeon<simd_abi::_Neon<8>>::__reduce(
+	  __y, forward<_BinaryOperation>(__binary_op));
+      }
+    else if constexpr (_N == 8)
+      {
+	__x = __binary_op(
+	  __x, _Base::template __make_simd<_Tp, _N>(
+		 __vector_permute<1, 0, 3, 2, 5, 4, 7, 6>(__x._M_data)));
+	__x = __binary_op(
+	  __x, _Base::template __make_simd<_Tp, _N>(
+		 __vector_permute<3, 2, 1, 0, 7, 6, 5, 4>(__x._M_data)));
+	__x = __binary_op(
+	  __x, _Base::template __make_simd<_Tp, _N>(
+		 __vector_permute<7, 6, 5, 4, 3, 2, 1, 0>(__x._M_data)));
+	return __x[0];
+      }
+    else if constexpr (_N == 4)
+      {
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+				 __vector_permute<1, 0, 3, 2>(__x._M_data)));
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+				 __vector_permute<3, 2, 1, 0>(__x._M_data)));
+	return __x[0];
+      }
+    else if constexpr (_N == 2)
+      {
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+				 __vector_permute<1, 0>(__x._M_data)));
+	return __x[0];
+      }
+    else
+      return _Base::__reduce(__x, forward<_BinaryOperation>(__binary_op));
+  }
+
+  // }}}
   // math {{{
   // __sqrt {{{
   template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
   _GLIBCXX_SIMD_INTRINSIC static _Tp __sqrt(_Tp __x)
   {
-    const auto __intrin = __to_intrin(__x);
-    if constexpr (_TVT::template __is<float, 2>)
-      return vsqrt_f32(__intrin);
-    else if constexpr (_TVT::template __is<float, 4>)
-      return vsqrtq_f32(__intrin);
-    else if constexpr (_TVT::template __is<double, 1>)
-      return vsqrt_f64(__intrin);
-    else if constexpr (_TVT::template __is<double, 2>)
-      return vsqrtq_f64(__intrin);
+    if constexpr (__have_neon_a64)
+      {
+	const auto __intrin = __to_intrin(__x);
+	if constexpr (_TVT::template __is<float, 2>)
+	  return vsqrt_f32(__intrin);
+	else if constexpr (_TVT::template __is<float, 4>)
+	  return vsqrtq_f32(__intrin);
+	else if constexpr (_TVT::template __is<double, 1>)
+	  return vsqrt_f64(__intrin);
+	else if constexpr (_TVT::template __is<double, 2>)
+	  return vsqrtq_f64(__intrin);
+	else
+	  __assert_unreachable<_Tp>();
+      }
     else
       return _Base::__sqrt(__x);
   } // }}}
@@ -67,15 +145,20 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
   _GLIBCXX_SIMD_INTRINSIC static _Tp __trunc(_Tp __x)
   {
-    const auto __intrin = __to_intrin(__x);
-    if constexpr (_TVT::template __is<float, 2>)
-      return vrnd_f32(__intrin);
-    else if constexpr (_TVT::template __is<float, 4>)
-      return vrndq_f32(__intrin);
-    else if constexpr (_TVT::template __is<double, 1>)
-      return vrnd_f64(__intrin);
-    else if constexpr (_TVT::template __is<double, 2>)
-      return vrndq_f64(__intrin);
+    if constexpr (__have_neon_a32)
+      {
+	const auto __intrin = __to_intrin(__x);
+	if constexpr (_TVT::template __is<float, 2>)
+	  return vrnd_f32(__intrin);
+	else if constexpr (_TVT::template __is<float, 4>)
+	  return vrndq_f32(__intrin);
+	else if constexpr (_TVT::template __is<double, 1>)
+	  return vrnd_f64(__intrin);
+	else if constexpr (_TVT::template __is<double, 2>)
+	  return vrndq_f64(__intrin);
+	else
+	  __assert_unreachable<_Tp>();
+      }
     else
       return _Base::__trunc(__x);
   } // }}}
@@ -83,15 +166,20 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
   _GLIBCXX_SIMD_INTRINSIC static _Tp __floor(_Tp __x)
   {
-    const auto __intrin = __to_intrin(__x);
-    if constexpr (_TVT::template __is<float, 2>)
-      return vrndm_f32(__intrin);
-    else if constexpr (_TVT::template __is<float, 4>)
-      return vrndmq_f32(__intrin);
-    else if constexpr (_TVT::template __is<double, 1>)
-      return vrndm_f64(__intrin);
-    else if constexpr (_TVT::template __is<double, 2>)
-      return vrndmq_f64(__intrin);
+    if constexpr (__have_neon_a32)
+      {
+	const auto __intrin = __to_intrin(__x);
+	if constexpr (_TVT::template __is<float, 2>)
+	  return vrndm_f32(__intrin);
+	else if constexpr (_TVT::template __is<float, 4>)
+	  return vrndmq_f32(__intrin);
+	else if constexpr (_TVT::template __is<double, 1>)
+	  return vrndm_f64(__intrin);
+	else if constexpr (_TVT::template __is<double, 2>)
+	  return vrndmq_f64(__intrin);
+	else
+	  __assert_unreachable<_Tp>();
+      }
     else
       return _Base::__floor(__x);
   } // }}}
@@ -99,15 +187,20 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
   _GLIBCXX_SIMD_INTRINSIC static _Tp __ceil(_Tp __x)
   {
-    const auto __intrin = __to_intrin(__x);
-    if constexpr (_TVT::template __is<float, 2>)
-      return vrndp_f32(__intrin);
-    else if constexpr (_TVT::template __is<float, 4>)
-      return vrndpq_f32(__intrin);
-    else if constexpr (_TVT::template __is<double, 1>)
-      return vrndp_f64(__intrin);
-    else if constexpr (_TVT::template __is<double, 2>)
-      return vrndpq_f64(__intrin);
+    if constexpr (__have_neon_a32)
+      {
+	const auto __intrin = __to_intrin(__x);
+	if constexpr (_TVT::template __is<float, 2>)
+	  return vrndp_f32(__intrin);
+	else if constexpr (_TVT::template __is<float, 4>)
+	  return vrndpq_f32(__intrin);
+	else if constexpr (_TVT::template __is<double, 1>)
+	  return vrndp_f64(__intrin);
+	else if constexpr (_TVT::template __is<double, 2>)
+	  return vrndpq_f64(__intrin);
+	else
+	  __assert_unreachable<_Tp>();
+      }
     else
       return _Base::__ceil(__x);
   } //}}}

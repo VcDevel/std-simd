@@ -206,6 +206,7 @@ TEST_TYPES(M, load_store, all_test_types)  //{{{1
 {
     // loads {{{2
     constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<M>;
+#pragma GCC diagnostic ignored "-Wattributes"
     alignas(alignment) bool mem[3 * M::size()];
     std::memset(mem, 0, sizeof(mem));
     for (std::size_t i = 1; i < sizeof(mem) / sizeof(*mem); i += 2) {

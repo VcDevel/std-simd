@@ -919,10 +919,11 @@ TEST_TYPES(V, operator_conversions, current_native_test_types)  //{{{1
         VERIFY((is_substitution_failure<vi8<char>, llong>));
         VERIFY((is_substitution_failure<vi8<char>, double>));
         VERIFY((is_substitution_failure<vchar, vuchar>));
-        VERIFY((is_substitution_failure<vchar, uchar>));
+        COMPARE((is_substitution_failure<vchar, uchar>), std::is_signed_v<char>);
+        COMPARE((is_substitution_failure<vchar, schar>), std::is_unsigned_v<char>);
         VERIFY((is_substitution_failure<vchar, short>));
         VERIFY((is_substitution_failure<vchar, ushort>));
-        VERIFY((is_substitution_failure<vchar, uint>));
+        COMPARE((is_substitution_failure<vchar, uint>), std::is_signed_v<char>);
         VERIFY((is_substitution_failure<vchar, long>));
         VERIFY((is_substitution_failure<vchar, ulong>));
         VERIFY((is_substitution_failure<vchar, llong>));
@@ -943,19 +944,21 @@ TEST_TYPES(V, operator_conversions, current_native_test_types)  //{{{1
         VERIFY((is_substitution_failure<vchar, vi8<double>>));
         VERIFY((is_substitution_failure<vi8<char>, vchar>));
         VERIFY((is_substitution_failure<vi8<char>, vuchar>));
-        VERIFY((is_substitution_failure<vi8<char>, uchar>));
+        COMPARE((is_substitution_failure<vi8<char>, uchar>), std::is_signed_v<char>);
+        COMPARE((is_substitution_failure<vi8<char>, schar>), std::is_unsigned_v<char>);
         VERIFY((is_substitution_failure<vi8<char>, short>));
         VERIFY((is_substitution_failure<vi8<char>, ushort>));
-        VERIFY((is_substitution_failure<vi8<char>, uint>));
+        COMPARE((is_substitution_failure<vi8<char>, uint>), std::is_signed_v<char>);
         VERIFY((is_substitution_failure<vi8<char>, long>));
         VERIFY((is_substitution_failure<vi8<char>, ulong>));
         VERIFY((is_substitution_failure<vi8<char>, ullong>));
         VERIFY((is_substitution_failure<vi8<char>, float>));
-        VERIFY((is_substitution_failure<vi8<char>, vi8<uchar>>));
-        VERIFY((is_substitution_failure<vi8<char>, vi8<ushort>>));
-        VERIFY((is_substitution_failure<vi8<char>, vi8<uint>>));
-        VERIFY((is_substitution_failure<vi8<char>, vi8<ulong>>));
-        VERIFY((is_substitution_failure<vi8<char>, vi8<ullong>>));
+        VERIFY((is_substitution_failure<vi8<char>, vi8<schar>>)); // converts in either direction
+        VERIFY((is_substitution_failure<vi8<char>, vi8<uchar>>)); // converts in either direction
+        COMPARE((is_substitution_failure<vi8<char>, vi8<ushort>>), std::is_signed_v<char>);
+        COMPARE((is_substitution_failure<vi8<char>, vi8<uint>>), std::is_signed_v<char>);
+        COMPARE((is_substitution_failure<vi8<char>, vi8<ulong>>), std::is_signed_v<char>);
+        COMPARE((is_substitution_failure<vi8<char>, vi8<ullong>>), std::is_signed_v<char>);
     } else if constexpr (std::is_same_v<V, vschar>) {  //{{{2
         binary_op_return_type<vi8<schar>, schar, vi8<schar>>();
         binary_op_return_type<vi8<schar>, int, vi8<schar>>();

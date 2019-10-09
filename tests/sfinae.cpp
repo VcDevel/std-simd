@@ -58,6 +58,7 @@ using std::experimental::simd_abi::scalar;
 using std::experimental::simd_abi::_Sse;
 using std::experimental::simd_abi::_Avx;
 using std::experimental::simd_abi::_Avx512;
+using std::experimental::simd_abi::_Neon;
 using std::experimental::simd_abi::__sse;
 using std::experimental::simd_abi::__avx;
 using std::experimental::simd_abi::__avx512;
@@ -97,11 +98,12 @@ int tmp[] = {
 #if !_GLIBCXX_SIMD_HAVE_AVX_ABI
   assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __sse, scalar>>(),
 #endif
-#elif _GLIBCXX_SIMD_HAVE_NEON_ABI
+#elif _GLIBCXX_SIMD_HAVE_NEON
   assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Neon<8>>>(),
-  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Neon<8>, scalar>>(),
-  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __neon128>>(),
-  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __neon128, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Neon<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, _Neon<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, _Neon<16>, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 6>, _SimdTuple<float, _Neon<16>, _Neon<8>>>(),
 #endif  // _GLIBCXX_SIMD_HAVE_SSE_ABI
 #if _GLIBCXX_SIMD_HAVE_AVX_ABI
   assert_equal<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _Avx<20>>>(),
@@ -201,7 +203,7 @@ TEST_TYPES(V, is_usable,  //{{{1
 }
 
 using unusable_abis = Typelist<
-#if !(_GLIBCXX_SIMD_HAVE_SSE_ABI || _GLIBCXX_SIMD_HAVE_NEON_ABI)
+#if !(_GLIBCXX_SIMD_HAVE_SSE_ABI || _GLIBCXX_SIMD_HAVE_NEON)
     Template<simd, std::experimental::simd_abi::_VecBuiltin<16>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltin<16>>,
 #endif
 #if !_GLIBCXX_SIMD_HAVE_AVX_ABI
