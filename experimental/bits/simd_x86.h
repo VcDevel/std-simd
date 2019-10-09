@@ -30,8 +30,6 @@
 
 #if __cplusplus >= 201703L
 
-#include "simd_abis.h"
-
 #if !_GLIBCXX_SIMD_X86INTRIN
 #error "simd_x86.h may only be included when MMX or SSE on x86(_64) are available"
 #endif

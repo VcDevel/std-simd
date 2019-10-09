@@ -30,8 +30,6 @@
 
 #if __cplusplus >= 201703L
 
-#include "simd_abis.h"
-
 #if !_GLIBCXX_SIMD_HAVE_NEON
 #error "simd_neon.h may only be included when NEON on ARM is available"
 #endif
