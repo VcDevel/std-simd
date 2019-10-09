@@ -1,4 +1,4 @@
-// Components for element-wise operations on data-parallel objects -*- C++ -*-
+// Simd fixed_size ABI specific implementations -*- C++ -*-
 
 // Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>
@@ -25,53 +25,52 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/** @file experimental/simd
- *  This is a TS C++ Library header.
- */
+#ifndef _GLIBCXX_EXPERIMENTAL_SIMD_COMBINE_H_
+#define _GLIBCXX_EXPERIMENTAL_SIMD_COMBINE_H_
 
-//
-// N4773 §9 data-parallel types library
-//
+#if __cplusplus >= 201703L
 
-#ifndef _GLIBCXX_EXPERIMENTAL_SIMD
-#define _GLIBCXX_EXPERIMENTAL_SIMD
+_GLIBCXX_SIMD_BEGIN_NAMESPACE
 
-#define __cpp_lib_experimental_parallel_simd 201803
+template <int _N, typename _Abi>
+struct _SimdImplCombine
+{
+  // member types {{{
+  using abi_type = simd_abi::_Combine<_N, _Abi>;
+  template <typename _Tp> using _TypeTag = _Tp *;
+  using _PartImpl = typename _Abi::_SimdImpl;
+  template <typename _Tp>
+  using _SimdMember =
+    std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _N>;
 
-#if defined __GNUC__ && __GNUC__ < 9
-#define __gnu__ gnu
-#endif
+  // }}}
+  // broadcast {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdMember<_Tp>
+    __broadcast(_Tp __x) noexcept
+  {
+    return __generate_from_n_evaluations<_N, _SimdMember<_Tp>>(
+      [&](int) constexpr { return _PartImpl::__broadcast(__x); });
+  }
 
-#pragma GCC diagnostic push
-// Many [[gnu::vector_size(N)]] types might lead to a -Wpsabi warning which is
-// irrelevant as those functions never appear on ABI borders
-#pragma GCC diagnostic ignored "-Wpsabi"
+  // }}}
+  // load {{{
+//X   template <typename _Tp, typename _Up, typename _F>
+//X   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+//X     __load(const _U* __mem, _F, _TypeTag<_Tp> __x) noexcept
+//X   {
+//X     return __generate_from_n_evaluations<_N, _Tp>(
+//X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i * __part_size<_Tp>, _F{}, __x); });
+//X   }
+//X 
+  // }}}
+};
+template <int _N, typename _Abi>
+struct _MaskImplCombine
+{
+};
 
-// If __OPTIMIZE__ is not defined some intrinsics are defined as macros, making use of C casts
-// internally. This requires us to disable the warning as it would otherwise yield many false
-// positives.
-#ifndef __OPTIMIZE__
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-
-#include "bits/simd_detail.h"
-#include "bits/simd.h"
-#include "bits/simd_fixed_size.h"
-#include "bits/simd_scalar.h"
-#include "bits/simd_combine.h"
-#include "bits/simd_abis.h"
-#if _GLIBCXX_SIMD_X86INTRIN
-#include "bits/simd_x86.h"
-#elif _GLIBCXX_SIMD_HAVE_NEON
-#include "bits/simd_neon.h"
-#endif
-#include "bits/simd_math.h"
-
-#pragma GCC diagnostic pop
-
-#if defined __GNUC__ && __GNUC__ < 9
-#undef __gnu__
-#endif
-
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD
-// vim: ft=cpp
+_GLIBCXX_SIMD_END_NAMESPACE
+#endif  // __cplusplus >= 201703L
+#endif  // _GLIBCXX_EXPERIMENTAL_SIMD_COMBINE_H_
+// vim: foldmethod=marker sw=2 noet ts=8 sts=2 tw=80
