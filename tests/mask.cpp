@@ -202,7 +202,7 @@ TEST_TYPES(M, implicit_conversions, all_test_types)
     implicit_conversions_test<M, fixed_size_simd_mask<schar, M::size()>>();
 }
 
-TEST_TYPES(M, load_store, concat<all_test_types, many_fixed_size_types>)  //{{{1
+TEST_TYPES(M, load_store, all_test_types)  //{{{1
 {
     // loads {{{2
     constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<M>;

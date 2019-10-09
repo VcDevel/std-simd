@@ -29,7 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#define UNITTEST_ONLY_XTEST 1
 #include "unittest.h"
 
-template <class... Ts> using base_template = std::experimental::simd_mask<Ts...>;
+namespace stdx = std::experimental;
+template <class... Ts> using base_template = stdx::simd_mask<Ts...>;
 #include "testtypes.h"
 
 // type iteration in a function {{{1
@@ -44,24 +45,25 @@ template <class List, class F> void call_with_typelist(F &&f)
 }
 
 TEST_TYPES(FromTo, conversions,  //{{{1
-           outer_product<all_arithmetic_types, all_arithmetic_types>)
+           outer_product<all_test_types, all_arithmetic_types>)
 {
-    using From = typename FromTo::template at<0>;
-    using FromM = std::experimental::native_simd_mask<From>;
+    using FromM = typename FromTo::template at<0>;
     using To = typename FromTo::template at<1>;
     call_with_typelist<vir::make_unique_typelist<
-        std::experimental::rebind_simd_t<To, FromM>, std::experimental::native_simd_mask<To>,
-        std::experimental::simd_mask<To>, std::experimental::simd_mask<To, std::experimental::simd_abi::scalar>>>([](auto _b) {
+        stdx::rebind_simd_t<To, FromM>, stdx::native_simd_mask<To>,
+        stdx::simd_mask<To>, stdx::simd_mask<To, stdx::simd_abi::scalar>>>([](auto _b) {
         using ToM = decltype(_b);
         using ToV = typename ToM::simd_type;
 
-        using std::experimental::static_simd_cast;
-        using std::experimental::simd_cast;
-        using std::experimental::__proposed::resizing_simd_cast;
+        using stdx::static_simd_cast;
+        using stdx::simd_cast;
+        using stdx::__proposed::resizing_simd_cast;
 
         auto x = resizing_simd_cast<ToM>(FromM());
         COMPARE(typeid(x), typeid(ToM));
-        COMPARE(x, ToM());
+        COMPARE(x, ToM()) << '\n'
+                        << vir::typeToString<FromM>() << " -> "
+                        << vir::typeToString<ToM>();
 
         x = resizing_simd_cast<ToM>(FromM(true));
         const ToM ref = ToV([](auto i) { return i; }) < int(FromM::size());
