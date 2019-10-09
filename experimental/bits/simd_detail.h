@@ -288,7 +288,6 @@ template <typename _Tp, typename _Abi> struct simd_size;
 #define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
 #define _GLIBCXX_SIMD_INTRINSIC [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
 #define _GLIBCXX_SIMD_CONST __attribute__((__const__))
-#define _GLIBCXX_SIMD_PURE __attribute__((__pure__))
 #define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]] inline
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)

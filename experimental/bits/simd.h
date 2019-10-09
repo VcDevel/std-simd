@@ -2691,20 +2691,18 @@ struct _SimdWrapper<
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(_BuiltinType __k)
   : _M_data(__k){};
 
-  _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_PURE
-			  operator const _BuiltinType&() const
+  _GLIBCXX_SIMD_INTRINSIC operator const _BuiltinType&() const
   {
     return _M_data;
   }
-  _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_PURE operator _BuiltinType&()
+  _GLIBCXX_SIMD_INTRINSIC operator _BuiltinType&()
   {
     return _M_data;
   }
 
   _GLIBCXX_SIMD_INTRINSIC _BuiltinType __intrin() const { return _M_data; }
 
-  _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_PURE value_type
-					     operator[](size_t __i) const
+  _GLIBCXX_SIMD_INTRINSIC value_type operator[](size_t __i) const
   {
     return _M_data & (_BuiltinType(1) << __i);
   }
