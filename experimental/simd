@@ -59,7 +59,8 @@
 #include "bits/simd_fixed_size.h"
 #include "bits/simd_scalar.h"
 #include "bits/simd_combine.h"
-#include "bits/simd_abis.h"
+#include "bits/simd_builtin.h"
+#include "bits/simd_converter.h"
 #if _GLIBCXX_SIMD_X86INTRIN
 #include "bits/simd_x86.h"
 #elif _GLIBCXX_SIMD_HAVE_NEON
