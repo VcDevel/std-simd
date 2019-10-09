@@ -162,7 +162,7 @@ struct __tuple_element_meta : public _Abi::_SimdImpl {
   using value_type                    = _Tp;
   using abi_type                      = _Abi;
   using _Traits                       = _SimdTraits<_Tp, _Abi>;
-  using _MaskImpl                     = typename _Traits::_MaskImpl;
+  using _MaskImpl                     = typename _Abi::_MaskImpl;
   using _MaskMember                   = typename _Traits::_MaskMember;
   using simd_type                     = std::experimental::simd<_Tp, _Abi>;
   static constexpr size_t    _S_offset = _Offset;
@@ -179,7 +179,7 @@ struct __tuple_element_meta : public _Abi::_SimdImpl {
 
   _GLIBCXX_SIMD_INTRINSIC static _ULLong __mask_to_shifted_ullong(_MaskMember __k)
   {
-    return __vector_to_bitset(__k).to_ullong() << _Offset;
+    return _ULLong(_MaskImpl::__to_bits(__k)) << _Offset;
   }
 };
 
@@ -496,13 +496,10 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC friend std::bitset<size()>
     __test(_F&& __fun, const _SimdTuple& __x, const _More&... __more)
   {
-    const auto __first = __vector_to_bitset(
+    const bitset<size()> __first = _Abi0::_MaskImpl::__to_bits(
       __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), __x.first, __more.first...));
     if constexpr (_S_tuple_size == 1)
-      {
-	static_assert(__first.size() >= size());
-	return __first.to_ullong();
-      }
+      return __first;
     else
       return __first.to_ullong() |
 	     (__test(__fun, __x.second, __more.second...).to_ullong()
@@ -1721,15 +1718,37 @@ public:
 
 // _MaskImplFixedSize {{{1
 template <int _N> struct _MaskImplFixedSize {
-    static_assert(sizeof(_ULLong) * CHAR_BIT >= _N,
-                  "The fixed_size implementation relies on one "
-                  "_ULLong being able to store all boolean "
-                  "elements.");  // required in load & store
+  static_assert(sizeof(_ULLong) * CHAR_BIT >= _N,
+		"The fixed_size implementation relies on one "
+		"_ULLong being able to store all boolean "
+		"elements."); // required in load & store
 
-    // member types {{{2
-    using _MaskMember = std::bitset<_N>;
-    template <typename _Tp> using _TypeTag = _Tp *;
+  // member types {{{
+  using _MaskMember = std::bitset<_N>;
+  template <typename _Tp>
+  using _TypeTag = _Tp*;
 
+  // }}}
+  // __to_bits {{{
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    __to_bits(std::bitset<_N> __x)
+  {
+    if constexpr (_N <= sizeof(long) * CHAR_BIT)
+      return __x.to_ulong();
+    else
+      return __x.to_ullong();
+  }
+
+  // }}}
+  // __convert {{{
+  template <typename _Tp, typename _Up, typename _UAbi>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
+    __convert(simd_mask<_Up, _UAbi> __x)
+  {
+    return _UAbi::_MaskImpl::__to_bits(__data(__x));
+  }
+
+  // }}}
     // __from_bitset {{{2
     template <typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember __from_bitset(const _MaskMember &__bs,
@@ -1904,6 +1923,12 @@ template <int _N> struct _MaskImplFixedSize {
                                                     const _MaskMember &__y) noexcept
     {
         return __x | __y;
+    }
+
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
+      __bit_not(const _MaskMember& __x) noexcept
+    {
+      return ~__x;
     }
 
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember __bit_and(const _MaskMember &__x,

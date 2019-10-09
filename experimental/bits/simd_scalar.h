@@ -368,9 +368,27 @@ struct _SimdImplScalar {
 // }}}
 // _MaskImplScalar {{{
 struct _MaskImplScalar {
-    // member types {{{2
-    template <typename _Tp> using _TypeTag = _Tp *;
+  // member types {{{
+  template <typename _Tp>
+  using _TypeTag = _Tp*;
 
+  // }}}
+  // __to_bits {{{
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _UChar __to_bits(bool __x)
+  {
+    return __x;
+  }
+
+  // }}}
+  // __convert {{{
+  template <typename _Tp, typename _Up, typename _UAbi>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    __convert(simd_mask<_Up, _UAbi> __x)
+  {
+    return __x[0];
+  }
+
+  // }}}
     // __from_bitset {{{2
     template <typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static bool __from_bitset(std::bitset<1> __bs, _TypeTag<_Tp>) noexcept
@@ -408,6 +426,7 @@ struct _MaskImplScalar {
     // logical and bitwise operators {{{2
     static constexpr bool __logical_and(bool __x, bool __y) { return __x && __y; }
     static constexpr bool __logical_or(bool __x, bool __y) { return __x || __y; }
+    static constexpr bool __bit_not(bool __x) { return !__x; }
     static constexpr bool __bit_and(bool __x, bool __y) { return __x && __y; }
     static constexpr bool __bit_or(bool __x, bool __y) { return __x || __y; }
     static constexpr bool __bit_xor(bool __x, bool __y) { return __x != __y; }

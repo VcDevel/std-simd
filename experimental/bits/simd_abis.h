@@ -51,37 +51,6 @@ template <typename _V, typename = _VectorTraits<_V>>
 static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, _S_allbits<_V>);
 
 //}}}
-// __xzyw{{{
-// shuffles the complete vector, swapping the inner two quarters. Often useful for AVX for
-// fixing up a shuffle result.
-template <class _Tp, class _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC _Tp __xzyw(_Tp __a)
-{
-    if constexpr (sizeof(_Tp) == 16) {
-        static_assert(sizeof(float) == 4 && sizeof(int) == 4);
-        const auto __x = __vector_bitcast<
-            conditional_t<is_floating_point_v<typename _TVT::value_type>, float, int>>(
-            __a);
-        return reinterpret_cast<_Tp>(decltype(__x){__x[0], __x[2], __x[1], __x[3]});
-    } else if constexpr (sizeof(_Tp) == 32) {
-        static_assert(sizeof(double) == 8 && sizeof(_LLong) == 8);
-        const auto __x =
-            __vector_bitcast<conditional_t<is_floating_point_v<typename _TVT::value_type>,
-                                           double, _LLong>>(__a);
-        return reinterpret_cast<_Tp>(decltype(__x){__x[0], __x[2], __x[1], __x[3]});
-    } else if constexpr (sizeof(_Tp) == 64) {
-        static_assert(sizeof(double) == 8 && sizeof(_LLong) == 8);
-        const auto __x =
-            __vector_bitcast<conditional_t<is_floating_point_v<typename _TVT::value_type>,
-                                           double, _LLong>>(__a);
-        return reinterpret_cast<_Tp>(decltype(__x){__x[0], __x[1], __x[4], __x[5], __x[2],
-                                                  __x[3], __x[6], __x[7]});
-    } else {
-        __assert_unreachable<_Tp>();
-    }
-}
-
-// }}}
 // __shift_elements_right{{{
 // if (__shift % 2ⁿ == 0) => the low n Bytes are correct
 template <unsigned __shift, class _Tp, class _TVT = _VectorTraits<_Tp>>
@@ -592,611 +561,6 @@ inline constexpr bool __converts_via_decomposition_v =
     __converts_via_decomposition<_From, _To, _ToSize>::value;
 
 // }}}
-// __is_bitset {{{
-template <class _Tp> struct __is_bitset : false_type {};
-template <size_t _N> struct __is_bitset<std::bitset<_N>> : true_type {};
-template <class _Tp> inline constexpr bool __is_bitset_v = __is_bitset<_Tp>::value;
-
-// }}}
-// __convert_mask{{{
-template <class _To, class _From>
-inline _To __convert_mask(_From __k)
-{
-  if constexpr (std::is_same_v<_To, _From>)
-    { // also covers bool -> bool
-      return __k;
-    } else if constexpr (std::is_unsigned_v<_From> && std::is_unsigned_v<_To>) {
-        // bits -> bits
-        return __k;  // zero-extends or truncates
-    } else if constexpr (__is_bitset_v<_From>) {
-        // from std::bitset {{{
-        static_assert(__k.size() <= sizeof(_ULLong) * CHAR_BIT);
-        using _Tp = std::conditional_t<
-            (__k.size() <= sizeof(_UShort) * CHAR_BIT),
-            std::conditional_t<(__k.size() <= CHAR_BIT), _UChar, _UShort>,
-            std::conditional_t<(__k.size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
-        return __convert_mask<_To>(static_cast<_Tp>(__k.to_ullong()));
-        // }}}
-    } else if constexpr (__is_bitset_v<_To>) {
-        // to std::bitset {{{
-        static_assert(_To().size() <= sizeof(_ULLong) * CHAR_BIT);
-        using _Tp = std::conditional_t<
-            (_To().size() <= sizeof(_UShort) * CHAR_BIT),
-            std::conditional_t<(_To().size() <= CHAR_BIT), _UChar, _UShort>,
-            std::conditional_t<(_To().size() <= sizeof(_UInt) * CHAR_BIT), _UInt, _ULLong>>;
-        return __convert_mask<_Tp>(__k);
-        // }}}
-    } else if constexpr (__is_simd_wrapper_v<_From>) {
-        return __convert_mask<_To>(__k._M_data);
-    } else if constexpr (__is_simd_wrapper_v<_To>) {
-        return __convert_mask<typename _To::_BuiltinType>(__k);
-    } else if constexpr (std::is_unsigned_v<_From> && __is_vector_type_v<_To>) {
-        // bits -> vector {{{
-        using _Trait = _VectorTraits<_To>;
-        using _ToT = typename _Trait::value_type;
-        constexpr size_t _N_out = _Trait::_S_width;
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-        constexpr size_t _N_in = sizeof(_From) * CHAR_BIT;
-        constexpr size_t _N = std::min(_N_in, _N_out);
-        constexpr size_t __bytes_per_output_element = sizeof(_ToT);
-        if constexpr (__have_avx512f) {
-            if constexpr (__bytes_per_output_element == 1 && sizeof(_To) <= 16) {
-                if constexpr (__have_avx512bw_vl) {
-                    return __intrin_bitcast<_To>(_mm_movm_epi8(__k));
-                } else if constexpr (__have_avx512bw) {
-                    return __intrin_bitcast<_To>(__lo128(_mm512_movm_epi8(__k)));
-                } else {
-                    auto __as32bits = _mm512_maskz_mov_epi32(__k, ~__m512i());
-                    auto __as16bits = __xzyw(
-                        _mm256_packs_epi32(__lo256(__as32bits), __hi256(__as32bits)));
-                    return __intrin_bitcast<_To>(
-                        _mm_packs_epi16(__lo128(__as16bits), __hi128(__as16bits)));
-                }
-            } else if constexpr (__bytes_per_output_element == 1 && sizeof(_To) == 32) {
-                if constexpr (__have_avx512bw_vl) {
-                    return __vector_bitcast<_ToT>(_mm256_movm_epi8(__k));
-                } else if constexpr (__have_avx512bw) {
-                    return __vector_bitcast<_ToT>(__lo256(_mm512_movm_epi8(__k)));
-                } else {
-                    auto __as16bits =  // 0 16 1 17 ... 15 31
-                        _mm512_srli_epi32(_mm512_maskz_mov_epi32(__k, ~__m512i()), 16) |
-                        _mm512_slli_epi32(_mm512_maskz_mov_epi32(__k >> 16, ~__m512i()),
-                                          16);
-                    auto __0_16_1_17 = __xzyw(_mm256_packs_epi16(
-                        __lo256(__as16bits),
-                        __hi256(__as16bits))  // 0 16 1 17 2 18 3 19 8 24 9 25 ...
-                    );
-                    // deinterleave:
-                    return __vector_bitcast<_ToT>(__xzyw(_mm256_shuffle_epi8(
-                        __0_16_1_17,  // 0 16 1 17 2 ...
-                        _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13,
-                                         15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11,
-                                         13, 15))));  // 0-7 16-23 8-15 24-31 -> xzyw
-                                                      // 0-3  8-11 16-19 24-27
-                                                      // 4-7 12-15 20-23 28-31
-                }
-            } else if constexpr (__bytes_per_output_element == 1 && sizeof(_To) == 64) {
-                return reinterpret_cast<__vector_type_t<_SChar, 64>>(_mm512_movm_epi8(__k));
-            } else if constexpr (__bytes_per_output_element == 2 && sizeof(_To) <= 16) {
-                if constexpr (__have_avx512bw_vl) {
-                    return __intrin_bitcast<_To>(_mm_movm_epi16(__k));
-                } else if constexpr (__have_avx512bw) {
-                    return __intrin_bitcast<_To>(__lo128(_mm512_movm_epi16(__k)));
-                } else {
-                    __m256i __as32bits;
-                    if constexpr (__have_avx512vl) {
-                        __as32bits = _mm256_maskz_mov_epi32(__k, ~__m256i());
-                    } else {
-                        __as32bits = __lo256(_mm512_maskz_mov_epi32(__k, ~__m512i()));
-                    }
-                    return __intrin_bitcast<_To>(
-                        _mm_packs_epi32(__lo128(__as32bits), __hi128(__as32bits)));
-                }
-            } else if constexpr (__bytes_per_output_element == 2 && sizeof(_To) == 32) {
-                if constexpr (__have_avx512bw_vl) {
-                    return __vector_bitcast<_ToT>(_mm256_movm_epi16(__k));
-                } else if constexpr (__have_avx512bw) {
-                    return __vector_bitcast<_ToT>(__lo256(_mm512_movm_epi16(__k)));
-                } else {
-                    auto __as32bits = _mm512_maskz_mov_epi32(__k, ~__m512i());
-                    return __vector_bitcast<_ToT>(__xzyw(
-                        _mm256_packs_epi32(__lo256(__as32bits), __hi256(__as32bits))));
-                }
-            } else if constexpr (__bytes_per_output_element == 2 && sizeof(_To) == 64) {
-                return __vector_bitcast<_ToT>(_mm512_movm_epi16(__k));
-            } else if constexpr (__bytes_per_output_element == 4 && sizeof(_To) <= 16) {
-                return __intrin_bitcast<_To>(
-                    __have_avx512dq_vl
-                        ? _mm_movm_epi32(__k)
-                        : __have_avx512dq
-                              ? __lo128(_mm512_movm_epi32(__k))
-                              : __have_avx512vl
-                                    ? _mm_maskz_mov_epi32(__k, ~__m128i())
-                                    : __lo128(_mm512_maskz_mov_epi32(__k, ~__m512i())));
-            } else if constexpr (__bytes_per_output_element == 4 && sizeof(_To) == 32) {
-                return __vector_bitcast<_ToT>(
-                    __have_avx512dq_vl
-                        ? _mm256_movm_epi32(__k)
-                        : __have_avx512dq
-                              ? __lo256(_mm512_movm_epi32(__k))
-                              : __have_avx512vl
-                                    ? _mm256_maskz_mov_epi32(__k, ~__m256i())
-                                    : __lo256(_mm512_maskz_mov_epi32(__k, ~__m512i())));
-            } else if constexpr (__bytes_per_output_element == 4 && sizeof(_To) == 64) {
-                return __vector_bitcast<_ToT>(__have_avx512dq
-                                             ? _mm512_movm_epi32(__k)
-                                             : _mm512_maskz_mov_epi32(__k, ~__m512i()));
-            } else if constexpr (__bytes_per_output_element == 8 && sizeof(_To) == 16) {
-                return __vector_bitcast<_ToT>(
-                    __have_avx512dq_vl
-                        ? _mm_movm_epi64(__k)
-                        : __have_avx512dq
-                              ? __lo128(_mm512_movm_epi64(__k))
-                              : __have_avx512vl
-                                    ? _mm_maskz_mov_epi64(__k, ~__m128i())
-                                    : __lo128(_mm512_maskz_mov_epi64(__k, ~__m512i())));
-            } else if constexpr (__bytes_per_output_element == 8 && sizeof(_To) == 32) {
-                return __vector_bitcast<_ToT>(
-                    __have_avx512dq_vl
-                        ? _mm256_movm_epi64(__k)
-                        : __have_avx512dq
-                              ? __lo256(_mm512_movm_epi64(__k))
-                              : __have_avx512vl
-                                    ? _mm256_maskz_mov_epi64(__k, ~__m256i())
-                                    : __lo256(_mm512_maskz_mov_epi64(__k, ~__m512i())));
-            } else if constexpr (__bytes_per_output_element == 8 && sizeof(_To) == 64) {
-                return __vector_bitcast<_ToT>(__have_avx512dq
-                                             ? _mm512_movm_epi64(__k)
-                                             : _mm512_maskz_mov_epi64(__k, ~__m512i()));
-            } else {
-                __assert_unreachable<_To>();
-            }
-        } else if constexpr (__have_sse) {
-            using _U = std::make_unsigned_t<__int_for_sizeof_t<_ToT>>;
-            using _V = __vector_type_t<_U, _N>;  // simd<_U, _Abi>;
-            static_assert(sizeof(_V) <= 32);  // can't be AVX512
-            constexpr size_t __bits_per_element = sizeof(_U) * CHAR_BIT;
-            if constexpr (!__have_avx2 && __have_avx && sizeof(_V) == 32) {
-                if constexpr (_N == 8) {
-                    return _mm256_cmp_ps(
-                        _mm256_and_ps(
-                            _mm256_castsi256_ps(_mm256_set1_epi32(__k)),
-                            _mm256_castsi256_ps(_mm256_setr_epi32(
-                                0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80))),
-                        _mm256_setzero_ps(), _CMP_NEQ_UQ);
-                } else if constexpr (_N == 4) {
-                    return _mm256_cmp_pd(
-                        _mm256_and_pd(
-                            _mm256_castsi256_pd(_mm256_set1_epi64x(__k)),
-                            _mm256_castsi256_pd(
-                                _mm256_setr_epi64x(0x01, 0x02, 0x04, 0x08))),
-                        _mm256_setzero_pd(), _CMP_NEQ_UQ);
-                } else {
-                    __assert_unreachable<_To>();
-                }
-            } else if constexpr (__bits_per_element >= _N)
-	      {
-		constexpr auto __bitmask =
-		  __generate_vector<__vector_type_t<_U, _N_out>>(
-		    [](auto __i) constexpr->_U {
-		      return __i < _N ? 1ull << __i : 0;
-		    });
-		return __vector_bitcast<_ToT>(
-		  (__vector_broadcast<_N_out, _U>(__k) & __bitmask) != 0);
-	      }
-	    else if constexpr (sizeof(_V) == 16 && sizeof(_ToT) == 1 && __have_ssse3) {
-                const auto __bitmask = __to_intrin(__make_vector<_UChar>(
-                    1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128));
-                return __vector_bitcast<_ToT>(
-                    __vector_bitcast<_ToT>(
-                        _mm_shuffle_epi8(
-                            __to_intrin(__vector_type_t<_ULLong, 2>{__k}),
-                            _mm_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-                                          1)) &
-                        __bitmask) != 0);
-            } else if constexpr (sizeof(_V) == 32 && sizeof(_ToT) == 1 && __have_avx2) {
-                const auto __bitmask =
-                    _mm256_broadcastsi128_si256(__to_intrin(__make_vector<_UChar>(
-                        1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128)));
-                return __vector_bitcast<_ToT>(
-                    __vector_bitcast<_ToT>(_mm256_shuffle_epi8(
-                                        _mm256_broadcastsi128_si256(__to_intrin(
-                                            __vector_type_t<_ULLong, 2>{__k})),
-                                        _mm256_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-                                                         1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
-                                                         2, 2, 3, 3, 3, 3, 3, 3, 3, 3)) &
-                                    __bitmask) != 0);
-                /* TODO:
-                } else if constexpr (sizeof(_V) == 32 && sizeof(_ToT) == 2 && __have_avx2) {
-                    constexpr auto __bitmask = _mm256_broadcastsi128_si256(
-                        _mm_setr_epi8(0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
-                0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000)); return
-                __vector_bitcast<_ToT>( _mm256_shuffle_epi8(
-                                   _mm256_broadcastsi128_si256(__m128i{__k}),
-                                   _mm_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-                1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3)) & __bitmask) != 0;
-                */
-            } else {
-                const _V __tmp = __generate_vector<_V>([&](auto __i) constexpr {
-                                  return static_cast<_U>(
-                                      __k >> (__bits_per_element * (__i / __bits_per_element)));
-                              }) &
-                              __generate_vector<_V>([](auto __i) constexpr {
-                                  return static_cast<_U>(1ull << (__i % __bits_per_element));
-                              });  // mask bit index
-                return __vector_bitcast<_ToT>(__tmp != _V());
-            }
-        } else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-	  {
-	    using _I = __int_for_sizeof_t<_ToT>;
-	    return reinterpret_cast<_To>(
-	      __generate_vector<__vector_type_t<_I, _N_out>>([&](auto __i) constexpr {
-		return ((__k >> __i) & 1) == 0 ? _I() : ~_I();
-	      }));
-	  }
-	// }}}
-    } else if constexpr (__is_vector_type_v<_From> && std::is_unsigned_v<_To>) {
-        // vector -> bits {{{
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-        using _Trait = _VectorTraits<_From>;
-        using _Tp = typename _Trait::value_type;
-        constexpr size_t _FromN = sizeof(_From) < 16 ? 16 / sizeof(_Tp) : _Trait::_S_width;
-        constexpr size_t cvt_id = _FromN * 10 + sizeof(_Tp);
-        constexpr bool __have_avx512_int = __have_avx512f && std::is_integral_v<_Tp>;
-        [[maybe_unused]]  // PR85827
-        const auto __intrin = __to_intrin(__k);
-
-             if constexpr (cvt_id == 16'1 && __have_avx512bw_vl) { return    _mm_movepi8_mask(__intrin); }
-        else if constexpr (cvt_id == 16'1 && __have_avx512bw   ) { return _mm512_movepi8_mask(__zero_extend(__intrin)); }
-        else if constexpr (cvt_id == 16'1                      ) { return    _mm_movemask_epi8(__intrin); }
-        else if constexpr (cvt_id == 32'1 && __have_avx512bw_vl) { return _mm256_movepi8_mask(__intrin); }
-        else if constexpr (cvt_id == 32'1 && __have_avx512bw   ) { return _mm512_movepi8_mask(__zero_extend(__intrin)); }
-        else if constexpr (cvt_id == 32'1                      ) { return _mm256_movemask_epi8(__intrin); }
-        else if constexpr (cvt_id == 64'1 && __have_avx512bw   ) { return _mm512_movepi8_mask(__intrin); }
-        else if constexpr (cvt_id ==  8'2 && __have_avx512bw_vl) { return    _mm_movepi16_mask(__intrin); }
-        else if constexpr (cvt_id ==  8'2 && __have_avx512bw   ) { return _mm512_movepi16_mask(__zero_extend(__intrin)); }
-        else if constexpr (cvt_id ==  8'2                      ) { return movemask_epi16(__intrin); }
-        else if constexpr (cvt_id == 16'2 && __have_avx512bw_vl) { return _mm256_movepi16_mask(__intrin); }
-        else if constexpr (cvt_id == 16'2 && __have_avx512bw   ) { return _mm512_movepi16_mask(__zero_extend(__intrin)); }
-        else if constexpr (cvt_id == 16'2                      ) { return movemask_epi16(__intrin); }
-        else if constexpr (cvt_id == 32'2 && __have_avx512bw   ) { return _mm512_movepi16_mask(__intrin); }
-        else if constexpr (cvt_id ==  4'4 && __have_avx512dq_vl) { return    _mm_movepi32_mask(__intrin_bitcast<__m128i>(__k)); }
-        else if constexpr (cvt_id ==  4'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__zero_extend(__intrin_bitcast<__m128i>(__k))); }
-        else if constexpr (cvt_id ==  4'4 && __have_avx512vl   ) { return    _mm_cmp_epi32_mask(__intrin_bitcast<__m128i>(__k), __m128i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'4 && __have_avx512_int ) { return _mm512_cmp_epi32_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'4                      ) { return    _mm_movemask_ps(__intrin); }
-        else if constexpr (cvt_id ==  8'4 && __have_avx512dq_vl) { return _mm256_movepi32_mask(__vector_bitcast<_LLong>(__k)); }
-        else if constexpr (cvt_id ==  8'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__zero_extend(__vector_bitcast<_LLong>(__k))); }
-        else if constexpr (cvt_id ==  8'4 && __have_avx512vl   ) { return _mm256_cmp_epi32_mask(__vector_bitcast<_LLong>(__k), __m256i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  8'4 && __have_avx512_int ) { return _mm512_cmp_epi32_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  8'4                      ) { return _mm256_movemask_ps(__intrin); }
-        else if constexpr (cvt_id == 16'4 && __have_avx512dq   ) { return _mm512_movepi32_mask(__vector_bitcast<_LLong>(__k)); }
-        else if constexpr (cvt_id == 16'4                      ) { return _mm512_cmp_epi32_mask(__vector_bitcast<_LLong>(__k), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  2'8 && __have_avx512dq_vl) { return    _mm_movepi64_mask(__intrin_bitcast<__m128i>(__k)); }
-        else if constexpr (cvt_id ==  2'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__zero_extend(__intrin_bitcast<__m128i>(__k))); }
-        else if constexpr (cvt_id ==  2'8 && __have_avx512vl   ) { return    _mm_cmp_epi64_mask(__intrin_bitcast<__m128i>(__k), __m128i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  2'8 && __have_avx512_int ) { return _mm512_cmp_epi64_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  2'8                      ) { return    _mm_movemask_pd(__intrin); }
-        else if constexpr (cvt_id ==  4'8 && __have_avx512dq_vl) { return _mm256_movepi64_mask(__vector_bitcast<_LLong>(__k)); }
-        else if constexpr (cvt_id ==  4'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__zero_extend(__vector_bitcast<_LLong>(__k))); }
-        else if constexpr (cvt_id ==  4'8 && __have_avx512vl   ) { return _mm256_cmp_epi64_mask(__vector_bitcast<_LLong>(__k), __m256i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'8 && __have_avx512_int ) { return _mm512_cmp_epi64_mask(__zero_extend(__intrin), __m512i(), _MM_CMPINT_LT); }
-        else if constexpr (cvt_id ==  4'8                      ) { return _mm256_movemask_pd(__intrin); }
-        else if constexpr (cvt_id ==  8'8 && __have_avx512dq   ) { return _mm512_movepi64_mask(__vector_bitcast<_LLong>(__k)); }
-        else if constexpr (cvt_id ==  8'8                      ) { return _mm512_cmp_epi64_mask(__vector_bitcast<_LLong>(__k), __m512i(), _MM_CMPINT_LT); }
-        else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-        __assert_unreachable<_To>();
-        // }}}
-    } else if constexpr (__is_vector_type_v<_From> && __is_vector_type_v<_To>) {
-        // vector -> vector {{{
-        using _ToTrait = _VectorTraits<_To>;
-        using _FromTrait = _VectorTraits<_From>;
-        using _ToT = typename _ToTrait::value_type;
-        using _Tp = typename _FromTrait::value_type;
-        [[maybe_unused]] constexpr size_t _FromN = _FromTrait::_S_width;
-        constexpr size_t _ToN = _ToTrait::_S_width;
-        constexpr int _FromBytes = sizeof(_Tp);
-        constexpr int _ToBytes = sizeof(_ToT);
-
-	if constexpr (_FromBytes == _ToBytes)
-	  return __intrin_bitcast<_To>(__k);
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-        else if constexpr (sizeof(_To) == 16 && sizeof(__k) == 16)
-	{ // SSE -> SSE {{{
-            if constexpr (_FromBytes == 4 && _ToBytes == 8) {
-                if constexpr(std::is_integral_v<_Tp>) {
-                    return __vector_bitcast<_ToT>(__interleave128_lo(__k, __k));
-                } else {
-                    return __vector_bitcast<_ToT>(__interleave128_lo(__k, __k));
-                }
-            } else if constexpr (_FromBytes == 2 && _ToBytes == 8) {
-                const auto __y = __vector_bitcast<int>(__interleave128_lo(__k, __k));
-                return __vector_bitcast<_ToT>(__interleave128_lo(__y, __y));
-            } else if constexpr (_FromBytes == 1 && _ToBytes == 8) {
-                auto __y = __vector_bitcast<short>(__interleave128_lo(__k, __k));
-                auto __z = __vector_bitcast<int>(__interleave128_lo(__y, __y));
-                return __vector_bitcast<_ToT>(__interleave128_lo(__z, __z));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 4) {
-		if constexpr (__have_sse2)
-		  return __vector_bitcast<_ToT>(
-		    _mm_packs_epi32(__vector_bitcast<_LLong>(__k), __m128i()));
-		else
-		  return __vector_shuffle<1, 3, 6, 7>(
-		    __vector_bitcast<_ToT>(__k), _To());
-	    } else if constexpr (_FromBytes == 2 && _ToBytes == 4) {
-                return __vector_bitcast<_ToT>(__interleave128_lo(__k, __k));
-            } else if constexpr (_FromBytes == 1 && _ToBytes == 4) {
-                const auto __y = __vector_bitcast<short>(__interleave128_lo(__k, __k));
-                return __vector_bitcast<_ToT>(__interleave128_lo(__y, __y));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 2) {
-		if constexpr (__have_sse2 && !__have_ssse3)
-		  return __vector_bitcast<_ToT>(_mm_packs_epi32(
-		    _mm_packs_epi32(__vector_bitcast<_LLong>(__k), __m128i()),
-		    __m128i()));
-		else
-		  return __vector_permute<3, 7, -1, -1, -1, -1, -1, -1>(
-		    __vector_bitcast<_ToT>(__k));
-	    } else if constexpr (_FromBytes == 4 && _ToBytes == 2) {
-                return __vector_bitcast<_ToT>(
-                    _mm_packs_epi32(__vector_bitcast<_LLong>(__k), __m128i()));
-            } else if constexpr (_FromBytes == 1 && _ToBytes == 2) {
-                return __vector_bitcast<_ToT>(__interleave128_lo(__k, __k));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 1) {
-                if constexpr(__have_ssse3) {
-                    return __vector_bitcast<_ToT>(
-                        _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                         _mm_setr_epi8(7, 15, -1, -1, -1, -1, -1, -1, -1,
-                                                       -1, -1, -1, -1, -1, -1, -1)));
-                } else {
-                    auto __y = _mm_packs_epi32(__vector_bitcast<_LLong>(__k), __m128i());
-                    __y = _mm_packs_epi32(__y, __m128i());
-                    return __vector_bitcast<_ToT>(_mm_packs_epi16(__y, __m128i()));
-                }
-		return __vector_permute<7, 15, -1, -1, -1, -1, -1, -1, -1, -1,
-					-1, -1, -1, -1, -1, -1>(
-		  __vector_bitcast<_ToT>(__k));
-	    } else if constexpr (_FromBytes == 4 && _ToBytes == 1) {
-                if constexpr(__have_ssse3) {
-                    return __vector_bitcast<_ToT>(
-                        _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                         _mm_setr_epi8(3, 7, 11, 15, -1, -1, -1, -1, -1,
-                                                       -1, -1, -1, -1, -1, -1, -1)));
-                } else {
-                    const auto __y = _mm_packs_epi32(__vector_bitcast<_LLong>(__k), __m128i());
-                    return __vector_bitcast<_ToT>(_mm_packs_epi16(__y, __m128i()));
-                }
-		return __vector_permute<3, 7, 11, 15, -1, -1, -1, -1, -1, -1,
-					-1, -1, -1, -1, -1, -1>(
-		  __vector_bitcast<_ToT>(__k));
-	    } else if constexpr (_FromBytes == 2 && _ToBytes == 1) {
-                return __vector_bitcast<_ToT>(_mm_packs_epi16(__vector_bitcast<_LLong>(__k), __m128i()));
-	    } else {
-                static_assert(!std::is_same_v<_Tp, _Tp>, "should be unreachable");
-            }
-	  } // }}}
-	else if constexpr (sizeof(_To) == 32 && sizeof(__k) == 32)
-	  { // AVX -> AVX {{{
-            if constexpr (_FromBytes == _ToBytes) {  // keep low 1/2
-                __assert_unreachable<_Tp>();
-            } else if constexpr (_FromBytes == _ToBytes * 2) {
-                const auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(
-                    _mm256_castsi128_si256(_mm_packs_epi16(__lo128(__y), __hi128(__y))));
-            } else if constexpr (_FromBytes == _ToBytes * 4) {
-                const auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(_mm256_castsi128_si256(
-                    _mm_packs_epi16(_mm_packs_epi16(__lo128(__y), __hi128(__y)), __m128i())));
-            } else if constexpr (_FromBytes == _ToBytes * 8) {
-                const auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(_mm256_castsi128_si256(
-                    _mm_shuffle_epi8(_mm_packs_epi16(__lo128(__y), __hi128(__y)),
-                                     _mm_setr_epi8(3, 7, 11, 15, -1, -1, -1, -1, -1, -1,
-                                                   -1, -1, -1, -1, -1, -1))));
-            } else if constexpr (_FromBytes * 2 == _ToBytes) {
-                auto __y = __xzyw(__to_intrin(__k));
-                if constexpr(std::is_floating_point_v<_Tp>) {
-                    return __vector_bitcast<_ToT>(_mm256_unpacklo_ps(__y, __y));
-                } else {
-                    return __vector_bitcast<_ToT>(_mm256_unpacklo_epi8(__y, __y));
-                }
-            } else if constexpr (_FromBytes * 4 == _ToBytes) {
-                auto __y = _mm_unpacklo_epi8(__lo128(__vector_bitcast<_LLong>(__k)),
-                                           __lo128(__vector_bitcast<_LLong>(__k)));  // drops 3/4 of input
-                return __vector_bitcast<_ToT>(
-                    __concat(_mm_unpacklo_epi16(__y, __y), _mm_unpackhi_epi16(__y, __y)));
-            } else if constexpr (_FromBytes == 1 && _ToBytes == 8) {
-                auto __y = _mm_unpacklo_epi8(__lo128(__vector_bitcast<_LLong>(__k)),
-                                           __lo128(__vector_bitcast<_LLong>(__k)));  // drops 3/4 of input
-                __y = _mm_unpacklo_epi16(__y, __y);  // drops another 1/2 => 7/8 total
-                return __vector_bitcast<_ToT>(
-                    __concat(_mm_unpacklo_epi32(__y, __y), _mm_unpackhi_epi32(__y, __y)));
-            } else {
-                __assert_unreachable<_Tp>();
-            }
-	  } // }}}
-	else if constexpr (sizeof(_To) == 32 && sizeof(__k) == 16)
-	  { // SSE -> AVX {{{
-            if constexpr (_FromBytes == _ToBytes) {
-                return __vector_bitcast<_ToT>(
-                    __intrinsic_type_t<_Tp, 32 / sizeof(_Tp)>(__zero_extend(__to_intrin(__k))));
-            } else if constexpr (_FromBytes * 2 == _ToBytes) {  // keep all
-                return __vector_bitcast<_ToT>(__concat(_mm_unpacklo_epi8(__vector_bitcast<_LLong>(__k), __vector_bitcast<_LLong>(__k)),
-                                         _mm_unpackhi_epi8(__vector_bitcast<_LLong>(__k), __vector_bitcast<_LLong>(__k))));
-            } else if constexpr (_FromBytes * 4 == _ToBytes) {
-                if constexpr (__have_avx2) {
-                    return __vector_bitcast<_ToT>(_mm256_shuffle_epi8(
-                        __concat(__vector_bitcast<_LLong>(__k), __vector_bitcast<_LLong>(__k)),
-                        _mm256_setr_epi8(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
-                                         4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7,
-                                         7)));
-                } else {
-                    return __vector_bitcast<_ToT>(
-                        __concat(_mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                                _mm_setr_epi8(0, 0, 0, 0, 1, 1, 1, 1, 2,
-                                                              2, 2, 2, 3, 3, 3, 3)),
-                               _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                                _mm_setr_epi8(4, 4, 4, 4, 5, 5, 5, 5, 6,
-                                                              6, 6, 6, 7, 7, 7, 7))));
-                }
-            } else if constexpr (_FromBytes * 8 == _ToBytes) {
-                if constexpr (__have_avx2) {
-                    return __vector_bitcast<_ToT>(_mm256_shuffle_epi8(
-                        __concat(__vector_bitcast<_LLong>(__k), __vector_bitcast<_LLong>(__k)),
-                        _mm256_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-                                         2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3,
-                                         3)));
-                } else {
-                    return __vector_bitcast<_ToT>(
-                        __concat(_mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                                _mm_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1,
-                                                              1, 1, 1, 1, 1, 1, 1)),
-                               _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                                _mm_setr_epi8(2, 2, 2, 2, 2, 2, 2, 2, 3,
-                                                              3, 3, 3, 3, 3, 3, 3))));
-                }
-            } else if constexpr (_FromBytes == _ToBytes * 2) {
-                return __vector_bitcast<_ToT>(
-                    __m256i(__zero_extend(_mm_packs_epi16(__vector_bitcast<_LLong>(__k), __m128i()))));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 2) {
-                return __vector_bitcast<_ToT>(__m256i(__zero_extend(
-                    _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                     _mm_setr_epi8(6, 7, 14, 15, -1, -1, -1, -1, -1, -1,
-                                                   -1, -1, -1, -1, -1, -1)))));
-            } else if constexpr (_FromBytes == 4 && _ToBytes == 1) {
-                return __vector_bitcast<_ToT>(__m256i(__zero_extend(
-                    _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                     _mm_setr_epi8(3, 7, 11, 15, -1, -1, -1, -1, -1, -1,
-                                                   -1, -1, -1, -1, -1, -1)))));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 1) {
-                return __vector_bitcast<_ToT>(__m256i(__zero_extend(
-                    _mm_shuffle_epi8(__vector_bitcast<_LLong>(__k),
-                                     _mm_setr_epi8(7, 15, -1, -1, -1, -1, -1, -1, -1, -1,
-                                                   -1, -1, -1, -1, -1, -1)))));
-            } else {
-                static_assert(!std::is_same_v<_Tp, _Tp>, "should be unreachable");
-            }
-	  } // }}}
-	else if constexpr (sizeof(_To) == 16 && sizeof(__k) == 32)
-	  { // AVX -> SSE {{{
-            if constexpr (_FromBytes == _ToBytes) {  // keep low 1/2
-                return __vector_bitcast<_ToT>(__lo128(__k));
-            } else if constexpr (_FromBytes == _ToBytes * 2) {  // keep all
-                auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(_mm_packs_epi16(__lo128(__y), __hi128(__y)));
-            } else if constexpr (_FromBytes == _ToBytes * 4) {  // add 1/2 undef
-                auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(
-                    _mm_packs_epi16(_mm_packs_epi16(__lo128(__y), __hi128(__y)), __m128i()));
-            } else if constexpr (_FromBytes == 8 && _ToBytes == 1) {  // add 3/4 undef
-                auto __y = __vector_bitcast<_LLong>(__k);
-                return __vector_bitcast<_ToT>(
-                    _mm_shuffle_epi8(_mm_packs_epi16(__lo128(__y), __hi128(__y)),
-                                     _mm_setr_epi8(3, 7, 11, 15, -1, -1, -1, -1, -1, -1,
-                                                   -1, -1, -1, -1, -1, -1)));
-            } else if constexpr (_FromBytes * 2 == _ToBytes) {  // keep low 1/4
-                auto __y = __lo128(__vector_bitcast<_LLong>(__k));
-                return __vector_bitcast<_ToT>(_mm_unpacklo_epi8(__y, __y));
-            } else if constexpr (_FromBytes * 4 == _ToBytes) {  // keep low 1/8
-                auto __y = __lo128(__vector_bitcast<_LLong>(__k));
-                __y = _mm_unpacklo_epi8(__y, __y);
-                return __vector_bitcast<_ToT>(_mm_unpacklo_epi8(__y, __y));
-            } else if constexpr (_FromBytes * 8 == _ToBytes) {  // keep low 1/16
-                auto __y = __lo128(__vector_bitcast<_LLong>(__k));
-                __y = _mm_unpacklo_epi8(__y, __y);
-                __y = _mm_unpacklo_epi8(__y, __y);
-                return __vector_bitcast<_ToT>(_mm_unpacklo_epi8(__y, __y));
-            } else {
-                static_assert(!std::is_same_v<_Tp, _Tp>, "should be unreachable");
-            }
-	  } // }}}
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-	else
-	  {
-	    using _I = __int_for_sizeof_t<_ToT>;
-	    return reinterpret_cast<_To>(
-	      __generate_vector<__vector_type_t<_I, _ToN>>([&](
-		auto __i) constexpr {
-		if constexpr (__i >= _FromN)
-		  return _I();
-		else
-		  return __k[int(__i)] == 0 ? _I() : ~_I();
-	      }));
-	  }
-	/*
-        } else if constexpr (_FromBytes > _ToBytes) {
-	    const _To     __y      = __vector_bitcast<_ToT>(__k);
-	    return [&] <std::size_t... _Is> (std::index_sequence<_Is...>) {
-	      constexpr int _Stride = _FromBytes / _ToBytes;
-	      return _To{__y[(_Is + 1) * _Stride - 1]...};
-	    }(std::make_index_sequence<std::min(_ToN, _FromN)>());
-	} else {
-	    // {0, 0, 1, 1} (_Dups = 2, _Is<4>)
-	    // {0, 0, 0, 0, 1, 1, 1, 1} (_Dups = 4, _Is<8>)
-	    // {0, 0, 1, 1, 2, 2, 3, 3} (_Dups = 2, _Is<8>)
-	    // ...
-	    return [&] <std::size_t... _Is> (std::index_sequence<_Is...>) {
-	      constexpr int __dup = _ToBytes / _FromBytes;
-	      return __vector_bitcast<_ToT>(_From{__k[_Is / __dup]...});
-	    }(std::make_index_sequence<_FromN>());
-	}
-	*/
-        // }}}
-    } else {
-        __assert_unreachable<_To>();
-    }
-}
-
-// }}}
-
-// ISA & type detection {{{1
-template <class _Tp, size_t _N>
-constexpr bool __is_sse_ps()
-{
-  return __have_sse && std::is_same_v<_Tp, float> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 16;
-}
-template <class _Tp, size_t _N>
-constexpr bool __is_sse_pd()
-{
-  return __have_sse2 && std::is_same_v<_Tp, double> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 16;
-}
-template <class _Tp, size_t _N>
-constexpr bool __is_avx_ps()
-{
-  return __have_avx && std::is_same_v<_Tp, float> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 32;
-}
-template <class _Tp, size_t _N>
-constexpr bool __is_avx_pd()
-{
-  return __have_avx && std::is_same_v<_Tp, double> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 32;
-}
-template <class _Tp, size_t _N>
-constexpr bool __is_avx512_ps()
-{
-  return __have_avx512f && std::is_same_v<_Tp, float> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 64;
-}
-template <class _Tp, size_t _N>
-constexpr bool __is_avx512_pd()
-{
-  return __have_avx512f && std::is_same_v<_Tp, double> &&
-	 sizeof(__intrinsic_type_t<_Tp, _N>) == 64;
-}
-
-template <class _Tp, size_t _N> constexpr bool __is_neon_ps()
-{
-    constexpr auto _Bytes = sizeof(__vector_type_t<_Tp, _N>);
-    return __have_neon && std::is_same_v<_Tp, float> && (_Bytes == 16 || _Bytes == 8);
-}
-template <class _Tp, size_t _N> constexpr bool __is_neon_pd()
-{
-    return __have_neon && std::is_same_v<_Tp, double> && sizeof(__vector_type_t<_Tp, _N>) == 16;
-}
 
 // _SimdImplBuiltin {{{1
 template <typename _Abi>
@@ -1214,6 +578,7 @@ struct _SimdImplBuiltin
     template <class _Tp> static constexpr size_t _S_size = _Abi::template size<_Tp>;
     template <class _Tp> static constexpr size_t _S_full_size = _Abi::template _S_full_size<_Tp>;
     using _SuperImpl = typename _Abi::_SimdImpl;
+    using _MaskImpl = typename _Abi::_MaskImpl;
 
     // __make_simd(_SimdWrapper/__intrinsic_type_t) {{{2
     template <class _Tp, size_t _N>
@@ -1312,9 +677,9 @@ struct _SimdImplBuiltin
                                                 const _U *__mem,
                                                 _F) noexcept
     {
-      _BitOps::__bit_iteration(
-	__vector_to_bitset(__k._M_data).to_ullong(),
-	[&](auto __i) { __merge.__set(__i, static_cast<_Tp>(__mem[__i])); });
+      _BitOps::__bit_iteration(_MaskImpl::__to_bits(__k), [&](auto __i) {
+	__merge.__set(__i, static_cast<_Tp>(__mem[__i]));
+      });
       return __merge;
     }
 
@@ -1362,18 +727,10 @@ struct _SimdImplBuiltin
     _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
       _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<_Tp, _N> __k)
     {
-      if constexpr (_N <= sizeof(long) * CHAR_BIT)
-	_BitOps::__bit_iteration(
-	  __vector_to_bitset(__k).to_ulong(), [&](auto __i) constexpr {
-	    __mem[__i] = __v[__i];
-	  });
-      else if constexpr (_N <= sizeof(long long) * CHAR_BIT)
-	_BitOps::__bit_iteration(
-	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
-	    __mem[__i] = __v[__i];
-	  });
-      else
-	__assert_unreachable<_Tp>();
+      _BitOps::__bit_iteration(
+	_MaskImpl::__to_bits(__k), [&](auto __i) constexpr {
+	  __mem[__i] = __v[__i];
+	});
     }
 
     // __masked_store {{{2
@@ -1446,7 +803,7 @@ struct _SimdImplBuiltin
 	      __execute_n_times<_NFullStores>([&](auto __i) {
 		_SuperImpl::__masked_store_nocvt(
 		  _UW(__converted[__i]), __mem + __i * _UV_size, _F(),
-		  __convert_mask<_UM>(
+		  _UAbi::_MaskImpl::template __convert<_U>(
 		    __extract_part<__i, _NParts>(__k.__as_full_vector())));
 	      });
 	      if constexpr (_NAllStores >
@@ -1454,13 +811,14 @@ struct _SimdImplBuiltin
 		_SuperImpl::__masked_store_nocvt(
 		  _UW(__converted[_NFullStores]),
 		  __mem + _NFullStores * _UV_size, _F(),
-		  __convert_mask<_UM>(__extract_part<_NFullStores, _NParts>(
-		    __k.__as_full_vector())));
+		  _UAbi::_MaskImpl::template __convert<_U>(
+		    __extract_part<_NFullStores, _NParts>(
+		      __k.__as_full_vector())));
 	    }
 	}
       else
 	_BitOps::__bit_iteration(
-	  __vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
+	  _MaskImpl::__to_bits(__k), [&](auto __i) constexpr {
 	    __mem[__i] = static_cast<_U>(__v[__i]);
 	  });
     }
@@ -2307,15 +1665,142 @@ struct _SimdImplBuiltin
     //}}}2
 };
 
-// _MaskImplBuiltin {{{1
-template <class _Abi> struct _MaskImplBuiltin {
-    // member types {{{2
-    template <class _Tp> using _TypeTag = _Tp *;
-    template <class _Tp>
-    using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
-    template <class _Tp>
-    using _MaskMember = typename _Abi::template __traits<_Tp>::_MaskMember;
+// _MaskImplBuiltinMixin {{{1
+struct _MaskImplBuiltinMixin {
+  template <class _Tp>
+  using _TypeTag = _Tp*;
 
+  // __to_maskvector {{{
+  template <typename _Up, size_t _ToN = 1>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
+    __to_maskvector(bool __x)
+  {
+    using _I = __int_for_sizeof_t<_Up>;
+    return __vector_bitcast<_Up>(__x ? __vector_type_t<_I, _ToN>{~_I()}
+				     : __vector_type_t<_I, _ToN>{});
+  }
+
+  template <typename _Up,
+	    size_t _UpN = 0,
+	    size_t _N,
+	    size_t _ToN = _UpN == 0 ? _N : _UpN>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
+    __to_maskvector(std::bitset<_N> __x)
+  {
+    using _I = __int_for_sizeof_t<_Up>;
+    return __vector_bitcast<_Up>(
+      __generate_vector<__vector_type_t<_I, _ToN>>([&](auto __i) constexpr {
+	if constexpr (__i < _N)
+	  return ((__x >> __i).to_ulong() & 1) == 0 ? _I() : ~_I();
+	else
+	  return _I();
+      }));
+  }
+
+  template <typename _Up,
+	    size_t _UpN = 0,
+	    typename _Tp,
+	    size_t _N,
+	    size_t _ToN = _UpN == 0 ? _N : _UpN>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
+    __to_maskvector(_SimdWrapper<_Tp, _N> __x)
+  {
+    using _TW = _SimdWrapper<_Tp, _N>;
+    using _UW = _SimdWrapper<_Up, _ToN>;
+    if constexpr (sizeof(_Up) == sizeof(_Tp) && sizeof(_TW) == sizeof(_UW))
+      return __wrapper_bitcast<_Up, _ToN>(__x);
+    else if constexpr (is_same_v<_Tp, bool>) // bits -> vector
+      return __to_maskvector<_Up, _ToN>(std::bitset<_N>(__x._M_data));
+    else
+      { // vector -> vector
+//X 	[[maybe_unused]] const auto __y = __vector_bitcast<_Up>(__x._M_data);
+//X 	if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4 && sizeof(__y) == 16)
+//X 	  return __vector_permute<1, 3, -1, -1>(__y);
+//X 	else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2 && sizeof(__y) == 16)
+//X 	  return __vector_permute<1, 3, 5, 7, -1, -1, -1, -1>(__y);
+//X 	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2 &&
+//X 			   sizeof(__y) == 16)
+//X 	  return __vector_permute<3, 7, -1, -1, -1, -1, -1, -1>(__y);
+//X 	else if constexpr (sizeof(_Tp) == 2 && sizeof(_Up) == 1 && sizeof(__y) == 16)
+//X 	  return __vector_permute<1, 3, 5, 7, 9, 11, 13, 15, -1, -1, -1, -1, -1,
+//X 				  -1, -1, -1>(__y);
+//X 	else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1 &&
+//X 			   sizeof(__y) == 16)
+//X 	  return __vector_permute<3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1,
+//X 				  -1, -1, -1, -1>(__y);
+//X 	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1 &&
+//X 			   sizeof(__y) == 16)
+//X 	  return __vector_permute<7, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+//X 				  -1, -1, -1, -1>(__y);
+//X 	else
+	  {
+	    using _I = __int_for_sizeof_t<_Up>;
+	    const auto __y =
+	      __vector_bitcast<__int_for_sizeof_t<_Tp>>(__x._M_data);
+	    return __vector_bitcast<_Up>(
+	      __generate_vector<__vector_type_t<_I, _ToN>>([&](
+		auto __i) constexpr {
+		if constexpr (__i < _N)
+		  return _I(__y[__i.value]);
+		else
+		  return _I();
+	      }));
+	  }
+      }
+  }
+
+  // }}}
+  // __to_bits {{{
+  template <typename _Tp, size_t _N>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    __to_bits(_SimdWrapper<_Tp, _N> __x)
+  {
+    static_assert(!is_same_v<_Tp, bool>);
+    static_assert(_N <= CHAR_BIT * sizeof(_ULLong));
+    using _Up = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+    const auto __bools = __vector_bitcast<_Up>(__x) >> (sizeof(_Up) * CHAR_BIT - 1);
+    using _R = make_unsigned_t<
+      __int_with_sizeof_t<__next_power_of_2(__div_roundup(_N, CHAR_BIT))>>;
+    _R __r = 0;
+    __execute_n_times<_N>(
+      [&](auto __i) { __r += _R(__bools[__i.value]) << __i; });
+    return __r;
+  }
+
+  // }}}
+};
+
+// _MaskImplBuiltin {{{1
+template <typename _Abi>
+struct _MaskImplBuiltin : _MaskImplBuiltinMixin
+{
+  using _MaskImplBuiltinMixin::__to_bits;
+  using _MaskImplBuiltinMixin::__to_maskvector;
+
+  // member types {{{
+  template <class _Tp>
+  using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
+  template <class _Tp>
+  using _MaskMember = typename _Abi::template __traits<_Tp>::_MaskMember;
+  using _SuperImpl  = typename _Abi::_MaskImpl;
+  template <typename _Tp>
+  static constexpr size_t size = simd_size_v<_Tp, _Abi>;
+
+  // }}}
+  // __convert {{{
+  template <typename _Tp, typename _Up, size_t _N>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<_Up, _N> __x)
+  {
+    return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__x);
+  }
+
+  template <typename _Tp, typename _Up, typename _UAbi>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(simd_mask<_Up, _UAbi> __x)
+  {
+    return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__data(__x));
+  }
+
+  // }}}
     // __masked_load {{{2
     template <class _Tp, size_t _N, class _F>
     static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
@@ -2325,9 +1810,9 @@ template <class _Abi> struct _MaskImplBuiltin {
     {
       // AVX(2) has 32/64 bit maskload, but nothing at 8 bit granularity
       auto __tmp = __wrapper_bitcast<__int_for_sizeof_t<_Tp>>(__merge);
-      _BitOps::__bit_iteration(
-	__vector_to_bitset(__mask._M_data).to_ullong(),
-	[&](auto __i) { __tmp.__set(__i, -__mem[__i]); });
+      _BitOps::__bit_iteration(_SuperImpl::__to_bits(__mask), [&](auto __i) {
+	__tmp.__set(__i, -__mem[__i]);
+      });
       __merge = __wrapper_bitcast<_Tp>(__tmp);
       return __merge;
     }
@@ -2345,16 +1830,17 @@ template <class _Abi> struct _MaskImplBuiltin {
                                     const _SimdWrapper<_Tp, _N> __k) noexcept
     {
       _BitOps::__bit_iteration(
-	__vector_to_bitset(__k._M_data).to_ullong(), [&](auto __i) constexpr {
+	_SuperImpl::__to_bits(__k), [&](auto __i) constexpr {
 	  __mem[__i] = __v[__i];
 	});
     }
 
     // __from_bitset{{{2
     template <size_t _N, class _Tp>
-    _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __from_bitset(std::bitset<_N> __bits, _TypeTag<_Tp>)
+    _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
+      __from_bitset(std::bitset<_N> __bits, _TypeTag<_Tp>)
     {
-        return __convert_mask<typename _MaskMember<_Tp>::_BuiltinType>(__bits);
+      return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__bits);
     }
 
     // logical and bitwise operators {{{2
@@ -2372,6 +1858,13 @@ template <class _Abi> struct _MaskImplBuiltin {
 		 const _SimdWrapper<_Tp, _N>& __y)
     {
       return __or(__x._M_data, __y._M_data);
+    }
+
+    template <typename _Tp, size_t _N>
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
+      __bit_not(const _SimdWrapper<_Tp, _N>& __x)
+    {
+      return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
     }
 
     template <class _Tp, size_t _N>
