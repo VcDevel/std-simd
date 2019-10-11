@@ -73,7 +73,7 @@ _GLIBCXX_SIMD_INTRINSIC _Tp __xzyw(_Tp __a)
 #include "simd_x86_conversions.h"
 #endif
 
-// ISA & type detection {{{1
+// ISA & type detection {{{
 template <typename _Tp, size_t _N>
 constexpr bool __is_sse_ps()
 {
@@ -110,10 +110,49 @@ constexpr bool __is_avx512_pd()
   return __have_avx512f && std::is_same_v<_Tp, double> &&
 	 sizeof(__intrinsic_type_t<_Tp, _N>) == 64;
 }
+
+// }}}
+// _SimdImplX86Mixin {{{
+struct _SimdImplX86Mixin
+{
+#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85048
+  template <typename _From, typename _To, size_t _ToSize>
+  static constexpr bool __converts_via_decomposition()
+  {
+    if constexpr (is_integral_v<_From> && is_integral_v<_To> &&
+		  sizeof(_From) == 8 && _ToSize == 16)
+      return (sizeof(_To) == 2 && !__have_ssse3) ||
+	     (sizeof(_To) == 1 && !__have_avx512f);
+    else if constexpr (is_floating_point_v<_From> && is_integral_v<_To>)
+      return ((sizeof(_From) == 4 || sizeof(_From) == 8) && sizeof(_To) == 8 &&
+	      !__have_avx512dq) ||
+	     (sizeof(_From) == 8 && sizeof(_To) == 4 && !__have_sse4_1 &&
+	      _ToSize == 16);
+    else if constexpr (is_integral_v<_From> && is_floating_point_v<_To> &&
+		       sizeof(_From) == 8 && !__have_avx512dq)
+      return (sizeof(_To) == 4 && _ToSize == 16) ||
+	     (sizeof(_To) == 8 && _ToSize < 64);
+    else
+      return false;
+  }
+
+  template <typename _From, typename _To, size_t _ToSize>
+  static inline constexpr bool __converts_via_decomposition_v =
+    __converts_via_decomposition<_From, _To, _ToSize>();
+#else
+  template <typename _From, typename _To, size_t _ToSize>
+  static inline constexpr bool __converts_via_decomposition_v =
+    _SimdImplBuiltinMixin::__converts_via_decomposition_v<_From, _To, _ToSize>;
+#endif
+};
+
+// }}}
 // _SimdImplX86 {{{1
 template <typename _Abi>
-struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
+struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 {
+  using _SimdImplX86Mixin::__converts_via_decomposition_v;
+
   using _Base = _SimdImplBuiltin<_Abi>;
   template <typename _Tp>
   using _MaskMember = typename _Base::template _MaskMember<_Tp>;

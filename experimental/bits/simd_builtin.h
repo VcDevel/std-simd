@@ -484,41 +484,25 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 }
 
 // }}}
-// __converts_via_decomposition{{{
-// This lists all cases where a __vector_convert needs to fall back to conversion of
-// individual scalars (i.e. decompose the input vector into scalars, convert, compose
-// output vector). In those cases, __masked_load & __masked_store prefer to use the
-// __bit_iteration implementation.
-template <class _From, class _To, size_t _ToSize> struct __converts_via_decomposition {
-private:
-    static constexpr bool _S_i_to_i = is_integral_v<_From> && is_integral_v<_To>;
-    static constexpr bool _S_f_to_i = is_floating_point_v<_From> && is_integral_v<_To>;
-    static constexpr bool _S_f_to_f = is_floating_point_v<_From> && is_floating_point_v<_To>;
-    static constexpr bool _S_i_to_f = is_integral_v<_From> && is_floating_point_v<_To>;
 
-    template <size_t _A, size_t _B>
-    static constexpr bool _S_sizes = sizeof(_From) == _A && sizeof(_To) == _B;
-
-public:
-    static constexpr bool value =
-        (_S_i_to_i && _S_sizes<8, 2> && !__have_ssse3 && _ToSize == 16) ||
-        (_S_i_to_i && _S_sizes<8, 1> && !__have_avx512f && _ToSize == 16) ||
-        (_S_f_to_i && _S_sizes<4, 8> && !__have_avx512dq) ||
-        (_S_f_to_i && _S_sizes<8, 8> && !__have_avx512dq) ||
-        (_S_f_to_i && _S_sizes<8, 4> && !__have_sse4_1 && _ToSize == 16) ||
-        (_S_i_to_f && _S_sizes<8, 4> && !__have_avx512dq && _ToSize == 16) ||
-        (_S_i_to_f && _S_sizes<8, 8> && !__have_avx512dq && _ToSize < 64);
+// _SimdImplBuiltinMixin {{{
+struct _SimdImplBuiltinMixin
+{
+  // __converts_via_decomposition{{{
+  // This lists all cases where a __vector_convert needs to fall back to
+  // conversion of individual scalars (i.e. decompose the input vector into
+  // scalars, convert, compose output vector). In those cases, __masked_load &
+  // __masked_store prefer to use the __bit_iteration implementation.
+  template <class _From, class _To, size_t _ToSize>
+  static inline constexpr bool
+    __converts_via_decomposition_v = sizeof(_From) != sizeof(_To);
+  // }}}
 };
 
-template <class _From, class _To, size_t _ToSize>
-inline constexpr bool __converts_via_decomposition_v =
-    __converts_via_decomposition<_From, _To, _ToSize>::value;
-
 // }}}
-
 // _SimdImplBuiltin {{{1
 template <typename _Abi>
-struct _SimdImplBuiltin
+struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 {
   // member types {{{2
   template <typename _Tp>
@@ -717,8 +701,8 @@ struct _SimdImplBuiltin
 					   _F(), __kk);
 	}
       else if constexpr (__can_vectorize_v<_U> &&
-			 !__converts_via_decomposition_v<_Tp, _U,
-							 __max_store_size>)
+			 !_SuperImpl::template __converts_via_decomposition_v<
+			   _Tp, _U, __max_store_size>)
 	{ // conversion via decomposition is better handled via the bit_iteration fallback below
 	  using _UV = __vector_type_t<_U, std::min(_TV_size, __max_store_size /
 							       sizeof(_U))>;
