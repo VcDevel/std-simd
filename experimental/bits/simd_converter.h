@@ -1,4 +1,4 @@
-// Simd Abi specific implementations -*- C++ -*-
+// Generic simd conversions -*- C++ -*-
 
 // Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>

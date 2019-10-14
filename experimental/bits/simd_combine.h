@@ -1,4 +1,4 @@
-// Simd fixed_size ABI specific implementations -*- C++ -*-
+// Simd _Combine ABI specific implementations -*- C++ -*-
 
 // Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>
