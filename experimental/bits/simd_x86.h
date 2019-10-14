@@ -168,12 +168,12 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
   using _MaskImpl = typename _Abi::_MaskImpl;
 
   // __masked_load {{{2
-  template <typename _Tp, size_t _N, typename _Up, typename _F>
+  template <typename _Tp, size_t _N, typename _Up, typename _Fp>
   static inline _SimdWrapper<_Tp, _N>
     __masked_load(_SimdWrapper<_Tp, _N> __merge,
 		  _MaskMember<_Tp>      __k,
 		  const _Up*             __mem,
-		  _F) noexcept
+		  _Fp) noexcept
   {
     static_assert(_N == size<_Tp>);
     if constexpr (std::is_same_v<_Tp, _Up> || // no conversion
@@ -365,21 +365,21 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	using _AImpl   = typename _ATraits::_SimdImpl;
 	typename _ATraits::_SimdMember __uncvted{};
 	typename _ATraits::_MaskMember __kk = _A::_MaskImpl::template __convert<_Up>(__k);
-	__uncvted = _AImpl::__masked_load(__uncvted, __kk, __mem, _F());
+	__uncvted = _AImpl::__masked_load(__uncvted, __kk, __mem, _Fp());
 	_SimdConverter<_Up, _A, _Tp, _Abi> __converter;
 	_Base::__masked_assign(__k, __merge, __converter(__uncvted));
       }
       */
     else
-      __merge = _Base::__masked_load(__merge, __k, __mem, _F());
+      __merge = _Base::__masked_load(__merge, __k, __mem, _Fp());
     return __merge;
     return __merge;
   }
 
   // __masked_store_nocvt {{{2
-  template <typename _Tp, std::size_t _N, typename _F>
+  template <typename _Tp, std::size_t _N, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
-    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<bool, _N> __k)
+    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _Fp, _SimdWrapper<bool, _N> __k)
   {
     [[maybe_unused]] const auto __vi = __to_intrin(__v);
     if constexpr (sizeof(__vi) == 64)
@@ -391,9 +391,9 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	  _mm512_mask_storeu_epi16(__mem, __k, __vi);
 	else if constexpr (__have_avx512f && sizeof(_Tp) == 4)
 	  {
-	    if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
+	    if constexpr (__is_aligned_v<_Fp, 64> && std::is_integral_v<_Tp>)
 	      _mm512_mask_store_epi32(__mem, __k, __vi);
-	    else if constexpr (__is_aligned_v<_F, 64> &&
+	    else if constexpr (__is_aligned_v<_Fp, 64> &&
 			       std::is_floating_point_v<_Tp>)
 	      _mm512_mask_store_ps(__mem, __k, __vi);
 	    else if constexpr (std::is_integral_v<_Tp>)
@@ -403,9 +403,9 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	  }
 	else if constexpr (__have_avx512f && sizeof(_Tp) == 8)
 	  {
-	    if constexpr (__is_aligned_v<_F, 64> && std::is_integral_v<_Tp>)
+	    if constexpr (__is_aligned_v<_Fp, 64> && std::is_integral_v<_Tp>)
 	      _mm512_mask_store_epi64(__mem, __k, __vi);
-	    else if constexpr (__is_aligned_v<_F, 64> &&
+	    else if constexpr (__is_aligned_v<_Fp, 64> &&
 			       std::is_floating_point_v<_Tp>)
 	      _mm512_mask_store_pd(__mem, __k, __vi);
 	    else if constexpr (std::is_integral_v<_Tp>)
@@ -449,9 +449,9 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	  _mm256_mask_storeu_epi16(__mem, __k, __vi);
 	else if constexpr (__have_avx512vl && sizeof(_Tp) == 4)
 	  {
-	    if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
+	    if constexpr (__is_aligned_v<_Fp, 32> && std::is_integral_v<_Tp>)
 	      _mm256_mask_store_epi32(__mem, __k, __vi);
-	    else if constexpr (__is_aligned_v<_F, 32> &&
+	    else if constexpr (__is_aligned_v<_Fp, 32> &&
 			       std::is_floating_point_v<_Tp>)
 	      _mm256_mask_store_ps(__mem, __k, __vi);
 	    else if constexpr (std::is_integral_v<_Tp>)
@@ -461,9 +461,9 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	  }
 	else if constexpr (__have_avx512vl && sizeof(_Tp) == 8)
 	  {
-	    if constexpr (__is_aligned_v<_F, 32> && std::is_integral_v<_Tp>)
+	    if constexpr (__is_aligned_v<_Fp, 32> && std::is_integral_v<_Tp>)
 	      _mm256_mask_store_epi64(__mem, __k, __vi);
-	    else if constexpr (__is_aligned_v<_F, 32> &&
+	    else if constexpr (__is_aligned_v<_Fp, 32> &&
 			       std::is_floating_point_v<_Tp>)
 	      _mm256_mask_store_pd(__mem, __k, __vi);
 	    else if constexpr (std::is_integral_v<_Tp>)
@@ -481,23 +481,23 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	      __mem,
 	      // careful, vector_aligned has a stricter meaning in the
 	      // 512-bit maskstore:
-	      std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
-				 overaligned_tag<32>, _F>(),
+	      std::conditional_t<std::is_same_v<_Fp, vector_aligned_tag>,
+				 overaligned_tag<32>, _Fp>(),
 	      _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
 	  }
 	else
 	  __masked_store_nocvt(
-	    __v, __mem, _F(),
+	    __v, __mem, _Fp(),
 	    _MaskImpl::template __to_maskvector<_Tp, 32 / sizeof(_Tp)>(__k));
       }
     else if constexpr (sizeof(__vi) == 16)
       {
-	// the store is aligned if _F is overaligned_tag<16> (or higher) or _F
+	// the store is aligned if _Fp is overaligned_tag<16> (or higher) or _Fp
 	// is vector_aligned_tag while __v is actually a 16-Byte vector (could
 	// be 2/4/8 as well)
 	[[maybe_unused]] constexpr bool __aligned =
-	  __is_aligned_v<_F, 16> &&
-	  (sizeof(__v) == 16 || !std::is_same_v<_F, vector_aligned_tag>);
+	  __is_aligned_v<_Fp, 16> &&
+	  (sizeof(__v) == 16 || !std::is_same_v<_Fp, vector_aligned_tag>);
 	if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 1)
 	  _mm_mask_storeu_epi8(__mem, __k, __vi);
 	else if constexpr (__have_avx512bw_vl && sizeof(_Tp) == 2)
@@ -534,13 +534,13 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	      __mem,
 	      // careful, vector_aligned has a stricter meaning in the 512-bit
 	      // maskstore:
-	      std::conditional_t<std::is_same_v<_F, vector_aligned_tag>,
-				 overaligned_tag<sizeof(__v)>, _F>(),
+	      std::conditional_t<std::is_same_v<_Fp, vector_aligned_tag>,
+				 overaligned_tag<sizeof(__v)>, _Fp>(),
 	      _SimdWrapper<bool, 64 / sizeof(_Tp)>(__k._M_data));
 	  }
 	else
 	  __masked_store_nocvt(
-	    __v, __mem, _F(),
+	    __v, __mem, _Fp(),
 	    _MaskImpl::template __to_maskvector<_Tp, 16 / sizeof(_Tp)>(__k));
       }
     else
@@ -549,9 +549,9 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 
   template <typename _TW,
 	    typename _Tp = typename _VectorTraits<_TW>::value_type,
-	    typename _F>
+	    typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void
-    __masked_store_nocvt(_TW __v, _Tp* __mem, _F, _TW __k)
+    __masked_store_nocvt(_TW __v, _Tp* __mem, _Fp, _TW __k)
   {
     if constexpr (sizeof(_TW) <= 16)
       {
@@ -613,11 +613,11 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
   }
 
   // __masked_store {{{2
-  template <typename _Tp, size_t _N, typename _Up, typename _F>
+  template <typename _Tp, size_t _N, typename _Up, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void
     __masked_store(const _SimdWrapper<_Tp, _N> __v,
 		   _Up*                         __mem,
-		   _F,
+		   _Fp,
 		   const _MaskMember<_Tp> __k) noexcept
   {
     if constexpr (std::is_integral_v<_Tp> && std::is_integral_v<_Up> &&
@@ -684,7 +684,7 @@ struct _SimdImplX86 : _SimdImplX86Mixin, _SimdImplBuiltin<_Abi>
 	  __assert_unreachable<_Tp>();
       }
     else
-      _Base::__masked_store(__v, __mem, _F(), __k);
+      _Base::__masked_store(__v, __mem, _Fp(), __k);
   }
 
     // __multiplies {{{2
@@ -3347,11 +3347,11 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 
   // }}}
   // __masked_load {{{2
-  template <typename _Tp, size_t _N, typename _F>
+  template <typename _Tp, size_t _N, typename _Fp>
   static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
 						  _SimdWrapper<_Tp, _N> __mask,
 						  const bool*           __mem,
-						  _F) noexcept
+						  _Fp) noexcept
   {
     if constexpr (__is_avx512_abi<_Abi>())
       {
@@ -3447,15 +3447,15 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       }
     else
       {
-	return _Base::__masked_load(__merge, __mask, __mem, _F{});
+	return _Base::__masked_load(__merge, __mask, __mem, _Fp{});
       }
     return __merge;
   }
 
   // __store {{{2
-  template <typename _Tp, size_t _N, typename _F>
+  template <typename _Tp, size_t _N, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void
-    __store(_SimdWrapper<_Tp, _N> __v, bool* __mem, _F) noexcept
+    __store(_SimdWrapper<_Tp, _N> __v, bool* __mem, _Fp) noexcept
   {
     if constexpr (__is_sse_abi<_Abi>())
       {
@@ -3478,7 +3478,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	  {
 	    const __m128 __k = __to_intrin(__v);
 	    const __m64  __kk  = _mm_cvtps_pi8(__and(__k, _mm_set1_ps(1.f)));
-	    __vector_store<4>(__kk, __mem, _F());
+	    __vector_store<4>(__kk, __mem, _Fp());
 	    _mm_empty();
 	  }
 	else if constexpr (_N == 8 && __have_sse2)
@@ -3486,11 +3486,11 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	    __vector_store<8>(
 	      _mm_packs_epi16(__to_intrin(__vector_bitcast<_UShort>(__v) >> 15),
 			      __m128i()),
-	      __mem, _F());
+	      __mem, _Fp());
 	  }
 	else if constexpr (_N == 16 && __have_sse2)
 	  {
-	    __vector_store(__v._M_data & 1, __mem, _F());
+	    __vector_store(__v._M_data & 1, __mem, _Fp());
 	  }
 	else
 	  {
@@ -3521,24 +3521,24 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	    const auto __k2 =
 	      _mm_srli_epi16(_mm_packs_epi16(__lo128(__k), __hi128(__k)), 15);
 	    const auto __k3 = _mm_packs_epi16(__k2, __m128i());
-	    __vector_store<8>(__k3, __mem, _F());
+	    __vector_store<8>(__k3, __mem, _Fp());
 	  }
 	else if constexpr (_N == 16 && __have_avx2)
 	  {
 	    const auto __x   = _mm256_srli_epi16(__to_intrin(__v), 15);
 	    const auto __bools = _mm_packs_epi16(__lo128(__x), __hi128(__x));
-	    __vector_store<16>(__bools, __mem, _F());
+	    __vector_store<16>(__bools, __mem, _Fp());
 	  }
 	else if constexpr (_N == 16 && __have_avx)
 	  {
 	    const auto __bools =
 	      1 & __vector_bitcast<_UChar>(_mm_packs_epi16(
 		    __lo128(__to_intrin(__v)), __hi128(__to_intrin(__v))));
-	    __vector_store<16>(__bools, __mem, _F());
+	    __vector_store<16>(__bools, __mem, _Fp());
 	  }
 	else if constexpr (_N == 32 && __have_avx)
 	  {
-	    __vector_store<32>(1 & __v._M_data, __mem, _F());
+	    __vector_store<32>(1 & __v._M_data, __mem, _Fp());
 	  }
 	else
 	  {
@@ -3559,11 +3559,11 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	      __make_wrapper<_UInt>(_pdep_u32(__v._M_data, 0x01010101U),
 				    _pdep_u32(__v._M_data >> 4, 0x01010101U)),
 #endif
-	      __mem, _F());
+	      __mem, _Fp());
 	  }
 	else if constexpr (_N == 16 && __have_avx512bw_vl)
 	  {
-	    __vector_store(_mm_maskz_set1_epi8(__v._M_data, 1), __mem, _F());
+	    __vector_store(_mm_maskz_set1_epi8(__v._M_data, 1), __mem, _Fp());
 	  }
 	else if constexpr (_N == 16 && __have_avx512f)
 	  {
@@ -3572,16 +3572,16 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	  }
 	else if constexpr (_N == 32 && __have_avx512bw_vl)
 	  {
-	    __vector_store(_mm256_maskz_set1_epi8(__v._M_data, 1), __mem, _F());
+	    __vector_store(_mm256_maskz_set1_epi8(__v._M_data, 1), __mem, _Fp());
 	  }
 	else if constexpr (_N == 32 && __have_avx512bw)
 	  {
 	    __vector_store(__lo256(_mm512_maskz_set1_epi8(__v._M_data, 1)),
-			   __mem, _F());
+			   __mem, _Fp());
 	  }
 	else if constexpr (_N == 64 && __have_avx512bw)
 	  {
-	    __vector_store(_mm512_maskz_set1_epi8(__v._M_data, 1), __mem, _F());
+	    __vector_store(_mm512_maskz_set1_epi8(__v._M_data, 1), __mem, _Fp());
 	  }
 	else
 	  {
@@ -3595,10 +3595,10 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
   }
 
   // __masked_store {{{2
-  template <typename _Tp, size_t _N, typename _F>
+  template <typename _Tp, size_t _N, typename _Fp>
   static inline void __masked_store(const _SimdWrapper<_Tp, _N> __v,
 				  bool*                       __mem,
-				  _F,
+				  _Fp,
 				  const _SimdWrapper<_Tp, _N> __k) noexcept
   {
     if constexpr (__is_avx512_abi<_Abi>())
@@ -3648,7 +3648,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       }
     else
       {
-	_Base::__masked_store(__v, __mem, _F(), __k);
+	_Base::__masked_store(__v, __mem, _Fp(), __k);
       }
   }
 

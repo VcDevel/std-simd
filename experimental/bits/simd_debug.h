@@ -200,7 +200,7 @@ public:
     template <typename... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
 };
 
-template <typename _F> class __defer_raii
+template <typename _Fp> class __defer_raii
 {
 public:
     // construct the object from the given callable
@@ -212,10 +212,10 @@ public:
     ~__defer_raii() { __cleanup_function(); }
 
 private:
-    _F __cleanup_function;
+    _Fp __cleanup_function;
 };
 
-template <typename _F> __defer_raii<_F> __defer(_F &&__f) { return {std::forward<_F>(__f)}; }
+template <typename _Fp> __defer_raii<_Fp> __defer(_Fp &&__f) { return {std::forward<_Fp>(__f)}; }
 
 _GLIBCXX_SIMD_END_NAMESPACE
 

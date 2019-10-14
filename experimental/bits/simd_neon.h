@@ -61,9 +61,9 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 
   // }}}
   // __masked_store_nocvt {{{
-  template <typename _Tp, std::size_t _N, typename _F>
+  template <typename _Tp, std::size_t _N, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
-    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _F, _SimdWrapper<_Tp, _N> __k)
+    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _Fp, _SimdWrapper<_Tp, _N> __k)
   {
     __execute_n_times<_N>([&](auto __i) {
       if (__k[__i] != 0)

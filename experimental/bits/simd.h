@@ -439,42 +439,42 @@ public:
 
 // }}}
 // __execute_on_index_sequence(_with_return){{{
-template <typename _F, size_t... _I>
+template <typename _Fp, size_t... _I>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __execute_on_index_sequence(_F&& __f, std::index_sequence<_I...>)
+  __execute_on_index_sequence(_Fp&& __f, std::index_sequence<_I...>)
 {
   [[maybe_unused]] auto&& __x = {(__f(_SizeConstant<_I>()), 0)...};
 }
 
-template <typename _F>
+template <typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __execute_on_index_sequence(_F&&, std::index_sequence<>)
+  __execute_on_index_sequence(_Fp&&, std::index_sequence<>)
 {
 }
 
-template <typename _R, typename _F, size_t... _I>
+template <typename _R, typename _Fp, size_t... _I>
 _GLIBCXX_SIMD_INTRINSIC constexpr _R
-  __execute_on_index_sequence_with_return(_F&& __f, std::index_sequence<_I...>)
+  __execute_on_index_sequence_with_return(_Fp&& __f, std::index_sequence<_I...>)
 {
   return _R{__f(_SizeConstant<_I>())...};
 }
 
 // }}}
 // __execute_n_times{{{
-template <size_t _N, typename _F>
-_GLIBCXX_SIMD_INTRINSIC constexpr void __execute_n_times(_F&& __f)
+template <size_t _N, typename _Fp>
+_GLIBCXX_SIMD_INTRINSIC constexpr void __execute_n_times(_Fp&& __f)
 {
-  __execute_on_index_sequence(std::forward<_F>(__f),
+  __execute_on_index_sequence(std::forward<_Fp>(__f),
 			      std::make_index_sequence<_N>{});
 }
 
 // }}}
 // __generate_from_n_evaluations{{{
-template <size_t _N, typename _R, typename _F>
-_GLIBCXX_SIMD_INTRINSIC constexpr _R __generate_from_n_evaluations(_F&& __f)
+template <size_t _N, typename _R, typename _Fp>
+_GLIBCXX_SIMD_INTRINSIC constexpr _R __generate_from_n_evaluations(_Fp&& __f)
 {
   return __execute_on_index_sequence_with_return<_R>(
-    std::forward<_F>(__f), std::make_index_sequence<_N>{});
+    std::forward<_Fp>(__f), std::make_index_sequence<_N>{});
 }
 
 // }}}
@@ -499,19 +499,19 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto
 
 // }}}
 // __call_with_subscripts{{{
-template <size_t _First = 0, size_t... _It, typename _Tp, typename _F>
+template <size_t _First = 0, size_t... _It, typename _Tp, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC auto
-  __call_with_subscripts(_Tp&& __x, index_sequence<_It...>, _F&& __fun)
+  __call_with_subscripts(_Tp&& __x, index_sequence<_It...>, _Fp&& __fun)
 {
   return __fun(__x[_First + _It]...);
 }
 
-template <size_t _N, size_t _First = 0, typename _Tp, typename _F>
-_GLIBCXX_SIMD_INTRINSIC auto __call_with_subscripts(_Tp&& __x, _F&& __fun)
+template <size_t _N, size_t _First = 0, typename _Tp, typename _Fp>
+_GLIBCXX_SIMD_INTRINSIC auto __call_with_subscripts(_Tp&& __x, _Fp&& __fun)
 {
   return __call_with_subscripts<_First>(std::forward<_Tp>(__x),
 					std::make_index_sequence<_N>(),
-					std::forward<_F>(__fun));
+					std::forward<_Fp>(__fun));
 }
 
 // }}}
@@ -773,8 +773,8 @@ struct _BitOps
 
   // }}}
   // __bit_iteration {{{
-  template <typename _Tp, typename _F>
-  static void __bit_iteration(_Tp __mask, _F&& __f)
+  template <typename _Tp, typename _Fp>
+  static void __bit_iteration(_Tp __mask, _Fp&& __f)
   {
     static_assert(sizeof(_ULLong) >= sizeof(_Tp));
     std::conditional_t<sizeof(_Tp) <= sizeof(_UInt), _UInt, _ULLong> __k;
@@ -1532,8 +1532,8 @@ _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _N>
 
 // }}}
 // __vector_load{{{
-template <typename _Tp, size_t _N, size_t _M = _N * sizeof(_Tp), typename _F>
-__vector_type_t<_Tp, _N> __vector_load(const void* __p, _F)
+template <typename _Tp, size_t _N, size_t _M = _N * sizeof(_Tp), typename _Fp>
+__vector_type_t<_Tp, _N> __vector_load(const void* __p, _Fp)
 {
   static_assert(_N > 1);
   static_assert(_M % sizeof(_Tp) == 0);
@@ -1549,19 +1549,19 @@ __vector_type_t<_Tp, _N> __vector_load(const void* __p, _F)
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
   _V __r{};
   static_assert(_M <= sizeof(_V));
-  if constexpr (std::is_same_v<_F, element_aligned_tag>) {}
-  else if constexpr (std::is_same_v<_F, vector_aligned_tag>)
+  if constexpr (std::is_same_v<_Fp, element_aligned_tag>) {}
+  else if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
     __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _N>));
   else
-    __p = __builtin_assume_aligned(__p, _F::_S_alignment);
+    __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
   std::memcpy(&__r, __p, _M);
   return reinterpret_cast<__vector_type_t<_Tp, _N>>(__r);
 }
 
 // }}}
 // __vector_load16 {{{
-template <typename _Tp, size_t _M = 16, typename _F>
-__vector_type16_t<_Tp> __vector_load16(const void* __p, _F __f)
+template <typename _Tp, size_t _M = 16, typename _Fp>
+__vector_type16_t<_Tp> __vector_load16(const void* __p, _Fp __f)
 {
   return __vector_load<_Tp, 16 / sizeof(_Tp), _M>(__p, __f);
 }
@@ -1572,8 +1572,8 @@ template <size_t _M         = 0, // only sets number of bytes to store
 	  size_t _NElements = 0, // modifies vector_alignment
 	  typename _B,
 	  typename _BVT = _VectorTraits<_B>,
-	  typename _F>
-void __vector_store(const _B __v, void* __p, _F)
+	  typename _Fp>
+void __vector_store(const _B __v, void* __p, _Fp)
 {
   using _Tp               = typename _BVT::value_type;
   constexpr size_t _N     = _NElements == 0 ? _BVT::_S_width : _NElements;
@@ -1589,10 +1589,10 @@ void __vector_store(const _B __v, void* __p, _F)
 #else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
   const __vector_type_t<_Tp, _N> __vv          = __v;
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
-  if constexpr (std::is_same_v<_F, vector_aligned_tag>)
+  if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
     __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _N>));
-  else if constexpr (!std::is_same_v<_F, element_aligned_tag>)
-    __p = __builtin_assume_aligned(__p, _F::_S_alignment);
+  else if constexpr (!std::is_same_v<_Fp, element_aligned_tag>)
+    __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
   if constexpr ((_Bytes & (_Bytes - 1)) != 0)
     {
       constexpr size_t         _MoreBytes = __next_power_of_2(_Bytes);
@@ -5157,9 +5157,9 @@ public:
 
     // load __impl {{{
 private:
-    template <typename _F>
+    template <typename _Fp>
     _GLIBCXX_SIMD_INTRINSIC static __member_type __load_wrapper(const value_type* __mem,
-                                                              [[maybe_unused]] _F __f)
+                                                              [[maybe_unused]] _Fp __f)
     {
       if constexpr (__is_scalar())
 	{
@@ -5207,7 +5207,7 @@ private:
 	    }
 	  else
 	    {
-	      __assert_unreachable<_F>();
+	      __assert_unreachable<_Fp>();
 	    }
 	}
       else if constexpr (__is_avx())
@@ -5217,7 +5217,7 @@ private:
 	      int __bool4;
 	      __builtin_memcpy(
 		&__bool4,
-		__builtin_assume_aligned(__mem, __is_aligned_v<_F, 4> ? 4 : 1),
+		__builtin_assume_aligned(__mem, __is_aligned_v<_Fp, 4> ? 4 : 1),
 		4);
 	      const auto __k = __to_intrin(
 		(__vector_broadcast<4>(__bool4) &
@@ -5237,7 +5237,7 @@ private:
                 return __vector_bitcast<_Tp>(
                     _mm256_cmpgt_epi8(__vector_load<long long, 4>(__mem, __f), __m256i()));
             } else {
-                __assert_unreachable<_F>();
+                __assert_unreachable<_Fp>();
             }
 	}
       else if constexpr (__is_avx512())
@@ -5291,7 +5291,7 @@ private:
                            (_mm512_test_epi32_mask(__d, __d) << 48);
                 }
             } else {
-                __assert_unreachable<_F>();
+                __assert_unreachable<_Fp>();
             }
         }
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
@@ -5419,8 +5419,8 @@ public :
 
     // }}}
     // private_init generator ctor {{{
-    template <typename _F, typename = decltype(bool(std::declval<_F>()(size_t())))>
-    _GLIBCXX_SIMD_INTRINSIC simd_mask(_PrivateInit, _F &&__gen)
+    template <typename _Fp, typename = decltype(bool(std::declval<_Fp>()(size_t())))>
+    _GLIBCXX_SIMD_INTRINSIC simd_mask(_PrivateInit, _Fp &&__gen)
     {
       __execute_n_times<size()>(
 	[&](auto __i) { __impl::__set(_M_data, __i, __gen(__i)); });
@@ -6149,13 +6149,13 @@ public:
     }
 
     // generator constructor
-    template <typename _F>
+    template <typename _Fp>
     _GLIBCXX_SIMD_ALWAYS_INLINE explicit constexpr simd(
-        _F &&__gen,
+        _Fp &&__gen,
         _ValuePreservingOrInt<
-            decltype(std::declval<_F>()(std::declval<_SizeConstant<0> &>())),
+            decltype(std::declval<_Fp>()(std::declval<_SizeConstant<0> &>())),
             value_type> * = nullptr)
-        : _M_data(__impl::__generator(std::forward<_F>(__gen), _S_type_tag))
+        : _M_data(__impl::__generator(std::forward<_Fp>(__gen), _S_type_tag))
     {
     }
 

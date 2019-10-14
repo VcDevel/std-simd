@@ -349,22 +349,22 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return second.template __simd_at<_N - 1>();
   }
 
-  template <size_t _Offset = 0, typename _F>
+  template <size_t _Offset = 0, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple
-    __generate(_F&& __gen, _SizeConstant<_Offset> = {})
+    __generate(_Fp&& __gen, _SizeConstant<_Offset> = {})
   {
     auto &&__first = __gen(__tuple_element_meta<_Tp, _Abi0, _Offset>());
     if constexpr (_S_tuple_size == 1)
       return {__first};
     else
       return {__first, _SecondType::__generate(
-			 std::forward<_F>(__gen),
+			 std::forward<_Fp>(__gen),
 			 _SizeConstant<_Offset + simd_size_v<_Tp, _Abi0>>())};
   }
 
-  template <size_t _Offset = 0, typename _F, typename... _More>
+  template <size_t _Offset = 0, typename _Fp, typename... _More>
   _GLIBCXX_SIMD_INTRINSIC _SimdTuple
-			  __apply_wrapped(_F&& __fun, const _More&... __more) const
+			  __apply_wrapped(_Fp&& __fun, const _More&... __more) const
   {
     auto&& __first= __fun(__make_meta<_Offset>(*this), first, __more.first...);
     if constexpr (_S_tuple_size == 1)
@@ -373,7 +373,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return {
 	__first,
 	second.template __apply_wrapped<_Offset + simd_size_v<_Tp, _Abi0>>(
-	  std::forward<_F>(__fun), __more.second...)};
+	  std::forward<_Fp>(__fun), __more.second...)};
   }
 
   template <size_t _Size,
@@ -477,9 +477,9 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
    * of them. If additional arguments are passed via __more, chunk them into
    * _SimdTuple or __vector_type_t objects of the same number of values.
    */
-  template <typename _F, typename... _More>
+  template <typename _Fp, typename... _More>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple
-    __apply_per_chunk(_F&& __fun, _More&&... __more) const
+    __apply_per_chunk(_Fp&& __fun, _More&&... __more) const
   {
     if constexpr ((... || conjunction_v<
 			    is_lvalue_reference<_More>,
@@ -504,7 +504,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	  return { __first };
 	else
 	  return {__first,
-		  second.__apply_per_chunk(std::forward<_F>(__fun),
+		  second.__apply_per_chunk(std::forward<_Fp>(__fun),
 					   __skip_argument(__more)...)};
       }
     else
@@ -515,14 +515,14 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	  return { __first };
 	else
 	  return {__first,
-		  second.__apply_per_chunk(std::forward<_F>(__fun),
+		  second.__apply_per_chunk(std::forward<_Fp>(__fun),
 					   __skip_argument(__more)...)};
       }
   }
 
-  template <typename _R = _Tp, typename _F, typename... _More>
+  template <typename _R = _Tp, typename _Fp, typename... _More>
   _GLIBCXX_SIMD_INTRINSIC auto
-    __apply_r(_F&& __fun, const _More&... __more) const
+    __apply_r(_Fp&& __fun, const _More&... __more) const
   {
     auto&& __first =
       __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), first, __more.first...);
@@ -530,13 +530,13 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return __first;
     else
       return __simd_tuple_concat<_R>(
-	__first, second.template __apply_r<_R>(std::forward<_F>(__fun),
+	__first, second.template __apply_r<_R>(std::forward<_Fp>(__fun),
 					       __more.second...));
   }
 
-  template <typename _F, typename... _More>
+  template <typename _Fp, typename... _More>
   _GLIBCXX_SIMD_INTRINSIC friend std::bitset<size()>
-    __test(_F&& __fun, const _SimdTuple& __x, const _More&... __more)
+    __test(_Fp&& __fun, const _SimdTuple& __x, const _More&... __more)
   {
     const bitset<size()> __first = _Abi0::_MaskImpl::__to_bits(
       __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), __x.first, __more.first...));
@@ -853,95 +853,95 @@ _GLIBCXX_SIMD_INTRINSIC _R __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1,
 }
 
 // __for_each(const _SimdTuple &, Fun) {{{1
-template <size_t _Offset = 0, typename _Tp, typename _A0, typename _F>
+template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __for_each(const _SimdTuple<_Tp, _A0>& __t, _F&& __fun)
+  __for_each(const _SimdTuple<_Tp, _A0>& __t, _Fp&& __fun)
 {
-  std::forward<_F>(__fun)(__make_meta<_Offset>(__t), __t.first);
+  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__t), __t.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
 	  typename _A0,
 	  typename _A1,
 	  typename... _As,
-	  typename _F>
+	  typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __for_each(const _SimdTuple<_Tp, _A0, _A1, _As...>& __t, _F&& __fun)
+  __for_each(const _SimdTuple<_Tp, _A0, _A1, _As...>& __t, _Fp&& __fun)
 {
   __fun(__make_meta<_Offset>(__t), __t.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__t.second,
-						   std::forward<_F>(__fun));
+						   std::forward<_Fp>(__fun));
 }
 
 // __for_each(_SimdTuple &, Fun) {{{1
-template <size_t _Offset = 0, typename _Tp, typename _A0, typename _F>
+template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __for_each(_SimdTuple<_Tp, _A0>& __t, _F&& __fun)
+  __for_each(_SimdTuple<_Tp, _A0>& __t, _Fp&& __fun)
 {
-  std::forward<_F>(__fun)(__make_meta<_Offset>(__t), __t.first);
+  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__t), __t.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
 	  typename _A0,
 	  typename _A1,
 	  typename... _As,
-	  typename _F>
+	  typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
-  __for_each(_SimdTuple<_Tp, _A0, _A1, _As...>& __t, _F&& __fun)
+  __for_each(_SimdTuple<_Tp, _A0, _A1, _As...>& __t, _Fp&& __fun)
 {
   __fun(__make_meta<_Offset>(__t), __t.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__t.second,
-						   std::forward<_F>(__fun));
+						   std::forward<_Fp>(__fun));
 }
 
 // __for_each(_SimdTuple &, const _SimdTuple &, Fun) {{{1
-template <size_t _Offset = 0, typename _Tp, typename _A0, typename _F>
+template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(_SimdTuple<_Tp, _A0>&       __a,
 	     const _SimdTuple<_Tp, _A0>& __b,
-	     _F&&                          __fun)
+	     _Fp&&                          __fun)
 {
-  std::forward<_F>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
+  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
 	  typename _A0,
 	  typename _A1,
 	  typename... _As,
-	  typename _F>
+	  typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(_SimdTuple<_Tp, _A0, _A1, _As...>&       __a,
 	     const _SimdTuple<_Tp, _A0, _A1, _As...>& __b,
-	     _F&&                                      __fun)
+	     _Fp&&                                      __fun)
 {
   __fun(__make_meta<_Offset>(__a), __a.first, __b.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__a.second, __b.second,
-						   std::forward<_F>(__fun));
+						   std::forward<_Fp>(__fun));
 }
 
 // __for_each(const _SimdTuple &, const _SimdTuple &, Fun) {{{1
-template <size_t _Offset = 0, typename _Tp, typename _A0, typename _F>
+template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(const _SimdTuple<_Tp, _A0>& __a,
 	     const _SimdTuple<_Tp, _A0>& __b,
-	     _F&&                          __fun)
+	     _Fp&&                          __fun)
 {
-  std::forward<_F>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
+  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
 	  typename _A0,
 	  typename _A1,
 	  typename... _As,
-	  typename _F>
+	  typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(const _SimdTuple<_Tp, _A0, _A1, _As...>& __a,
 	     const _SimdTuple<_Tp, _A0, _A1, _As...>& __b,
-	     _F&&                                      __fun)
+	     _Fp&&                                      __fun)
 {
   __fun(__make_meta<_Offset>(__a), __a.first, __b.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__a.second, __b.second,
-						   std::forward<_F>(__fun));
+						   std::forward<_Fp>(__fun));
 }
 
 // }}}1
@@ -1274,9 +1274,9 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __generator {{{2
-    template <typename _F, typename _Tp>
+    template <typename _Fp, typename _Tp>
     static constexpr inline _SimdMember<_Tp>
-      __generator(_F&& __gen, _TypeTag<_Tp>)
+      __generator(_Fp&& __gen, _TypeTag<_Tp>)
     {
       return _SimdMember<_Tp>::__generate([&__gen](auto __meta) constexpr {
 	return __meta.__generator(
@@ -1288,21 +1288,21 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __load {{{2
-    template <typename _Tp, typename _Up, typename _F>
+    template <typename _Tp, typename _Up, typename _Fp>
     static inline _SimdMember<_Tp>
-      __load(const _Up* __mem, _F __f, _TypeTag<_Tp>) noexcept
+      __load(const _Up* __mem, _Fp __f, _TypeTag<_Tp>) noexcept
     {
         return _SimdMember<_Tp>::__generate(
             [&](auto __meta) { return __meta.__load(&__mem[__meta._S_offset], __f, _TypeTag<_Tp>()); });
     }
 
     // __masked_load {{{2
-    template <typename _Tp, typename... _As, typename _Up, typename _F>
+    template <typename _Tp, typename... _As, typename _Up, typename _Fp>
     static inline _SimdTuple<_Tp, _As...>
       __masked_load(const _SimdTuple<_Tp, _As...>& __old,
 		    const _MaskMember              __bits,
 		    const _Up*                      __mem,
-		    _F                             __f) noexcept
+		    _Fp                             __f) noexcept
     {
       auto __merge = __old;
       __for_each(__merge, [&](auto __meta, auto& __native) {
@@ -1313,10 +1313,10 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __store {{{2
-    template <typename _Tp, typename _Up, typename _F>
+    template <typename _Tp, typename _Up, typename _Fp>
     static inline void __store(const _SimdMember<_Tp>& __v,
 			       _Up*                     __mem,
-			       _F                      __f,
+			       _Fp                      __f,
 			       _TypeTag<_Tp>) noexcept
     {
       __for_each(__v, [&](auto __meta, auto __native) {
@@ -1325,10 +1325,10 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __masked_store {{{2
-    template <typename _Tp, typename... _As, typename _Up, typename _F>
+    template <typename _Tp, typename... _As, typename _Up, typename _Fp>
     static inline void __masked_store(const _SimdTuple<_Tp, _As...>& __v,
 				      _Up*                            __mem,
-				      _F                             __f,
+				      _Fp                             __f,
 				      const _MaskMember __bits) noexcept
     {
       __for_each(__v, [&](auto __meta, auto __native) {
@@ -1776,7 +1776,7 @@ template <int _N> struct _MaskImplFixedSize {
     }
 
     // __load {{{2
-    template <typename _F> static inline _MaskMember __load(const bool *__mem, _F __f) noexcept
+    template <typename _Fp> static inline _MaskMember __load(const bool *__mem, _Fp __f) noexcept
     {
         // TODO: _UChar is not necessarily the best type to use here. For smaller _N _UShort,
         // _UInt, _ULLong, float, and double can be more efficient.
@@ -1790,10 +1790,10 @@ template <int _N> struct _MaskImplFixedSize {
     }
 
     // __masked_load {{{2
-    template <typename _F>
+    template <typename _Fp>
     static inline _MaskMember __masked_load(_MaskMember __merge,
                                                _MaskMember __mask, const bool *__mem,
-                                               _F) noexcept
+                                               _Fp) noexcept
     {
       _BitOps::__bit_iteration(__mask.to_ullong(),
 			       [&](auto __i) { __merge[__i] = __mem[__i]; });
@@ -1801,15 +1801,15 @@ template <int _N> struct _MaskImplFixedSize {
     }
 
     // __store {{{2
-    template <typename _F>
-    static inline void __store(_MaskMember __bs, bool *__mem, _F) noexcept
+    template <typename _Fp>
+    static inline void __store(_MaskMember __bs, bool *__mem, _Fp) noexcept
     {
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
       if constexpr (__have_avx512bw)
 	{
 	  const __m512i bool64 =
 	    _mm512_movm_epi8(__bs.to_ullong()) & 0x0101010101010101ULL;
-	  __vector_store<_N>(bool64, __mem, _F());
+	  __vector_store<_N>(bool64, __mem, _Fp());
 	}
       else if constexpr (__have_bmi2)
 	{
@@ -1882,7 +1882,7 @@ template <int _N> struct _MaskImplFixedSize {
 		  1); // 0xff -> 0x00 | 0x00 -> 0x01
 		if constexpr (__remaining >= 16)
 		  {
-		    __vector_store<16>(__bool16, &__mem[__offset], _F());
+		    __vector_store<16>(__bool16, &__mem[__offset], _Fp());
 		  }
 		else if constexpr (__remaining & 3)
 		  {
@@ -1894,17 +1894,17 @@ template <int _N> struct _MaskImplFixedSize {
 		else // at this point: 8 < __remaining < 16
 		  if constexpr (__remaining >= 8)
 		  {
-		    __vector_store<8>(__bool16, &__mem[__offset], _F());
+		    __vector_store<8>(__bool16, &__mem[__offset], _Fp());
 		    if constexpr (__remaining == 12)
 		      {
 			__vector_store<4>(
 			  _mm_unpackhi_epi64(__bool16, __bool16),
-			  &__mem[__offset + 8], _F());
+			  &__mem[__offset + 8], _Fp());
 		      }
 		  }
 	      }
 	    else
-	      __assert_unreachable<_F>();
+	      __assert_unreachable<_Fp>();
 	  });
 	}
       else
@@ -1916,15 +1916,15 @@ template <int _N> struct _MaskImplFixedSize {
 	  using _Vs = __fixed_size_storage_t<_UChar, _N>;
 	  __for_each(_Vs{}, [&](auto __meta, auto) {
 	    __meta._S_mask_impl.__store(__meta.__make_mask(__bs),
-					&__mem[__meta._S_offset], _F());
+					&__mem[__meta._S_offset], _Fp());
 	  });
 	  //__execute_n_times<_N>([&](auto __i) { __mem[__i] = __bs[__i]; });
 	}
     }
 
     // __masked_store {{{2
-    template <typename _F>
-    static inline void __masked_store(const _MaskMember __v, bool *__mem, _F,
+    template <typename _Fp>
+    static inline void __masked_store(const _MaskMember __v, bool *__mem, _Fp,
                                     const _MaskMember __k) noexcept
     {
       _BitOps::__bit_iteration(__k, [&](auto __i) { __mem[__i] = __v[__i]; });

@@ -55,12 +55,12 @@ struct _SimdImplCombine
 
   // }}}
   // load {{{
-//X   template <typename _Tp, typename _Up, typename _F>
+//X   template <typename _Tp, typename _Up, typename _Fp>
 //X   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
-//X     __load(const _U* __mem, _F, _TypeTag<_Tp> __x) noexcept
+//X     __load(const _U* __mem, _Fp, _TypeTag<_Tp> __x) noexcept
 //X   {
 //X     return __generate_from_n_evaluations<_N, _Tp>(
-//X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i * __part_size<_Tp>, _F{}, __x); });
+//X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i * __part_size<_Tp>, _Fp{}, __x); });
 //X   }
 //X 
   // }}}

@@ -63,25 +63,25 @@ struct _SimdImplScalar {
   }
 
   // __generator {{{2
-  template <typename _F, typename _Tp>
+  template <typename _Fp, typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
-    __generator(_F&& __gen, _TypeTag<_Tp>)
+    __generator(_Fp&& __gen, _TypeTag<_Tp>)
   {
     return __gen(_SizeConstant<0>());
   }
 
   // __load {{{2
-  template <typename _Tp, typename _Up, typename _F>
+  template <typename _Tp, typename _Up, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static _Tp
-    __load(const _Up* __mem, _F, _TypeTag<_Tp>) noexcept
+    __load(const _Up* __mem, _Fp, _TypeTag<_Tp>) noexcept
   {
     return static_cast<_Tp>(__mem[0]);
   }
 
   // __masked_load {{{2
-  template <typename _Tp, typename _Up, typename _F>
+  template <typename _Tp, typename _Up, typename _Fp>
   static inline _Tp
-    __masked_load(_Tp __merge, bool __k, const _Up* __mem, _F) noexcept
+    __masked_load(_Tp __merge, bool __k, const _Up* __mem, _Fp) noexcept
   {
     if (__k)
       __merge = static_cast<_Tp>(__mem[0]);
@@ -89,16 +89,16 @@ struct _SimdImplScalar {
   }
 
   // __store {{{2
-  template <typename _Tp, typename _Up, typename _F>
-  static inline void __store(_Tp __v, _Up* __mem, _F, _TypeTag<_Tp>) noexcept
+  template <typename _Tp, typename _Up, typename _Fp>
+  static inline void __store(_Tp __v, _Up* __mem, _Fp, _TypeTag<_Tp>) noexcept
   {
     __mem[0] = static_cast<_Tp>(__v);
   }
 
   // __masked_store {{{2
-  template <typename _Tp, typename _Up, typename _F>
+  template <typename _Tp, typename _Up, typename _Fp>
   static inline void
-    __masked_store(const _Tp __v, _Up* __mem, _F, const bool __k) noexcept
+    __masked_store(const _Tp __v, _Up* __mem, _Fp, const bool __k) noexcept
   {
     if (__k)
       __mem[0] = __v;
@@ -397,9 +397,9 @@ struct _MaskImplScalar {
     }
 
     // __masked_load {{{2
-    template <typename _F>
+    template <typename _Fp>
     _GLIBCXX_SIMD_INTRINSIC static bool __masked_load(bool __merge, bool __mask, const bool *__mem,
-                                         _F) noexcept
+                                         _Fp) noexcept
     {
         if (__mask) {
             __merge = __mem[0];
@@ -408,14 +408,14 @@ struct _MaskImplScalar {
     }
 
     // __store {{{2
-    template <typename _F> _GLIBCXX_SIMD_INTRINSIC static void __store(bool __v, bool *__mem, _F) noexcept
+    template <typename _Fp> _GLIBCXX_SIMD_INTRINSIC static void __store(bool __v, bool *__mem, _Fp) noexcept
     {
         __mem[0] = __v;
     }
 
     // __masked_store {{{2
-    template <typename _F>
-    _GLIBCXX_SIMD_INTRINSIC static void __masked_store(const bool __v, bool *__mem, _F,
+    template <typename _Fp>
+    _GLIBCXX_SIMD_INTRINSIC static void __masked_store(const bool __v, bool *__mem, _Fp,
                                           const bool __k) noexcept
     {
         if (__k) {
