@@ -224,13 +224,13 @@
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)
 
-#define _GLIBCXX_SIMD_LIST_BINARY(macro) macro(|) macro(&) macro(^)
-#define _GLIBCXX_SIMD_LIST_SHIFTS(macro) macro(<<) macro(>>)
-#define _GLIBCXX_SIMD_LIST_ARITHMETICS(macro) macro(+) macro(-) macro(*) macro(/) macro(%)
+#define _GLIBCXX_SIMD_LIST_BINARY(__macro) __macro(|) __macro(&) __macro(^)
+#define _GLIBCXX_SIMD_LIST_SHIFTS(__macro) __macro(<<) __macro(>>)
+#define _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) __macro(+) __macro(-) __macro(*) __macro(/) __macro(%)
 
-#define _GLIBCXX_SIMD_ALL_BINARY(macro) _GLIBCXX_SIMD_LIST_BINARY(macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_SHIFTS(macro) _GLIBCXX_SIMD_LIST_SHIFTS(macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_ARITHMETICS(macro) _GLIBCXX_SIMD_LIST_ARITHMETICS(macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_BINARY(__macro) _GLIBCXX_SIMD_LIST_BINARY(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_SHIFTS(__macro) _GLIBCXX_SIMD_LIST_SHIFTS(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_ARITHMETICS(__macro) _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) static_assert(true)
 
 #ifdef _GLIBCXX_SIMD_NO_ALWAYS_INLINE
 #undef _GLIBCXX_SIMD_ALWAYS_INLINE
