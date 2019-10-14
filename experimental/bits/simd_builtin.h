@@ -136,10 +136,10 @@ _GLIBCXX_SIMD_INTRINSIC _Tp __shift_elements_right(_Tp __v)
       constexpr int __chunksize =
 	__shift % 8 == 0 ? 8 : __shift % 4 == 0 ? 4 : __shift % 2 == 0 ? 2 : 1;
       auto __w = __vector_bitcast<__int_with_sizeof_t<__chunksize>>(__v);
-      using _U = decltype(__w);
+      using _Up = decltype(__w);
       return __intrin_bitcast<_Tp>(
 	__call_with_n_evaluations<(sizeof(_Tp) - __shift) / __chunksize>(
-	  [](auto... __chunks) { return _U{__chunks...}; },
+	  [](auto... __chunks) { return _Up{__chunks...}; },
 	  [&](auto __i) { return __w[__shift / __chunksize + __i]; }));
     }
 }
@@ -552,27 +552,27 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __load {{{2
-    template <class _Tp, class _U, class _F>
+    template <class _Tp, class _Up, class _F>
     _GLIBCXX_SIMD_INTRINSIC static _SimdMember<_Tp>
-      __load(const _U* __mem, _F, _TypeTag<_Tp>) noexcept
+      __load(const _Up* __mem, _F, _TypeTag<_Tp>) noexcept
     {
       constexpr size_t _N = _S_size<_Tp>;
       constexpr size_t __max_load_size =
-	(sizeof(_U) >= 4 && __have_avx512f) || __have_avx512bw
+	(sizeof(_Up) >= 4 && __have_avx512f) || __have_avx512bw
 	  ? 64
-	  : (std::is_floating_point_v<_U> && __have_avx) || __have_avx2 ? 32
+	  : (std::is_floating_point_v<_Up> && __have_avx) || __have_avx2 ? 32
 									: 16;
-      constexpr size_t __bytes_to_load = sizeof(_U) * _N;
-      if constexpr (sizeof(_U) > 8)
+      constexpr size_t __bytes_to_load = sizeof(_Up) * _N;
+      if constexpr (sizeof(_Up) > 8)
 	return __generate_vector<_Tp, _SimdMember<_Tp>::_S_width>([&](
 	  auto __i) constexpr {
 	  return static_cast<_Tp>(__i < _N ? __mem[__i] : 0);
 	});
-      else if constexpr (std::is_same_v<_U, _Tp>)
+      else if constexpr (std::is_same_v<_Up, _Tp>)
 	return __vector_load<_Tp, _S_full_size<_Tp>, _N * sizeof(_Tp)>(__mem,
 								       _F());
       else if constexpr (__bytes_to_load <= __max_load_size)
-	return __convert<_SimdMember<_Tp>>(__vector_load<_U, _N>(__mem, _F()));
+	return __convert<_SimdMember<_Tp>>(__vector_load<_Up, _N>(__mem, _F()));
       else if constexpr(__bytes_to_load % __max_load_size == 0)
 	{
 	  constexpr size_t __n_loads = __bytes_to_load / __max_load_size;
@@ -582,7 +582,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	      return __convert<_SimdMember<_Tp>>(__uncvted...);
 	    },
 	    [&](auto __i) {
-	      return __vector_load<_U, __elements_per_load>(
+	      return __vector_load<_Up, __elements_per_load>(
 		__mem + __i * __elements_per_load, _F());
 	    });
 	}
@@ -596,7 +596,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	      return __convert<_SimdMember<_Tp>>(__uncvted...);
 	    },
 	    [&](auto __i) {
-	      return __vector_load<_U, __elements_per_load>(
+	      return __vector_load<_Up, __elements_per_load>(
 		__mem + __i * __elements_per_load, _F());
 	    });
 	}
@@ -609,10 +609,10 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __masked_load {{{2
-    template <class _Tp, size_t _N, class _U, class _F>
+    template <class _Tp, size_t _N, class _Up, class _F>
     static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
                                                 _MaskMember<_Tp> __k,
-                                                const _U *__mem,
+                                                const _Up *__mem,
                                                 _F) noexcept
     {
       _BitOps::__bit_iteration(_MaskImpl::__to_bits(__k), [&](auto __i) {
@@ -622,39 +622,39 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __store {{{2
-    template <class _Tp, class _U, class _F>
+    template <class _Tp, class _Up, class _F>
     _GLIBCXX_SIMD_INTRINSIC static void
-      __store(_SimdMember<_Tp> __v, _U* __mem, _F, _TypeTag<_Tp>) noexcept
+      __store(_SimdMember<_Tp> __v, _Up* __mem, _F, _TypeTag<_Tp>) noexcept
     {
       // TODO: converting int -> "smaller int" can be optimized with AVX512
       constexpr size_t _N = _S_size<_Tp>;
       constexpr size_t __max_store_size =
-	_SuperImpl::template _S_max_store_size<_U>;
-      if constexpr (sizeof(_U) > 8)
+	_SuperImpl::template _S_max_store_size<_Up>;
+      if constexpr (sizeof(_Up) > 8)
 	__execute_n_times<_N>([&](auto __i) constexpr {
 	  __mem[__i] = __v[__i];
 	});
-      else if constexpr (std::is_same_v<_U, _Tp>)
+      else if constexpr (std::is_same_v<_Up, _Tp>)
 	__vector_store<sizeof(_Tp) * _N, _N>(__v._M_data, __mem, _F());
-      else if constexpr (sizeof(_U) * _N < 16)
-	__vector_store<sizeof(_U) * _N>(__convert<_U>(__v),
+      else if constexpr (sizeof(_Up) * _N < 16)
+	__vector_store<sizeof(_Up) * _N>(__convert<_Up>(__v),
 					__mem, _F());
-      else if constexpr (sizeof(_U) * _N <= __max_store_size)
-	__vector_store<0, _N>(__convert<__vector_type_t<_U, _N>>(__v), __mem, _F());
+      else if constexpr (sizeof(_Up) * _N <= __max_store_size)
+	__vector_store<0, _N>(__convert<__vector_type_t<_Up, _N>>(__v), __mem, _F());
       else
 	{
-	  constexpr size_t __vsize = __max_store_size / sizeof(_U);
+	  constexpr size_t __vsize = __max_store_size / sizeof(_Up);
 	  // round up to convert the last partial vector as well:
 	  constexpr size_t __stores = __div_roundup(_N, __vsize);
 	  constexpr size_t __full_stores = _N / __vsize;
-	  using _V = __vector_type_t<_U, __vsize>;
+	  using _V = __vector_type_t<_Up, __vsize>;
 	  const std::array<_V, __stores> __converted =
 	    __convert_all<_V, __stores>(__v);
 	  __execute_n_times<__full_stores>([&](auto __i) constexpr {
 	    __vector_store(__converted[__i], __mem + __i * __vsize, _F());
 	  });
 	  if constexpr (__full_stores < __stores)
-	    __vector_store<(_N - __full_stores * __vsize) * sizeof(_U)>(
+	    __vector_store<(_N - __full_stores * __vsize) * sizeof(_Up)>(
 	      __converted[__full_stores], __mem + __full_stores * __vsize,
 	      _F());
 	}
@@ -675,52 +675,52 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     template <typename _TW,
 	      typename _TVT = _VectorTraits<_TW>,
 	      typename _Tp  = typename _TVT::value_type,
-	      typename _U,
+	      typename _Up,
 	      typename _F>
     static inline void __masked_store(const _TW __v,
-				      _U*       __mem,
+				      _Up*       __mem,
 				      _F,
 				      const _MaskMember<_Tp> __k) noexcept
     {
       constexpr size_t            _TV_size = _S_size<_Tp>;
       [[maybe_unused]] const auto __vi     = __to_intrin(__v);
       constexpr size_t            __max_store_size =
-	_SuperImpl::template _S_max_store_size<_U>;
-      if constexpr (std::is_same_v<_Tp, _U> ||
-		    (std::is_integral_v<_Tp> && std::is_integral_v<_U> &&
-		     sizeof(_Tp) == sizeof(_U)))
+	_SuperImpl::template _S_max_store_size<_Up>;
+      if constexpr (std::is_same_v<_Tp, _Up> ||
+		    (std::is_integral_v<_Tp> && std::is_integral_v<_Up> &&
+		     sizeof(_Tp) == sizeof(_Up)))
 	{
 	  // bitwise or no conversion, reinterpret:
 	  const auto __kk = [&]() {
 	    if constexpr (__is_bitmask_v<decltype(__k)>)
-	      return _MaskMember<_U>(__k._M_data);
+	      return _MaskMember<_Up>(__k._M_data);
 	    else
-	      return __wrapper_bitcast<_U>(__k);
+	      return __wrapper_bitcast<_Up>(__k);
 	  }();
-	  _SuperImpl::__masked_store_nocvt(__wrapper_bitcast<_U>(__v), __mem,
+	  _SuperImpl::__masked_store_nocvt(__wrapper_bitcast<_Up>(__v), __mem,
 					   _F(), __kk);
 	}
-      else if constexpr (__can_vectorize_v<_U> &&
+      else if constexpr (__can_vectorize_v<_Up> &&
 			 !_SuperImpl::template __converts_via_decomposition_v<
-			   _Tp, _U, __max_store_size>)
+			   _Tp, _Up, __max_store_size>)
 	{ // conversion via decomposition is better handled via the bit_iteration fallback below
-	  using _UV = __vector_type_t<_U, std::min(_TV_size, __max_store_size /
-							       sizeof(_U))>;
+	  using _UV = __vector_type_t<_Up, std::min(_TV_size, __max_store_size /
+							       sizeof(_Up))>;
 	  constexpr size_t _UV_size = _VectorTraits<_UV>::_S_width;
-	  using _UW                 = _SimdWrapper<_U, _UV_size>;
-	  using _UAbi               = simd_abi::deduce_t<_U, _UV_size>;
+	  using _UW                 = _SimdWrapper<_Up, _UV_size>;
+	  using _UAbi               = simd_abi::deduce_t<_Up, _UV_size>;
 	  if constexpr (_UV_size >= _TV_size)
 	    {
 	      _UW __converted(__convert<_UV>(__v));
 	      // if _UV has more elements than the input (_TV_size),
 	      // vector_aligned is incorrect:
 	      constexpr std::conditional_t<
-		(_UV_size > _TV_size), overaligned_tag<sizeof(_U) * _TV_size>,
+		(_UV_size > _TV_size), overaligned_tag<sizeof(_Up) * _TV_size>,
 		_F>
 		__flag;
 	      _SuperImpl::__masked_store_nocvt(
 		__converted, __mem, __flag,
-		_UAbi::_MaskImpl::template __convert<_U>(__k));
+		_UAbi::_MaskImpl::template __convert<_Up>(__k));
 	    }
 	  else
 	    {
@@ -732,7 +732,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	      __execute_n_times<_NFullStores>([&](auto __i) {
 		_SuperImpl::__masked_store_nocvt(
 		  _UW(__converted[__i]), __mem + __i * _UV_size, _F(),
-		  _UAbi::_MaskImpl::template __convert<_U>(
+		  _UAbi::_MaskImpl::template __convert<_Up>(
 		    __extract_part<__i, _NParts>(__k.__as_full_vector())));
 	      });
 	      if constexpr (_NAllStores >
@@ -740,7 +740,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 		_SuperImpl::__masked_store_nocvt(
 		  _UW(__converted[_NFullStores]),
 		  __mem + _NFullStores * _UV_size, _F(),
-		  _UAbi::_MaskImpl::template __convert<_U>(
+		  _UAbi::_MaskImpl::template __convert<_Up>(
 		    __extract_part<_NFullStores, _NParts>(
 		      __k.__as_full_vector())));
 	    }
@@ -748,7 +748,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
       else
 	_BitOps::__bit_iteration(
 	  _MaskImpl::__to_bits(__k), [&](auto __i) constexpr {
-	    __mem[__i] = static_cast<_U>(__v[__i]);
+	    __mem[__i] = static_cast<_Up>(__v[__i]);
 	  });
     }
 
@@ -1026,15 +1026,15 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	    }
 	  if constexpr (_N >= 4)
 	    {
-	      using _U =
+	      using _Up =
 		std::conditional_t<std::is_floating_point_v<_Tp>, float, int>;
-	      const auto __y = __vector_bitcast<_U>(__x._M_data);
+	      const auto __y = __vector_bitcast<_Up>(__x._M_data);
 	      __x = __binary_op(__x, __make_simd<_Tp, _N>(__vector_bitcast<_Tp>(
 				       __vector_permute<3, 2, 1, 0>(__y))));
 	    }
-	  using _U =
+	  using _Up =
 	    std::conditional_t<std::is_floating_point_v<_Tp>, double, _LLong>;
-	  const auto __y = __vector_bitcast<_U>(__x._M_data);
+	  const auto __y = __vector_bitcast<_Up>(__x._M_data);
 	  __x = __binary_op(__x, __make_simd<_Tp, _N>(__vector_bitcast<_Tp>(
 				   __vector_permute<1, 1>(__y))));
 	  return __x[0];
@@ -1493,10 +1493,10 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // smart_reference access {{{2
-    template <class _Tp, size_t _N, class _U>
-    _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdWrapper<_Tp, _N> &__v, int __i, _U &&__x) noexcept
+    template <class _Tp, size_t _N, class _Up>
+    _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdWrapper<_Tp, _N> &__v, int __i, _Up &&__x) noexcept
     {
-        __v.__set(__i, std::forward<_U>(__x));
+        __v.__set(__i, std::forward<_Up>(__x));
     }
 
     // __masked_assign{{{2

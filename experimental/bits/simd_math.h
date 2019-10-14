@@ -64,7 +64,7 @@ template <class _DoubleR, class _Tp, class _Abi> struct __math_return_type {
 
 // }}}
 //__extra_argument_type{{{
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type;
+template <class _Up, class _Tp, class _Abi> struct __extra_argument_type;
 
 template <class _Tp, class _Abi> struct __extra_argument_type<_Tp *, _Tp, _Abi> {
     using type = std::experimental::simd<_Tp, _Abi> *;
@@ -72,10 +72,10 @@ template <class _Tp, class _Abi> struct __extra_argument_type<_Tp *, _Tp, _Abi> 
     _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x) { return &std::experimental::__data(*__x); }
     static constexpr bool __needs_temporary_scalar = true;
 };
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type<_U *, _Tp, _Abi> {
-    static_assert(std::is_integral_v<_U>);
-    using type = std::experimental::fixed_size_simd<_U, std::experimental::simd_size_v<_Tp, _Abi>> *;
-    static constexpr _U *declval();
+template <class _Up, class _Tp, class _Abi> struct __extra_argument_type<_Up *, _Tp, _Abi> {
+    static_assert(std::is_integral_v<_Up>);
+    using type = std::experimental::fixed_size_simd<_Up, std::experimental::simd_size_v<_Tp, _Abi>> *;
+    static constexpr _Up *declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x) { return &std::experimental::__data(*__x); }
     static constexpr bool __needs_temporary_scalar = true;
 };
@@ -88,10 +88,10 @@ template <class _Tp, class _Abi> struct __extra_argument_type<_Tp, _Tp, _Abi> {
     }
     static constexpr bool __needs_temporary_scalar = false;
 };
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
-    static_assert(std::is_integral_v<_U>);
-    using type = std::experimental::fixed_size_simd<_U, std::experimental::simd_size_v<_Tp, _Abi>>;
-    static constexpr _U declval();
+template <class _Up, class _Tp, class _Abi> struct __extra_argument_type {
+    static_assert(std::is_integral_v<_Up>);
+    using type = std::experimental::fixed_size_simd<_Up, std::experimental::simd_size_v<_Tp, _Abi>>;
+    static constexpr _Up declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr decltype(auto) __data(const type &__x)
     {
         return std::experimental::__data(__x);
@@ -115,23 +115,23 @@ template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
 	    _Abi::_SimdImpl::__##__name(std::experimental::__data(__x),        \
 					_Arg2::__data(__y))};                  \
   }                                                                            \
-  template <class _U, class _Tp, class _Abi>                                   \
+  template <class _Up, class _Tp, class _Abi>                                   \
   _GLIBCXX_SIMD_INTRINSIC std::experimental::__math_return_type_t<             \
     decltype(std::__name(                                                      \
       std::declval<double>(),                                                  \
       std::declval<enable_if_t<                                                \
 	std::conjunction_v<                                                    \
 	  std::is_same<arg2_, _Tp>,                                            \
-	  std::negation<std::is_same<__remove_cvref_t<_U>,                     \
+	  std::negation<std::is_same<__remove_cvref_t<_Up>,                     \
 				     std::experimental::simd<_Tp, _Abi>>>,     \
-	  std::is_convertible<_U, std::experimental::simd<_Tp, _Abi>>,         \
+	  std::is_convertible<_Up, std::experimental::simd<_Tp, _Abi>>,         \
 	  std::is_floating_point<_Tp>>,                                        \
 	double>>())),                                                          \
     _Tp, _Abi>                                                                 \
-    __name(_U&& __xx, const std::experimental::simd<_Tp, _Abi>& __yy)          \
+    __name(_Up&& __xx, const std::experimental::simd<_Tp, _Abi>& __yy)          \
   {                                                                            \
     return std::experimental::__name(                                          \
-      std::experimental::simd<_Tp, _Abi>(std::forward<_U>(__xx)), __yy);       \
+      std::experimental::simd<_Tp, _Abi>(std::forward<_Up>(__xx)), __yy);       \
   }
 
 // }}}
@@ -154,19 +154,19 @@ template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
 					_Arg2::__data(__y),                    \
 					_Arg3::__data(__z))};                  \
   }                                                                            \
-  template <class _Tp, class _U, class _V, class...,                           \
+  template <class _Tp, class _Up, class _V, class...,                           \
 	    class _TT = __remove_cvref_t<_Tp>,                                 \
-	    class _UU = __remove_cvref_t<_U>,                                  \
+	    class _UU = __remove_cvref_t<_Up>,                                  \
 	    class _VV = __remove_cvref_t<_V>,                                  \
 	    class _Simd =                                                      \
 	      std::conditional_t<std::experimental::is_simd_v<_UU>, _UU, _VV>> \
   _GLIBCXX_SIMD_INTRINSIC decltype(std::experimental::__name(                  \
-    _Simd(std::declval<_Tp>()), _Simd(std::declval<_U>()),                     \
+    _Simd(std::declval<_Tp>()), _Simd(std::declval<_Up>()),                     \
     _Simd(std::declval<_V>())))                                                \
-    __name(_Tp&& __xx, _U&& __yy, _V&& __zz)                                   \
+    __name(_Tp&& __xx, _Up&& __yy, _V&& __zz)                                   \
   {                                                                            \
     return std::experimental::__name(_Simd(std::forward<_Tp>(__xx)),           \
-				     _Simd(std::forward<_U>(__yy)),            \
+				     _Simd(std::forward<_Up>(__yy)),            \
 				     _Simd(std::forward<_V>(__zz)));           \
   }
 
@@ -799,8 +799,8 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 	// inputs (domain-error => implementation-defined value is returned)
 	const _V abs_x = abs(__x);
 
-	// __exponent(__x) returns the exponent value (bias removed) as simd<_U>
-	// with integral _U
+	// __exponent(__x) returns the exponent value (bias removed) as simd<_Up>
+	// with integral _Up
 	auto&& __exponent = [](const _V& __v) {
 	  using namespace std::experimental::__proposed;
 	  using _IV = rebind_simd_t<

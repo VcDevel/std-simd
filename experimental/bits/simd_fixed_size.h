@@ -427,16 +427,16 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   _GLIBCXX_SIMD_INTRINSIC constexpr auto& __skip_argument(_Tup&& __tup) const
   {
     static_assert(_S_tuple_size > 1);
-    using _U               = __remove_cvref_t<_Tup>;
-    constexpr size_t __off = __offset<_U>;
-    if constexpr (_S_first_size == _U::_S_first_size && __off == 0)
+    using _Up               = __remove_cvref_t<_Tup>;
+    constexpr size_t __off = __offset<_Up>;
+    if constexpr (_S_first_size == _Up::_S_first_size && __off == 0)
       return __tup.second;
-    else if constexpr (_S_first_size > _U::_S_first_size &&
-		       _S_first_size % _U::_S_first_size == 0 && __off == 0)
-      return __simd_tuple_pop_front<_S_first_size / _U::_S_first_size>(__tup);
-    else if constexpr (_S_first_size + __off < _U::_S_first_size)
+    else if constexpr (_S_first_size > _Up::_S_first_size &&
+		       _S_first_size % _Up::_S_first_size == 0 && __off == 0)
+      return __simd_tuple_pop_front<_S_first_size / _Up::_S_first_size>(__tup);
+    else if constexpr (_S_first_size + __off < _Up::_S_first_size)
       return __add_offset<_S_first_size>(__tup);
-    else if constexpr (_S_first_size + __off == _U::_S_first_size)
+    else if constexpr (_S_first_size + __off == _Up::_S_first_size)
       return __tup.second;
     else
       __assert_unreachable<_Tup>();
@@ -548,14 +548,14 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	      << simd_size_v<_Tp, _Abi0>);
   }
 
-  template <typename _U, _U _I>
+  template <typename _Up, _Up _I>
   _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-    operator[](std::integral_constant<_U, _I>) const noexcept
+    operator[](std::integral_constant<_Up, _I>) const noexcept
   {
     if constexpr (_I < simd_size_v<_Tp, _Abi0>)
       return __subscript_read(_I);
     else
-      return second[std::integral_constant<_U, _I - simd_size_v<_Tp, _Abi0>>()];
+      return second[std::integral_constant<_Up, _I - simd_size_v<_Tp, _Abi0>>()];
   }
 
   _Tp operator[](size_t __i) const noexcept
@@ -1288,20 +1288,20 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __load {{{2
-    template <class _Tp, class _U, class _F>
+    template <class _Tp, class _Up, class _F>
     static inline _SimdMember<_Tp>
-      __load(const _U* __mem, _F __f, _TypeTag<_Tp>) noexcept
+      __load(const _Up* __mem, _F __f, _TypeTag<_Tp>) noexcept
     {
         return _SimdMember<_Tp>::__generate(
             [&](auto __meta) { return __meta.__load(&__mem[__meta._S_offset], __f, _TypeTag<_Tp>()); });
     }
 
     // __masked_load {{{2
-    template <class _Tp, class... _As, class _U, class _F>
+    template <class _Tp, class... _As, class _Up, class _F>
     static inline _SimdTuple<_Tp, _As...>
       __masked_load(const _SimdTuple<_Tp, _As...>& __old,
 		    const _MaskMember              __bits,
-		    const _U*                      __mem,
+		    const _Up*                      __mem,
 		    _F                             __f) noexcept
     {
       auto __merge = __old;
@@ -1313,9 +1313,9 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __store {{{2
-    template <class _Tp, class _U, class _F>
+    template <class _Tp, class _Up, class _F>
     static inline void __store(const _SimdMember<_Tp>& __v,
-			       _U*                     __mem,
+			       _Up*                     __mem,
 			       _F                      __f,
 			       _TypeTag<_Tp>) noexcept
     {
@@ -1325,9 +1325,9 @@ template <int _N> struct _SimdImplFixedSize {
     }
 
     // __masked_store {{{2
-    template <class _Tp, class... _As, class _U, class _F>
+    template <class _Tp, class... _As, class _Up, class _F>
     static inline void __masked_store(const _SimdTuple<_Tp, _As...>& __v,
-				      _U*                            __mem,
+				      _Up*                            __mem,
 				      _F                             __f,
 				      const _MaskMember __bits) noexcept
     {
@@ -1656,10 +1656,10 @@ public:
 #undef _GLIBCXX_SIMD_CMP_OPERATIONS
 
     // smart_reference access {{{2
-    template <typename _Tp, typename... _As, typename _U>
-    _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdTuple<_Tp, _As...> &__v, int __i, _U &&__x) noexcept
+    template <typename _Tp, typename... _As, typename _Up>
+    _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdTuple<_Tp, _As...> &__v, int __i, _Up &&__x) noexcept
     {
-        __v.__set(__i, std::forward<_U>(__x));
+        __v.__set(__i, std::forward<_Up>(__x));
     }
 
     // __masked_assign {{{2

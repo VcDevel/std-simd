@@ -71,17 +71,17 @@ struct _SimdImplScalar {
   }
 
   // __load {{{2
-  template <typename _Tp, typename _U, typename _F>
+  template <typename _Tp, typename _Up, typename _F>
   _GLIBCXX_SIMD_INTRINSIC static _Tp
-    __load(const _U* __mem, _F, _TypeTag<_Tp>) noexcept
+    __load(const _Up* __mem, _F, _TypeTag<_Tp>) noexcept
   {
     return static_cast<_Tp>(__mem[0]);
   }
 
   // __masked_load {{{2
-  template <typename _Tp, typename _U, typename _F>
+  template <typename _Tp, typename _Up, typename _F>
   static inline _Tp
-    __masked_load(_Tp __merge, bool __k, const _U* __mem, _F) noexcept
+    __masked_load(_Tp __merge, bool __k, const _Up* __mem, _F) noexcept
   {
     if (__k)
       __merge = static_cast<_Tp>(__mem[0]);
@@ -89,16 +89,16 @@ struct _SimdImplScalar {
   }
 
   // __store {{{2
-  template <typename _Tp, typename _U, typename _F>
-  static inline void __store(_Tp __v, _U* __mem, _F, _TypeTag<_Tp>) noexcept
+  template <typename _Tp, typename _Up, typename _F>
+  static inline void __store(_Tp __v, _Up* __mem, _F, _TypeTag<_Tp>) noexcept
   {
     __mem[0] = static_cast<_Tp>(__v);
   }
 
   // __masked_store {{{2
-  template <typename _Tp, typename _U, typename _F>
+  template <typename _Tp, typename _Up, typename _F>
   static inline void
-    __masked_store(const _Tp __v, _U* __mem, _F, const bool __k) noexcept
+    __masked_store(const _Tp __v, _Up* __mem, _F, const bool __k) noexcept
   {
     if (__k)
       __mem[0] = __v;
@@ -331,11 +331,11 @@ struct _SimdImplScalar {
     template <typename _Tp> static bool __less_equal(_Tp __x, _Tp __y) { return __x <= __y; }
 
     // smart_reference access {{{2
-    template <typename _Tp, typename _U>
-    static void __set(_Tp& __v, [[maybe_unused]] int __i, _U&& __x) noexcept
+    template <typename _Tp, typename _Up>
+    static void __set(_Tp& __v, [[maybe_unused]] int __i, _Up&& __x) noexcept
     {
       _GLIBCXX_DEBUG_ASSERT(__i == 0);
-      __v = std::forward<_U>(__x);
+      __v = std::forward<_Up>(__x);
     }
 
     // __masked_assign {{{2
