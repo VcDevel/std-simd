@@ -94,17 +94,6 @@ using _ULong = unsigned long;
 using _ULLong = unsigned long long;
 using _LLong = long long;
 //}}}
-// __is_equal {{{
-template <typename _Tp, _Tp __a, _Tp __b>
-struct __is_equal : public false_type
-{
-};
-template <typename _Tp, _Tp __a>
-struct __is_equal<_Tp, __a, __a> : public true_type
-{
-};
-
-// }}}
 // __identity/__id{{{
 template <typename _Tp>
 struct __identity
