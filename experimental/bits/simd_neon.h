@@ -45,14 +45,14 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   static constexpr size_t _S_max_store_size = 16;
 
   // __masked_load {{{
-  template <typename _Tp, size_t _N, typename _Up, typename _Fp>
-  static inline _SimdWrapper<_Tp, _N>
-    __masked_load(_SimdWrapper<_Tp, _N> __merge,
-		  _SimdWrapper<_Tp, _N> __k,
+  template <typename _Tp, size_t _Np, typename _Up, typename _Fp>
+  static inline _SimdWrapper<_Tp, _Np>
+    __masked_load(_SimdWrapper<_Tp, _Np> __merge,
+		  _SimdWrapper<_Tp, _Np> __k,
 		  const _Up*            __mem,
 		  _Fp) noexcept
   {
-    __execute_n_times<_N>([&](auto __i) {
+    __execute_n_times<_Np>([&](auto __i) {
       if (__k[__i] != 0)
 	__merge.__set(__i, static_cast<_Tp>(__mem[__i]));
     });
@@ -61,11 +61,11 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 
   // }}}
   // __masked_store_nocvt {{{
-  template <typename _Tp, std::size_t _N, typename _Fp>
+  template <typename _Tp, std::size_t _Np, typename _Fp>
   _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
-    _SimdWrapper<_Tp, _N> __v, _Tp* __mem, _Fp, _SimdWrapper<_Tp, _N> __k)
+    _SimdWrapper<_Tp, _Np> __v, _Tp* __mem, _Fp, _SimdWrapper<_Tp, _Np> __k)
   {
-    __execute_n_times<_N>([&](auto __i) {
+    __execute_n_times<_Np>([&](auto __i) {
       if (__k[__i] != 0)
 	__mem[__i] = __v[__i];
     });
@@ -77,38 +77,38 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static _Tp
     __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
   {
-    constexpr size_t _N = __x.size();
-    if constexpr (sizeof(__x) == 16 && _N >= 4 && !_Abi::_S_is_partial)
+    constexpr size_t _Np = __x.size();
+    if constexpr (sizeof(__x) == 16 && _Np >= 4 && !_Abi::_S_is_partial)
       {
 	const auto __halves = split<simd<_Tp, simd_abi::_Neon<8>>>(__x);
 	const auto __y      = __binary_op(__halves[0], __halves[1]);
 	return _SimdImplNeon<simd_abi::_Neon<8>>::__reduce(
 	  __y, forward<_BinaryOperation>(__binary_op));
       }
-    else if constexpr (_N == 8)
+    else if constexpr (_Np == 8)
       {
 	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _N>(
+	  __x, _Base::template __make_simd<_Tp, _Np>(
 		 __vector_permute<1, 0, 3, 2, 5, 4, 7, 6>(__x._M_data)));
 	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _N>(
+	  __x, _Base::template __make_simd<_Tp, _Np>(
 		 __vector_permute<3, 2, 1, 0, 7, 6, 5, 4>(__x._M_data)));
 	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _N>(
+	  __x, _Base::template __make_simd<_Tp, _Np>(
 		 __vector_permute<7, 6, 5, 4, 3, 2, 1, 0>(__x._M_data)));
 	return __x[0];
       }
-    else if constexpr (_N == 4)
+    else if constexpr (_Np == 4)
       {
-	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
 				 __vector_permute<1, 0, 3, 2>(__x._M_data)));
-	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
 				 __vector_permute<3, 2, 1, 0>(__x._M_data)));
 	return __x[0];
       }
-    else if constexpr (_N == 2)
+    else if constexpr (_Np == 2)
       {
-	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _N>(
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
 				 __vector_permute<1, 0>(__x._M_data)));
 	return __x[0];
       }
@@ -208,9 +208,9 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 struct _MaskImplNeonMixin {
   using _Base = _MaskImplBuiltinMixin;
 
-  template <typename _Tp, size_t _N>
+  template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-    __to_bits(_SimdWrapper<_Tp, _N> __x)
+    __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
     using _I = __int_for_sizeof_t<_Tp>;
     if constexpr (sizeof(__x) == 16)

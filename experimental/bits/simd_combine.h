@@ -32,16 +32,16 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
-template <int _N, typename _Abi>
+template <int _Np, typename _Abi>
 struct _SimdImplCombine
 {
   // member types {{{
-  using abi_type = simd_abi::_Combine<_N, _Abi>;
+  using abi_type = simd_abi::_Combine<_Np, _Abi>;
   template <typename _Tp> using _TypeTag = _Tp *;
   using _PartImpl = typename _Abi::_SimdImpl;
   template <typename _Tp>
   using _SimdMember =
-    std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _N>;
+    std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
 
   // }}}
   // broadcast {{{
@@ -49,7 +49,7 @@ struct _SimdImplCombine
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdMember<_Tp>
     __broadcast(_Tp __x) noexcept
   {
-    return __generate_from_n_evaluations<_N, _SimdMember<_Tp>>(
+    return __generate_from_n_evaluations<_Np, _SimdMember<_Tp>>(
       [&](int) constexpr { return _PartImpl::__broadcast(__x); });
   }
 
@@ -59,13 +59,13 @@ struct _SimdImplCombine
 //X   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
 //X     __load(const _U* __mem, _Fp, _TypeTag<_Tp> __x) noexcept
 //X   {
-//X     return __generate_from_n_evaluations<_N, _Tp>(
+//X     return __generate_from_n_evaluations<_Np, _Tp>(
 //X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i * __part_size<_Tp>, _Fp{}, __x); });
 //X   }
 //X 
   // }}}
 };
-template <int _N, typename _Abi>
+template <int _Np, typename _Abi>
 struct _MaskImplCombine
 {
 };

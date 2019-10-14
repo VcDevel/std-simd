@@ -36,7 +36,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
-    constexpr size_t _N = _Traits::_S_width;
+    constexpr size_t _Np = _Traits::_S_width;
     [[maybe_unused]] const auto __intrin = __to_intrin(__v);
     using _Up = typename _VectorTraits<_To>::value_type;
     constexpr size_t _M = _VectorTraits<_To>::_S_width;
@@ -101,7 +101,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
     } else if constexpr (__i_to_i && __x_to_y && !__have_avx2) {  //{{{2
         return __concat(__convert_x86<__vector_type_t<_Up, _M / 2>>(__v),
                         __convert_x86<__vector_type_t<_Up, _M / 2>>(
-                            __extract_part<1, _N / _M * 2>(__v)));
+                            __extract_part<1, _Np / _M * 2>(__v)));
     } else if constexpr (__i_to_i) {  //{{{2
         static_assert(__x_to_x || __have_avx2,
                       "integral conversions with ymm registers require AVX2");
@@ -115,17 +115,17 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
     if constexpr (is_floating_point_v<_Tp> == is_floating_point_v<_Up> &&  //{{{2
                   sizeof(_Tp) == sizeof(_Up)) {
         // conversion uses simple bit reinterpretation (or no conversion at all)
-        if constexpr (_N >= _M) {
+        if constexpr (_Np >= _M) {
             return __intrin_bitcast<_To>(__v);
         } else {
             return __zero_extend(__vector_bitcast<_Up>(__v));
         }
-    } else if constexpr (_N < _M && sizeof(_To) > 16) {  // zero extend (eg. xmm -> ymm){{{2
+    } else if constexpr (_Np < _M && sizeof(_To) > 16) {  // zero extend (eg. xmm -> ymm){{{2
         return __zero_extend(
             __convert_x86<
-                __vector_type_t<_Up, (16 / sizeof(_Up) > _N) ? 16 / sizeof(_Up) : _N>>(__v));
-    } else if constexpr (_N > _M && sizeof(__v) > 16) {  // partial input (eg. ymm -> xmm){{{2
-        return __convert_x86<_To>(__extract_part<0, _N / _M>(__v));
+                __vector_type_t<_Up, (16 / sizeof(_Up) > _Np) ? 16 / sizeof(_Up) : _Np>>(__v));
+    } else if constexpr (_Np > _M && sizeof(__v) > 16) {  // partial input (eg. ymm -> xmm){{{2
+        return __convert_x86<_To>(__extract_part<0, _Np / _M>(__v));
     } else if constexpr (__i64_to_i32) {  //{{{2
         if constexpr (__x_to_x && __have_avx512vl) {
             return __intrin_bitcast<_To>(_mm_cvtepi64_epi32(__intrin));
@@ -377,14 +377,14 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         // the __builtin_constant_p hack enables constant propagation
 	if (__builtin_constant_p(__v))
 	  {
-	    if constexpr (_N == 2)
+	    if constexpr (_Np == 2)
 	      return __make_vector<_Up>(__v[0], __v[1]);
-	    else if constexpr (_N == 4)
+	    else if constexpr (_Np == 4)
 	      return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3]);
-	    else if constexpr (_N == 8)
+	    else if constexpr (_Np == 8)
 	      return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3], __v[4],
 				       __v[5], __v[6], __v[7]);
-	    else if constexpr (_N == 16)
+	    else if constexpr (_Np == 16)
 	      return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3], __v[4],
 				       __v[5], __v[6], __v[7], __v[8], __v[9],
 				       __v[10], __v[11], __v[12], __v[13],
@@ -411,7 +411,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
 	else
 	  __assert_unreachable<_Tp>();
     } else if constexpr (__f32_to_ibw) {  //{{{2
-        return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N>>(__v));
+        return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np>>(__v));
     } else if constexpr (__f64_to_s64) {  //{{{2
         if constexpr (__have_avx512dq_vl && __x_to_x) {
             return __intrin_bitcast<_To>(_mm_cvttpd_epi64(__intrin));
@@ -456,7 +456,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
             return __intrin_bitcast<_To>(_mm512_cvttpd_epu32(__intrin));
         }
     } else if constexpr (__f64_to_ibw) {  //{{{2
-        return __convert_x86<_To>(__convert_x86<__vector_type_t<int, (_N < 4 ? 4 : _N)>>(__v));
+        return __convert_x86<_To>(__convert_x86<__vector_type_t<int, (_Np < 4 ? 4 : _Np)>>(__v));
     } else if constexpr (__s64_to_f32) {  //{{{2
         if constexpr (__x_to_x && __have_avx512dq_vl) {
             return __intrin_bitcast<_To>(_mm_cvtepi64_ps(__intrin));
@@ -604,7 +604,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
     }
 
     // fallback:{{{2
-    return __vector_convert<_To>(__v, make_index_sequence<std::min(_M, _N)>());
+    return __vector_convert<_To>(__v, make_index_sequence<std::min(_M, _Np)>());
     //}}}
 } // }}}
 // 2-arg __convert_x86 {{{1
@@ -612,14 +612,14 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
-    constexpr size_t _N = _Traits::_S_width;
+    constexpr size_t _Np = _Traits::_S_width;
     [[maybe_unused]] const auto __i0 = __to_intrin(__v0);
     [[maybe_unused]] const auto __i1 = __to_intrin(__v1);
     using _Up = typename _VectorTraits<_To>::value_type;
     constexpr size_t _M = _VectorTraits<_To>::_S_width;
 
     static_assert(
-        2 * _N <= _M,
+        2 * _Np <= _M,
         "__v1 would be discarded; use the one-argument __convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
@@ -702,10 +702,10 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         // through the concat branch above:
         static_assert(!(std::is_floating_point_v<_Tp> == std::is_floating_point_v<_Up> &&
                         sizeof(_Tp) == sizeof(_Up)));
-        if constexpr (2 * _N < _M && sizeof(_To) > 16) {  // handle all zero extension{{{2
+        if constexpr (2 * _Np < _M && sizeof(_To) > 16) {  // handle all zero extension{{{2
             constexpr size_t Min = 16 / sizeof(_Up);
             return __zero_extend(
-                __convert_x86<__vector_type_t<_Up, (Min > 2 * _N) ? Min : 2 * _N>>(__v0, __v1));
+                __convert_x86<__vector_type_t<_Up, (Min > 2 * _Np) ? Min : 2 * _Np>>(__v0, __v1));
         } else if constexpr (__i64_to_i32) {  //{{{2
             if constexpr (__x_to_x) {
                 return __auto_bitcast(_mm_shuffle_ps(__auto_bitcast(__v0), __auto_bitcast(__v1), 0x88));
@@ -915,11 +915,11 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
             // independet conversions to _SimdWrapper<_To> and subsequent interleaving. This is
             // better, because f64->__i32 allows to combine __v0 and __v1 into one register:
             //if constexpr (__z_to_x || __y_to_x) {
-            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N * 2>>(__v0, __v1));
+            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np * 2>>(__v0, __v1));
             //}
         } else if constexpr (__f32_to_ibw) {  //{{{2
-            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N>>(__v0),
-                                     __convert_x86<__vector_type_t<int, _N>>(__v1));
+            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np>>(__v0),
+                                     __convert_x86<__vector_type_t<int, _Np>>(__v1));
             //}}}
         }
 
@@ -931,27 +931,27 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         } else if constexpr (sizeof(_To) == 16) {
             const auto __lo = __to_intrin(__convert_x86<_To>(__v0));
             const auto __hi = __to_intrin(__convert_x86<_To>(__v1));
-            if constexpr (sizeof(_Up) * _N == 8) {
+            if constexpr (sizeof(_Up) * _Np == 8) {
                 if constexpr (is_floating_point_v<_Up>) {
                     return __auto_bitcast(_mm_unpacklo_pd(__vector_bitcast<double>(__lo),
                                                           __vector_bitcast<double>(__hi)));
                 } else {
                     return __intrin_bitcast<_To>(_mm_unpacklo_epi64(__lo, __hi));
                 }
-            } else if constexpr (sizeof(_Up) * _N == 4) {
+            } else if constexpr (sizeof(_Up) * _Np == 4) {
                 if constexpr (is_floating_point_v<_Up>) {
                     return __auto_bitcast(_mm_unpacklo_ps(__vector_bitcast<float>(__lo),
                                                           __vector_bitcast<float>(__hi)));
                 } else {
                     return __intrin_bitcast<_To>(_mm_unpacklo_epi32(__lo, __hi));
                 }
-            } else if constexpr (sizeof(_Up) * _N == 2) {
+            } else if constexpr (sizeof(_Up) * _Np == 2) {
                 return __intrin_bitcast<_To>(_mm_unpacklo_epi16(__lo, __hi));
             } else {
                 __assert_unreachable<_Tp>();
             }
         } else {
-            return __vector_convert<_To>(__v0, __v1, make_index_sequence<_N>());
+            return __vector_convert<_To>(__v0, __v1, make_index_sequence<_Np>());
         }  //}}}
     }
 }//}}}1
@@ -960,7 +960,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
-    constexpr size_t _N = _Traits::_S_width;
+    constexpr size_t _Np = _Traits::_S_width;
     [[maybe_unused]] const auto __i0 = __to_intrin(__v0);
     [[maybe_unused]] const auto __i1 = __to_intrin(__v1);
     [[maybe_unused]] const auto __i2 = __to_intrin(__v2);
@@ -969,7 +969,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
     constexpr size_t _M = _VectorTraits<_To>::_S_width;
 
     static_assert(
-        4 * _N <= _M,
+        4 * _Np <= _M,
         "__v2/__v3 would be discarded; use the two/one-argument __convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
@@ -1053,10 +1053,10 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         // through the concat branch above:
         static_assert(!(std::is_floating_point_v<_Tp> == std::is_floating_point_v<_Up> &&
                         sizeof(_Tp) == sizeof(_Up)));
-        if constexpr (4 * _N < _M && sizeof(_To) > 16) {  // handle all zero extension{{{2
+        if constexpr (4 * _Np < _M && sizeof(_To) > 16) {  // handle all zero extension{{{2
             constexpr size_t Min = 16 / sizeof(_Up);
             return __zero_extend(
-                __convert_x86<__vector_type_t<_Up, (Min > 4 * _N) ? Min : 4 * _N>>(__v0, __v1,
+                __convert_x86<__vector_type_t<_Up, (Min > 4 * _Np) ? Min : 4 * _Np>>(__v0, __v1,
                                                                                  __v2, __v3));
         } else if constexpr (__i64_to_i16) {  //{{{2
             if constexpr (__x_to_x && __have_sse4_1) {
@@ -1174,13 +1174,13 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
                 return (__hi + __mid) + __lo;
             }
         } else if constexpr (__f64_to_ibw) {  //{{{2
-            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N * 2>>(__v0, __v1),
-                                     __convert_x86<__vector_type_t<int, _N * 2>>(__v2, __v3));
+            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np * 2>>(__v0, __v1),
+                                     __convert_x86<__vector_type_t<int, _Np * 2>>(__v2, __v3));
         } else if constexpr (__f32_to_ibw) {  //{{{2
-            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N>>(__v0),
-                                     __convert_x86<__vector_type_t<int, _N>>(__v1),
-                                     __convert_x86<__vector_type_t<int, _N>>(__v2),
-                                     __convert_x86<__vector_type_t<int, _N>>(__v3));
+            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np>>(__v0),
+                                     __convert_x86<__vector_type_t<int, _Np>>(__v1),
+                                     __convert_x86<__vector_type_t<int, _Np>>(__v2),
+                                     __convert_x86<__vector_type_t<int, _Np>>(__v3));
         }  //}}}
 
         // fallback: {{{2
@@ -1191,13 +1191,13 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         } else if constexpr (sizeof(_To) == 16) {
             const auto __lo = __to_intrin(__convert_x86<_To>(__v0, __v1));
             const auto __hi = __to_intrin(__convert_x86<_To>(__v2, __v3));
-            if constexpr (sizeof(_Up) * _N * 2 == 8) {
+            if constexpr (sizeof(_Up) * _Np * 2 == 8) {
                 if constexpr (is_floating_point_v<_Up>) {
                     return __auto_bitcast(_mm_unpacklo_pd(__lo, __hi));
                 } else {
                     return __intrin_bitcast<_To>(_mm_unpacklo_epi64(__lo, __hi));
                 }
-            } else if constexpr (sizeof(_Up) * _N * 2 == 4) {
+            } else if constexpr (sizeof(_Up) * _Np * 2 == 4) {
                 if constexpr (is_floating_point_v<_Up>) {
                     return __auto_bitcast(_mm_unpacklo_ps(__lo, __hi));
                 } else {
@@ -1208,7 +1208,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
             }
         } else {
             return __vector_convert<_To>(__v0, __v1, __v2, __v3,
-                                         make_index_sequence<_N>());
+                                         make_index_sequence<_Np>());
         }  //}}}2
     }
 }//}}}
@@ -1217,7 +1217,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
-    constexpr size_t _N = _Traits::_S_width;
+    constexpr size_t _Np = _Traits::_S_width;
     [[maybe_unused]] const auto __i0 = __to_intrin(__v0);
     [[maybe_unused]] const auto __i1 = __to_intrin(__v1);
     [[maybe_unused]] const auto __i2 = __to_intrin(__v2);
@@ -1229,7 +1229,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
     using _Up = typename _VectorTraits<_To>::value_type;
     constexpr size_t _M = _VectorTraits<_To>::_S_width;
 
-    static_assert(8 * _N <= _M, "__v4-__v7 would be discarded; use the four/two/one-argument "
+    static_assert(8 * _Np <= _M, "__v4-__v7 would be discarded; use the four/two/one-argument "
                               "__convert_x86 overload instead");
 
     // [xyz]_to_[xyz] {{{2
@@ -1270,7 +1270,7 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         // through the concat branch above:
         static_assert(!(std::is_floating_point_v<_Tp> == std::is_floating_point_v<_Up> &&
                         sizeof(_Tp) == sizeof(_Up)));
-        static_assert(!(8 * _N < _M && sizeof(_To) > 16),
+        static_assert(!(8 * _Np < _M && sizeof(_To) > 16),
                       "zero extension should be impossible");
         if constexpr (__i64_to_i8) {  //{{{2
             if constexpr (__x_to_x && __have_ssse3) {
@@ -1325,10 +1325,10 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
                     __convert_x86<__vector_type_t<_Up, _M / 2>>(__v4, __v5, __v6, __v7));
             }
         } else if constexpr (__f64_to_i8) {  //{{{2
-            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _N * 2>>(__v0, __v1),
-                                     __convert_x86<__vector_type_t<int, _N * 2>>(__v2, __v3),
-                                     __convert_x86<__vector_type_t<int, _N * 2>>(__v4, __v5),
-                                     __convert_x86<__vector_type_t<int, _N * 2>>(__v6, __v7));
+            return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np * 2>>(__v0, __v1),
+                                     __convert_x86<__vector_type_t<int, _Np * 2>>(__v2, __v3),
+                                     __convert_x86<__vector_type_t<int, _Np * 2>>(__v4, __v5),
+                                     __convert_x86<__vector_type_t<int, _Np * 2>>(__v6, __v7));
         } else { // unreachable {{{2
             __assert_unreachable<_Tp>();
         }  //}}}
@@ -1341,12 +1341,12 @@ template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _
         } else if constexpr (sizeof(_To) == 16) {
             const auto __lo = __to_intrin(__convert_x86<_To>(__v0, __v1, __v2, __v3));
             const auto __hi = __to_intrin(__convert_x86<_To>(__v4, __v5, __v6, __v7));
-            static_assert(sizeof(_Up) == 1 && _N == 2);
+            static_assert(sizeof(_Up) == 1 && _Np == 2);
             return __intrin_bitcast<_To>(_mm_unpacklo_epi64(__lo, __hi));
         } else {
             __assert_unreachable<_Tp>();
             //return __vector_convert<_To>(__v0, __v1, __v2, __v3, __v4, __v5, __v6, __v7,
-            //                             make_index_sequence<_N>());
+            //                             make_index_sequence<_Np>());
         }  //}}}2
     }
 }//}}}

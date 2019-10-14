@@ -148,16 +148,16 @@ struct _SimdConverter<_From,
   }
 };
 
-// _SimdConverter fixed_size<_N> -> fixed_size<_N> {{{1
-template <typename _From, typename _To, int _N>
+// _SimdConverter fixed_size<_Np> -> fixed_size<_Np> {{{1
+template <typename _From, typename _To, int _Np>
 struct _SimdConverter<_From,
-		      simd_abi::fixed_size<_N>,
+		      simd_abi::fixed_size<_Np>,
 		      _To,
-		      simd_abi::fixed_size<_N>,
+		      simd_abi::fixed_size<_Np>,
 		      std::enable_if_t<!std::is_same_v<_From, _To>>>
 {
-  using _Ret = __fixed_size_storage_t<_To, _N>;
-  using _Arg = __fixed_size_storage_t<_From, _N>;
+  using _Ret = __fixed_size_storage_t<_To, _Np>;
+  using _Arg = __fixed_size_storage_t<_From, _Np>;
 
   _GLIBCXX_SIMD_INTRINSIC _Ret operator()(const _Arg& __x)
   {
@@ -173,7 +173,7 @@ struct _SimdConverter<_From,
     else if constexpr (__is_scalar_abi<typename _Ret::_FirstAbi>())
       {
 	return __call_with_subscripts(
-	  __x, make_index_sequence<_N>(), [](auto... __values) constexpr->_Ret {
+	  __x, make_index_sequence<_Np>(), [](auto... __values) constexpr->_Ret {
 	    return __make_simd_tuple<_To, decltype((void)__values,
 						   simd_abi::scalar())...>(
 	      static_cast<_To>(__values)...);
@@ -190,7 +190,7 @@ struct _SimdConverter<_From,
 	  return {__native_cvt(__x.first)};
 	else
 	  {
-	    constexpr size_t _NRemain = _N - _Arg::_S_first_size;
+	    constexpr size_t _NRemain = _Np - _Arg::_S_first_size;
 	    _SimdConverter<_From, simd_abi::fixed_size<_NRemain>, _To,
 			   simd_abi::fixed_size<_NRemain>>
 	      __remainder_cvt;
@@ -205,9 +205,9 @@ struct _SimdConverter<_From,
 	  __convert_all<__vector_type_t<_To, _Ret::_S_first_size>>(__x.first);
 	constexpr auto __converted = __multiple_return_chunks.size() *
 				     _Ret::_FirstAbi::template size<_To>;
-	constexpr auto __remaining = _N - __converted;
+	constexpr auto __remaining = _Np - __converted;
 	if constexpr (_Arg::_S_tuple_size == 1 && __remaining == 0)
-	  return __to_simd_tuple<_To, _N>(__multiple_return_chunks);
+	  return __to_simd_tuple<_To, _Np>(__multiple_return_chunks);
 	else if constexpr (_Arg::_S_tuple_size == 1)
 	  { // e.g. <int, 3> -> <double, 2, 1> or <short, 7> -> <double, 4, 2,
 	    // 1>
@@ -218,8 +218,8 @@ struct _SimdConverter<_From,
 			    __converted>(__x.first);
 	    constexpr auto __converted2 =
 	      __converted + __return_chunks2.size() * _RetRem::_S_first_size;
-	    if constexpr (__converted2 == _N)
-	      return __to_simd_tuple<_To, _N>(__multiple_return_chunks,
+	    if constexpr (__converted2 == _Np)
+	      return __to_simd_tuple<_To, _Np>(__multiple_return_chunks,
 					      __return_chunks2);
 	    else
 	      {
@@ -231,8 +231,8 @@ struct _SimdConverter<_From,
 		constexpr auto __converted3 =
 		  __converted2 +
 		  __return_chunks3.size() * _RetRem2::_S_first_size;
-		if constexpr (__converted3 == _N)
-		  return __to_simd_tuple<_To, _N>(__multiple_return_chunks,
+		if constexpr (__converted3 == _Np)
+		  return __to_simd_tuple<_To, _Np>(__multiple_return_chunks,
 						  __return_chunks2, __return_chunks3);
 		else
 		  {
@@ -245,8 +245,8 @@ struct _SimdConverter<_From,
 		    constexpr auto __converted4 =
 		      __converted3 +
 		      __return_chunks4.size() * _RetRem3::_S_first_size;
-		    if constexpr (__converted4 == _N)
-		      return __to_simd_tuple<_To, _N>(
+		    if constexpr (__converted4 == _Np)
+		      return __to_simd_tuple<_To, _Np>(
 			__multiple_return_chunks, __return_chunks2,
 			__return_chunks3, __return_chunks4);
 		    else
@@ -256,7 +256,7 @@ struct _SimdConverter<_From,
 	  }
 	else
 	  {
-	    constexpr size_t _NRemain = _N - _Arg::_S_first_size;
+	    constexpr size_t _NRemain = _Np - _Arg::_S_first_size;
 	    _SimdConverter<_From, simd_abi::fixed_size<_NRemain>, _To,
 			   simd_abi::fixed_size<_NRemain>>
 	      __remainder_cvt;
@@ -271,11 +271,11 @@ struct _SimdConverter<_From,
     // _Arg::_S_first_size < _Ret::_S_first_size
     // a) heterogeneous input at the end of the tuple (possible with partial
     //    native registers in _Ret)
-    else if constexpr (_Ret::_S_tuple_size == 1 && _N % _Arg::_S_first_size != 0)
+    else if constexpr (_Ret::_S_tuple_size == 1 && _Np % _Arg::_S_first_size != 0)
       {
 	static_assert(_Ret::_FirstAbi::_S_is_partial);
 	return _Ret{__generate_from_n_evaluations<
-	  _N, typename _VectorTraits<typename _Ret::_FirstType>::type>(
+	  _Np, typename _VectorTraits<typename _Ret::_FirstType>::type>(
 	  [&](auto __i) { return static_cast<_To>(__x[__i]); })};
       }
     else
@@ -295,8 +295,8 @@ struct _SimdConverter<_From,
 	      return _Ret{
 		__native_cvt(__uncvted...),
 		_SimdConverter<
-		  _From, simd_abi::fixed_size<_N - _Ret::_S_first_size>, _To,
-		  simd_abi::fixed_size<_N - _Ret::_S_first_size>>()(
+		  _From, simd_abi::fixed_size<_Np - _Ret::_S_first_size>, _To,
+		  simd_abi::fixed_size<_Np - _Ret::_S_first_size>>()(
 		  __simd_tuple_pop_front<sizeof...(__uncvted)>(__x))};
 	  },
 	  [&__x](auto __i) { return __get_tuple_at<__i>(__x); });
@@ -304,47 +304,47 @@ struct _SimdConverter<_From,
   }
 };
 
-// _SimdConverter "native" -> fixed_size<_N> {{{1
+// _SimdConverter "native" -> fixed_size<_Np> {{{1
 // i.e. 1 register to ? registers
-template <typename _From, typename _A, typename _To, int _N>
+template <typename _From, typename _A, typename _To, int _Np>
 struct _SimdConverter<_From,
 		      _A,
 		      _To,
-		      simd_abi::fixed_size<_N>,
+		      simd_abi::fixed_size<_Np>,
 		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
 {
   static_assert(
-    _N == simd_size_v<_From, _A>,
+    _Np == simd_size_v<_From, _A>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
-  _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_To, _N>
+  _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_To, _Np>
 			  operator()(typename _SimdTraits<_From, _A>::_SimdMember __x)
   {
-    _SimdConverter<_From, simd_abi::fixed_size<_N>, _To,
-		   simd_abi::fixed_size<_N>>
+    _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
+		   simd_abi::fixed_size<_Np>>
       __fixed_cvt;
-    return __fixed_cvt(__fixed_size_storage_t<_From, _N>{__x});
+    return __fixed_cvt(__fixed_size_storage_t<_From, _Np>{__x});
   }
 };
 
-// _SimdConverter fixed_size<_N> -> "native" {{{1
+// _SimdConverter fixed_size<_Np> -> "native" {{{1
 // i.e. ? register to 1 registers
-template <typename _From, int _N, typename _To, typename _A>
+template <typename _From, int _Np, typename _To, typename _A>
 struct _SimdConverter<_From,
-		      simd_abi::fixed_size<_N>,
+		      simd_abi::fixed_size<_Np>,
 		      _To,
 		      _A,
 		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
 {
   static_assert(
-    _N == simd_size_v<_To, _A>,
+    _Np == simd_size_v<_To, _A>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
   _GLIBCXX_SIMD_INTRINSIC typename _SimdTraits<_To, _A>::_SimdMember
-    operator()(__fixed_size_storage_t<_From, _N> __x)
+    operator()(__fixed_size_storage_t<_From, _Np> __x)
   {
-    _SimdConverter<_From, simd_abi::fixed_size<_N>, _To,
-		   simd_abi::fixed_size<_N>>
+    _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
+		   simd_abi::fixed_size<_Np>>
       __fixed_cvt;
     return __fixed_cvt(__x).first;
   }
