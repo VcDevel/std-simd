@@ -73,7 +73,7 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 
   // }}}
   // __reduce {{{
-  template <typename _Tp, class _BinaryOperation>
+  template <typename _Tp, typename _BinaryOperation>
   _GLIBCXX_SIMD_INTRINSIC static _Tp
     __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
   {

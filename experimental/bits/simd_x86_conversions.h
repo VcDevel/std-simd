@@ -32,7 +32,7 @@
 
 // work around PR85827
 // 1-arg __convert_x86 {{{1
-template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v)
+template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v)
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
@@ -608,7 +608,7 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
     //}}}
 } // }}}
 // 2-arg __convert_x86 {{{1
-template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1)
+template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1)
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
@@ -956,7 +956,7 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
     }
 }//}}}1
 // 4-arg __convert_x86 {{{1
-template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1,_V __v2,_V __v3)
+template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1,_V __v2,_V __v3)
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;
@@ -1213,7 +1213,7 @@ template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __conv
     }
 }//}}}
 // 8-arg __convert_x86 {{{1
-template <class _To, class _V, class _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1,_V __v2,_V __v3,_V __v4,_V __v5, _V __v6, _V __v7)
+template <typename _To, typename _V, typename _Traits> _GLIBCXX_SIMD_INTRINSIC _To __convert_x86(_V __v0, _V __v1,_V __v2,_V __v3,_V __v4,_V __v5, _V __v6, _V __v7)
 {
     static_assert(__is_vector_type_v<_V>);
     using _Tp = typename _Traits::value_type;

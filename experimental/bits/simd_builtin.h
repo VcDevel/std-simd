@@ -50,7 +50,7 @@ static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, _S_allbits<_V>
 //}}}
 // __shift_elements_right{{{
 // if (__shift % 2ⁿ == 0) => the low n Bytes are correct
-template <unsigned __shift, class _Tp, class _TVT = _VectorTraits<_Tp>>
+template <unsigned __shift, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC _Tp __shift_elements_right(_Tp __v)
 {
   [[maybe_unused]] const auto __iv = __to_intrin(__v);
@@ -220,7 +220,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<bool, _N / _Total * _Combine>
 // }}}
 
 // __convert function{{{
-template <class _To, class _From, class... _More>
+template <typename _To, typename _From, typename... _More>
 _GLIBCXX_SIMD_INTRINSIC auto __convert(_From __v0, _More... __vs)
 {
   if constexpr (__is_vectorizable_v<_From>)
@@ -493,7 +493,7 @@ struct _SimdImplBuiltinMixin
   // conversion of individual scalars (i.e. decompose the input vector into
   // scalars, convert, compose output vector). In those cases, __masked_load &
   // __masked_store prefer to use the __bit_iteration implementation.
-  template <class _From, class _To, size_t _ToSize>
+  template <typename _From, typename _To, size_t _ToSize>
   static inline constexpr bool
     __converts_via_decomposition_v = sizeof(_From) != sizeof(_To);
   // }}}
@@ -508,37 +508,37 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
   template <typename _Tp>
   static constexpr size_t _S_max_store_size = 16;
     using abi_type = _Abi;
-    template <class _Tp> using _TypeTag = _Tp *;
-    template <class _Tp>
+    template <typename _Tp> using _TypeTag = _Tp *;
+    template <typename _Tp>
     using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
-    template <class _Tp>
+    template <typename _Tp>
     using _MaskMember = typename _Abi::template __traits<_Tp>::_MaskMember;
-    template <class _Tp> static constexpr size_t _S_size = _Abi::template size<_Tp>;
-    template <class _Tp> static constexpr size_t _S_full_size = _Abi::template _S_full_size<_Tp>;
+    template <typename _Tp> static constexpr size_t _S_size = _Abi::template size<_Tp>;
+    template <typename _Tp> static constexpr size_t _S_full_size = _Abi::template _S_full_size<_Tp>;
     using _SuperImpl = typename _Abi::_SimdImpl;
     using _MaskImpl = typename _Abi::_MaskImpl;
 
     // __make_simd(_SimdWrapper/__intrinsic_type_t) {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static simd<_Tp, _Abi> __make_simd(_SimdWrapper<_Tp, _N> __x)
     {
         return {__private_init, __x};
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static simd<_Tp, _Abi> __make_simd(__intrinsic_type_t<_Tp, _N> __x)
     {
         return {__private_init, __vector_bitcast<_Tp>(__x)};
     }
 
     // __broadcast {{{2
-    template <class _Tp>
+    template <typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdMember<_Tp> __broadcast(_Tp __x) noexcept
     {
         return __vector_broadcast<_S_full_size<_Tp>>(__x);
     }
 
     // __generator {{{2
-    template <class _F, class _Tp>
+    template <typename _F, typename _Tp>
     inline static constexpr _SimdMember<_Tp>
       __generator(_F&& __gen, _TypeTag<_Tp>)
     {
@@ -552,7 +552,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __load {{{2
-    template <class _Tp, class _Up, class _F>
+    template <typename _Tp, typename _Up, typename _F>
     _GLIBCXX_SIMD_INTRINSIC static _SimdMember<_Tp>
       __load(const _Up* __mem, _F, _TypeTag<_Tp>) noexcept
     {
@@ -609,7 +609,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __masked_load {{{2
-    template <class _Tp, size_t _N, class _Up, class _F>
+    template <typename _Tp, size_t _N, typename _Up, typename _F>
     static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
                                                 _MaskMember<_Tp> __k,
                                                 const _Up *__mem,
@@ -622,7 +622,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __store {{{2
-    template <class _Tp, class _Up, class _F>
+    template <typename _Tp, typename _Up, typename _F>
     _GLIBCXX_SIMD_INTRINSIC static void
       __store(_SimdMember<_Tp> __v, _Up* __mem, _F, _TypeTag<_Tp>) noexcept
     {
@@ -753,14 +753,14 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __complement {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __complement(_SimdWrapper<_Tp, _N> __x) noexcept
     {
         return ~__x._M_data;
     }
 
     // __unary_minus {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __unary_minus(_SimdWrapper<_Tp, _N> __x) noexcept
     {
         // GCC doesn't use the psign instructions, but pxor & psub seem to be just as good
@@ -769,25 +769,25 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // arithmetic operators {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __plus(_SimdWrapper<_Tp, _N> __x,
                                                                     _SimdWrapper<_Tp, _N> __y)
     {
       return __x._M_data + __y._M_data;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __minus(_SimdWrapper<_Tp, _N> __x,
                                                                      _SimdWrapper<_Tp, _N> __y)
     {
       return __x._M_data - __y._M_data;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __multiplies(
         _SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
       return __x._M_data * __y._M_data;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __divides(
         _SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
@@ -799,7 +799,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	return __as_vector(__x) /
 	       _Abi::__make_padding_nonzero(__as_vector(__y));
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __modulus(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
       static_assert(std::is_integral<_Tp>::value,
@@ -810,27 +810,27 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	return __as_vector(__x) %
 	       _Abi::__make_padding_nonzero(__as_vector(__y));
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_and(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
         return __and(__x._M_data, __y._M_data);
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_or(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
         return __or(__x._M_data, __y._M_data);
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_xor(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
         return __xor(__x._M_data, __y._M_data);
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __bit_shift_left(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
         return __x._M_data << __y._M_data;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __bit_shift_right(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
 #ifdef _GLIBCXX_SIMD_WORKAROUND_XXX_5
@@ -843,12 +843,12 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
         return __x._M_data >> __y._M_data;
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_shift_left(_SimdWrapper<_Tp, _N> __x, int __y)
     {
         return __x._M_data << __y;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __bit_shift_right(_SimdWrapper<_Tp, _N> __x,
                                                                          int __y)
     {
@@ -862,7 +862,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 
     // compares {{{2
     // __equal_to {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __equal_to(
         _SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
@@ -870,7 +870,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __not_equal_to {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __not_equal_to(
         _SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
@@ -878,7 +878,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __less {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __less(_SimdWrapper<_Tp, _N> __x,
                                                            _SimdWrapper<_Tp, _N> __y)
     {
@@ -886,7 +886,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __less_equal {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __less_equal(_SimdWrapper<_Tp, _N> __x,
                                                                  _SimdWrapper<_Tp, _N> __y)
     {
@@ -894,27 +894,27 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // negation {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> __negate(_SimdWrapper<_Tp, _N> __x) noexcept
     {
       return __vector_bitcast<_Tp>(!__x._M_data);
     }
 
     // __min, __max, __minmax {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_NORMAL_MATH _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __min(_SimdWrapper<_Tp, _N> __a,
                                                                    _SimdWrapper<_Tp, _N> __b)
     {
         return __a._M_data < __b._M_data ? __a._M_data : __b._M_data;
     }
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_NORMAL_MATH _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N> __max(_SimdWrapper<_Tp, _N> __a,
                                                                    _SimdWrapper<_Tp, _N> __b)
     {
         return __a._M_data > __b._M_data ? __a._M_data : __b._M_data;
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_NORMAL_MATH _GLIBCXX_SIMD_INTRINSIC static constexpr std::pair<_SimdWrapper<_Tp, _N>, _SimdWrapper<_Tp, _N>>
     __minmax(_SimdWrapper<_Tp, _N> __a, _SimdWrapper<_Tp, _N> __b)
     {
@@ -925,8 +925,8 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     template <size_t _N,
 	      size_t... _Is,
 	      size_t... _Zeros,
-	      class _Tp,
-	      class _BinaryOperation>
+	      typename _Tp,
+	      typename _BinaryOperation>
     _GLIBCXX_SIMD_INTRINSIC static _Tp
       __reduce_partial(std::index_sequence<_Is...>,
 		       std::index_sequence<_Zeros...>,
@@ -950,7 +950,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	__binary_op);
     }
 
-    template <class _Tp, class _BinaryOperation>
+    template <typename _Tp, typename _BinaryOperation>
     _GLIBCXX_SIMD_INTRINSIC static _Tp
       __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
     {
@@ -1207,7 +1207,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 #undef _GLIBCXX_SIMD_MATH_FALLBACK_MASKRET
 #undef _GLIBCXX_SIMD_MATH_FALLBACK_FIXEDRET
     // __abs {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N>
       __abs(_SimdWrapper<_Tp, _N> __x) noexcept
     {
@@ -1265,7 +1265,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __trunc {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N>
       __trunc(_SimdWrapper<_Tp, _N> __x)
     {
@@ -1281,7 +1281,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __round {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N>
       __round(_SimdWrapper<_Tp, _N> __x)
     {
@@ -1299,7 +1299,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __floor {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __floor(_SimdWrapper<_Tp, _N> __x)
     {
       const auto __y = _SuperImpl::__trunc(__x)._M_data;
@@ -1309,7 +1309,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __ceil {{{3
-    template <class _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __ceil(_SimdWrapper<_Tp, _N> __x)
+    template <typename _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __ceil(_SimdWrapper<_Tp, _N> __x)
     {
       const auto __y = _SuperImpl::__trunc(__x)._M_data;
       const auto __negative_input = __vector_bitcast<_Tp>(__x._M_data < __vector_broadcast<_N, _Tp>(0));
@@ -1319,7 +1319,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __isnan {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isnan(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
@@ -1331,7 +1331,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __isfinite {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isfinite(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
@@ -1348,7 +1348,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __isunordered {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __isunordered(_SimdWrapper<_Tp, _N> __x, _SimdWrapper<_Tp, _N> __y)
     {
@@ -1359,7 +1359,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __signbit {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __signbit(_SimdWrapper<_Tp, _N> __x)
     {
       using _I = __int_for_sizeof_t<_Tp>;
@@ -1370,7 +1370,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __isinf {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp> __isinf(_SimdWrapper<_Tp, _N> __x)
     {
 #if __FINITE_MATH_ONLY__
@@ -1393,7 +1393,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __isnormal {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __isnormal(_SimdWrapper<_Tp, _N> __x)
     {
@@ -1411,7 +1411,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __fpclassify {{{3
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static __fixed_size_storage_t<int, _N>
       __fpclassify(_SimdWrapper<_Tp, _N> __x)
     {
@@ -1483,24 +1483,24 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __increment & __decrement{{{2
-    template <class _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static void __increment(_SimdWrapper<_Tp, _N> &__x)
+    template <typename _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static void __increment(_SimdWrapper<_Tp, _N> &__x)
     {
         __x = __x._M_data + 1;
     }
-    template <class _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static void __decrement(_SimdWrapper<_Tp, _N> &__x)
+    template <typename _Tp, size_t _N> _GLIBCXX_SIMD_INTRINSIC static void __decrement(_SimdWrapper<_Tp, _N> &__x)
     {
         __x = __x._M_data - 1;
     }
 
     // smart_reference access {{{2
-    template <class _Tp, size_t _N, class _Up>
+    template <typename _Tp, size_t _N, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdWrapper<_Tp, _N> &__v, int __i, _Up &&__x) noexcept
     {
         __v.__set(__i, std::forward<_Up>(__x));
     }
 
     // __masked_assign{{{2
-    template <class _Tp, class _K, size_t _N>
+    template <typename _Tp, typename _K, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_K, _N> __k,
                                                       _SimdWrapper<_Tp, _N> &__lhs,
                                                       __id<_SimdWrapper<_Tp, _N>> __rhs)
@@ -1508,7 +1508,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
         __lhs = __blend(__k._M_data, __lhs._M_data, __rhs._M_data);
     }
 
-    template <class _Tp, class _K, size_t _N>
+    template <typename _Tp, typename _K, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_K, _N> __k, _SimdWrapper<_Tp, _N> &__lhs,
                                            __id<_Tp> __rhs)
     {
@@ -1527,7 +1527,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __masked_cassign {{{2
-    template <typename _Op, class _Tp, class _K, size_t _N>
+    template <typename _Op, typename _Tp, typename _K, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void
       __masked_cassign(const _SimdWrapper<_K, _N>        __k,
 		       _SimdWrapper<_Tp, _N>&            __lhs,
@@ -1538,7 +1538,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	__blend(__k._M_data, __lhs._M_data, __op(_SuperImpl{}, __lhs, __rhs));
     }
 
-    template <typename _Op, class _Tp, class _K, size_t _N>
+    template <typename _Op, typename _Tp, typename _K, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void
       __masked_cassign(const _SimdWrapper<_K, _N> __k,
 		       _SimdWrapper<_Tp, _N>&     __lhs,
@@ -1552,7 +1552,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
     }
 
     // __masked_unary {{{2
-    template <template <typename> class _Op, class _Tp, class _K, size_t _N>
+    template <template <typename> class _Op, typename _Tp, typename _K, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _N> __masked_unary(const _SimdWrapper<_K, _N> __k,
                                                             const _SimdWrapper<_Tp, _N> __v)
     {
@@ -1566,7 +1566,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 
 // _MaskImplBuiltinMixin {{{1
 struct _MaskImplBuiltinMixin {
-  template <class _Tp>
+  template <typename _Tp>
   using _TypeTag = _Tp*;
 
   // __to_maskvector {{{
@@ -1677,9 +1677,9 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   using _MaskImplBuiltinMixin::__to_maskvector;
 
   // member types {{{
-  template <class _Tp>
+  template <typename _Tp>
   using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
-  template <class _Tp>
+  template <typename _Tp>
   using _MaskMember = typename _Abi::template __traits<_Tp>::_MaskMember;
   using _SuperImpl  = typename _Abi::_MaskImpl;
   template <typename _Tp>
@@ -1701,7 +1701,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 
   // }}}
     // __masked_load {{{2
-    template <class _Tp, size_t _N, class _F>
+    template <typename _Tp, size_t _N, typename _F>
     static inline _SimdWrapper<_Tp, _N> __masked_load(_SimdWrapper<_Tp, _N> __merge,
 						    _SimdWrapper<_Tp, _N> __mask,
 						    const bool*           __mem,
@@ -1717,14 +1717,14 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     // __store {{{2
-    template <class _Tp, size_t _N, class _F>
+    template <typename _Tp, size_t _N, typename _F>
     _GLIBCXX_SIMD_INTRINSIC static void __store(_SimdWrapper<_Tp, _N> __v, bool *__mem, _F) noexcept
     {
       __execute_n_times<_N>([&](auto __i) constexpr { __mem[__i] = __v[__i]; });
     }
 
     // __masked_store {{{2
-    template <class _Tp, size_t _N, class _F>
+    template <typename _Tp, size_t _N, typename _F>
     static inline void __masked_store(const _SimdWrapper<_Tp, _N> __v, bool *__mem, _F,
                                     const _SimdWrapper<_Tp, _N> __k) noexcept
     {
@@ -1735,7 +1735,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     // __from_bitset{{{2
-    template <size_t _N, class _Tp>
+    template <size_t _N, typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __from_bitset(std::bitset<_N> __bits, _TypeTag<_Tp>)
     {
@@ -1743,7 +1743,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     // logical and bitwise operators {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __logical_and(const _SimdWrapper<_Tp, _N>& __x,
 		  const _SimdWrapper<_Tp, _N>& __y)
@@ -1751,7 +1751,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
       return __and(__x._M_data, __y._M_data);
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __logical_or(const _SimdWrapper<_Tp, _N>& __x,
 		 const _SimdWrapper<_Tp, _N>& __y)
@@ -1766,7 +1766,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
       return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __bit_and(const _SimdWrapper<_Tp, _N>& __x,
 	      const _SimdWrapper<_Tp, _N>& __y)
@@ -1774,14 +1774,14 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
       return __and(__x._M_data, __y._M_data);
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __bit_or(const _SimdWrapper<_Tp, _N>& __x, const _SimdWrapper<_Tp, _N>& __y)
     {
       return __or(__x._M_data, __y._M_data);
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _N>
       __bit_xor(const _SimdWrapper<_Tp, _N>& __x,
 	      const _SimdWrapper<_Tp, _N>& __y)
@@ -1790,7 +1790,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     // smart_reference access {{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     static void __set(_SimdWrapper<_Tp, _N>& __k, int __i, bool __x) noexcept
     {
       if constexpr (std::is_same_v<_Tp, bool>)
@@ -1800,14 +1800,14 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     // __masked_assign{{{2
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_Tp, _N> __k, _SimdWrapper<_Tp, _N> &__lhs,
                                            __id<_SimdWrapper<_Tp, _N>> __rhs)
     {
         __lhs = __blend(__k._M_data, __lhs._M_data, __rhs._M_data);
     }
 
-    template <class _Tp, size_t _N>
+    template <typename _Tp, size_t _N>
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_Tp, _N> __k, _SimdWrapper<_Tp, _N> &__lhs, bool __rhs)
     {
         if (__builtin_constant_p(__rhs)) {

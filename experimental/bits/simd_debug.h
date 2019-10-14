@@ -40,7 +40,7 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
-template <class... T>
+template <typename... T>
 [[__gnu__::__noinline__]] void __tag()
 {
   asm("");
@@ -143,7 +143,7 @@ public:
         std::cout << __buffer.str() << std::flush;
     }
 
-  template <class... _Ts>
+  template <typename... _Ts>
   __debug_stream& operator()(const _Ts&... __args)
   {
     __color = __color > 37 ? 30 : __color + 1;
@@ -153,14 +153,14 @@ public:
   }
 
 private:
-  template <class _Tp, class = decltype(__buffer << std::declval<const _Tp&>())>
+  template <typename _Tp, typename = decltype(__buffer << std::declval<const _Tp&>())>
   void __print(const _Tp& __x, int)
   {
     __buffer << ' ' << __x;
   }
 
-  template <class _Tp,
-	    class = decltype(__buffer << std::declval<const _Tp&>()[0])>
+  template <typename _Tp,
+	    typename = decltype(__buffer << std::declval<const _Tp&>()[0])>
   void __print(const _Tp& __x, float)
   {
     using _U = __remove_cvref_t<decltype(__x[0])>;
@@ -173,7 +173,7 @@ private:
   }
 
   static char hexChar(char __x) { return __x + (__x > 9 ? 87 : 48); }
-  template <class _Tp>
+  template <typename _Tp>
   void __print(const _Tp& __x, ...)
   {
     __buffer.put(' ');
@@ -197,14 +197,14 @@ template <> class __debug_stream<__area::__disabled>
 {
 public:
     __debug_stream(const char *, const char *, int, void *) {}
-    template <class... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
+    template <typename... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
 };
 
-template <class _F> class __defer_raii
+template <typename _F> class __defer_raii
 {
 public:
     // construct the object from the given callable
-    template <class _FF> __defer_raii(_FF &&__f) : __cleanup_function(std::forward<_FF>(__f))
+    template <typename _FF> __defer_raii(_FF &&__f) : __cleanup_function(std::forward<_FF>(__f))
     {
     }
 
