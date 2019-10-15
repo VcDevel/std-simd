@@ -50,4 +50,13 @@ TEST_TYPES(V, conversions, all_test_types)
     COMPARE(k.__to_bitset(), B(0x2492492492492492LLU)) << k;
     k = make_mask<M>({false, false, true});
     COMPARE(k.__to_bitset(), B(0x4924924924924924LLU)) << k;
+
+    k = make_mask<M>({true, false, false, false});
+    COMPARE(k.__to_bitset(), B(0x1111111111111111LLU)) << k;
+    k = make_mask<M>({false, true, false, false});
+    COMPARE(k.__to_bitset(), B(0x2222222222222222LLU)) << k;
+    k = make_mask<M>({false, false, true, false});
+    COMPARE(k.__to_bitset(), B(0x4444444444444444LLU)) << k;
+    k = make_mask<M>({false, false, false, true});
+    COMPARE(k.__to_bitset(), B(0x8888888888888888LLU)) << k;
 }
