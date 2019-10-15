@@ -5471,32 +5471,6 @@ private:
     }
 
     // }}}
-    // TODO remove __intrin:
-    /*auto __intrin() const  // {{{
-    {
-        if constexpr (!__is_scalar() && !__is_fixed()) {
-            return __to_intrin(_M_data._M_data);
-        }
-    }*/
-
-    // }}}
-    auto &__builtin() {  // {{{
-        if constexpr (__is_scalar() || __is_fixed()) {
-            return _M_data;
-        } else {
-            return _M_data._M_data;
-        }
-    }
-    const auto &__builtin() const
-    {
-        if constexpr (__is_scalar() || __is_fixed()) {
-            return _M_data;
-        } else {
-            return _M_data._M_data;
-        }
-    }
-
-    // }}}
     friend const auto &__data<_Tp, abi_type>(const simd_mask &);
     friend auto &__data<_Tp, abi_type>(simd_mask &);
     alignas(__traits::_S_mask_align) __member_type _M_data;
@@ -5516,7 +5490,7 @@ template <typename _Tp, typename _A> _GLIBCXX_SIMD_INTRINSIC constexpr auto &__d
 }
 // }}}
 
-// reductions [simd_mask.reductions] {{{
+// simd_mask reductions [simd_mask.reductions] {{{
 template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE bool all_of(const simd_mask<_Tp, _Abi>& __k)
 {
