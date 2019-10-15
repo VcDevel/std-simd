@@ -447,6 +447,62 @@ struct _MaskImplScalar {
     }
 
     // }}}2
+    // __all_of {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return __k._M_data;
+    }
+
+    // }}}
+    // __any_of {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return __k._M_data;
+    }
+
+    // }}}
+    // __none_of {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return !__k._M_data;
+    }
+
+    // }}}
+    // __some_of {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static bool __some_of(simd_mask<_Tp, _Abi>)
+    {
+      return false;
+    }
+
+    // }}}
+    // __popcount {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+    {
+      return __k._M_data;
+    }
+
+    // }}}
+    // __find_first_set {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static int __find_first_set(simd_mask<_Tp, _Abi>)
+    {
+      return 0;
+    }
+
+    // }}}
+    // __find_last_set {{{
+    template <typename _Tp, typename _Abi>
+    _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi>)
+    {
+      return 0;
+    }
+
+    // }}}
 };
 
 // }}}

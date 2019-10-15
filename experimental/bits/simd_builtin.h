@@ -1822,6 +1822,80 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     }
 
     //}}}2
+    // __all_of {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return __call_with_subscripts(
+	__vector_bitcast<__int_for_sizeof_t<_Tp>>(__data(__k)),
+	make_index_sequence<size<_Tp>>(),
+	[](const auto... __ent) constexpr { return (... && !(__ent == 0)); });
+    }
+
+    // }}}
+    // __any_of {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return __call_with_subscripts(
+	__vector_bitcast<__int_for_sizeof_t<_Tp>>(__data(__k)),
+	make_index_sequence<size<_Tp>>(),
+	[](const auto... __ent) constexpr { return (... || !(__ent == 0)); });
+    }
+
+    // }}}
+    // __none_of {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+    {
+      return __call_with_subscripts(
+	__vector_bitcast<__int_for_sizeof_t<_Tp>>(__data(__k)),
+	make_index_sequence<size<_Tp>>(),
+	[](const auto... __ent) constexpr { return (... && (__ent == 0)); });
+    }
+
+    // }}}
+    // __some_of {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static bool __some_of(simd_mask<_Tp, _Abi> __k)
+    {
+      const int __n_true = __popcount(__k);
+      return __n_true > 0 && __n_true < int(size<_Tp>);
+    }
+
+    // }}}
+    // __popcount {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+    {
+      using _I = __int_for_sizeof_t<_Tp>;
+      if constexpr (std::is_default_constructible_v<simd<_I, _Abi>>)
+	return -reduce(
+	  simd<_I, _Abi>(__private_init, __wrapper_bitcast<_I>(__data(__k))));
+      else
+	return -reduce(
+	  __proposed::simd_reinterpret_cast<rebind_simd_t<_I, simd<_Tp, _Abi>>>(
+	    simd<_Tp, _Abi>(__private_init, __data(__k))));
+    }
+
+    // }}}
+    // __find_first_set {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static int
+      __find_first_set(simd_mask<_Tp, _Abi> __k)
+    {
+      return _BitOps::__firstbit(_SuperImpl::__to_bits(__data(__k)));
+    }
+
+    // }}}
+    // __find_last_set {{{
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi> __k)
+    {
+      return _BitOps::__lastbit(_SuperImpl::__to_bits(__data(__k)));
+    }
+
+    // }}}
 };
 
 //}}}1

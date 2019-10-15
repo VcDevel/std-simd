@@ -1742,6 +1742,7 @@ template <int _Np> struct _MaskImplFixedSize {
 		"elements."); // required in load & store
 
   // member types {{{
+  using _Abi = simd_abi::fixed_size<_Np>;
   using _MaskMember = std::bitset<_Np>;
   template <typename _Tp>
   using _TypeTag = _Tp*;
@@ -1993,6 +1994,66 @@ template <int _Np> struct _MaskImplFixedSize {
     }
 
     // }}}2
+  // __all_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+  {
+    return __data(__k).all();
+  }
+
+  // }}}
+  // __any_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+  {
+    return __data(__k).any();
+  }
+
+  // }}}
+  // __none_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+  {
+    return __data(__k).none();
+  }
+
+  // }}}
+  // __some_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool
+    __some_of([[maybe_unused]] simd_mask<_Tp, _Abi> __k)
+  {
+    if constexpr (_Np == 1)
+      return false;
+    else
+      return __data(__k).any() && !__data(__k).all();
+  }
+
+  // }}}
+  // __popcount {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+  {
+    return __data(__k).count();
+  }
+
+  // }}}
+  // __find_first_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_first_set(simd_mask<_Tp, _Abi> __k)
+  {
+    return _BitOps::__firstbit(__data(__k).to_ullong());
+  }
+
+  // }}}
+  // __find_last_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi> __k)
+  {
+    return _BitOps::__lastbit(__data(__k).to_ullong());
+  }
+
+  // }}}
 };
 // }}}1
 

@@ -300,6 +300,132 @@ template <typename _Abi>
 struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
 {
   using _MaskImplNeonMixin::__to_bits;
+  using _Base = _MaskImplBuiltin<_Abi>;
+
+  // __all_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+  {
+    const auto __kk =
+      __vector_bitcast<char>(__k._M_data) |
+      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    if constexpr (sizeof(__k) == 16)
+      {
+	const auto __x = __vector_bitcast<long long>(__kk);
+	return __x[0] + __x[1] == -2;
+      }
+    else if constexpr (sizeof(__k) <= 8)
+      return __bit_cast<__int_for_sizeof_t<decltype(__kk)>>(__kk) == -1;
+    else
+      __assert_unreachable<_Tp>();
+  }
+
+  // }}}
+  // __any_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+  {
+    const auto __kk =
+      __vector_bitcast<char>(__k._M_data) |
+      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    if constexpr (sizeof(__k) == 16)
+      {
+	const auto __x = __vector_bitcast<long long>(__kk);
+	return (__x[0] | __x[1]) != 0;
+      }
+    else if constexpr (sizeof(__k) <= 8)
+      return __bit_cast<__int_for_sizeof_t<decltype(__kk)>>(__kk) != 0;
+    else
+      __assert_unreachable<_Tp>();
+  }
+
+  // }}}
+  // __none_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+  {
+    const auto __kk =
+      __vector_bitcast<char>(__k._M_data) |
+      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    if constexpr (sizeof(__k) == 16)
+      {
+	const auto __x = __vector_bitcast<long long>(__kk);
+	return (__x[0] | __x[1]) == 0;
+      }
+    else if constexpr (sizeof(__k) <= 8)
+      return __bit_cast<__int_for_sizeof_t<decltype(__kk)>>(__kk) == 0;
+    else
+      __assert_unreachable<_Tp>();
+  }
+
+  // }}}
+  // __some_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __some_of(simd_mask<_Tp, _Abi> __k)
+  {
+    if constexpr (sizeof(__k) <= 8)
+      {
+	const auto __kk =
+	  __vector_bitcast<char>(__k._M_data) |
+	  ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+	using _Up = std::make_unsigned_t<__int_for_sizeof_t<decltype(__kk)>>;
+	return __bit_cast<_Up>(__kk) + 1 > 1;
+      }
+    else
+      return _Base::__some_of(__k);
+  }
+
+  // }}}
+  // __popcount {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+  {
+    if constexpr (sizeof(_Tp) == 1)
+      {
+	const auto __s8  = __vector_bitcast<_SChar>(__k._M_data);
+	int8x8_t   __tmp = __lo64(__s8) + __hi64z(__s8);
+	return -vpadd_s8(vpadd_s8(vpadd_s8(__tmp, int8x8_t()), int8x8_t()),
+			 int8x8_t())[0];
+      }
+    else if constexpr (sizeof(_Tp) == 2)
+      {
+	const auto __s16 = __vector_bitcast<short>(__k._M_data);
+	int16x4_t  __tmp = __lo64(__s16) + __hi64z(__s16);
+	return -vpadd_s16(vpadd_s16(__tmp, int16x4_t()), int16x4_t())[0];
+      }
+    else if constexpr (sizeof(_Tp) == 4)
+      {
+	const auto __s32 = __vector_bitcast<int>(__k._M_data);
+	int32x2_t  __tmp = __lo64(__s32) + __hi64z(__s32);
+	return -vpadd_s32(__tmp, int32x2_t())[0];
+      }
+    else if constexpr (sizeof(_Tp) == 8)
+      {
+	static_assert(sizeof(__k) == 16);
+	const auto __s64 = __vector_bitcast<long>(__k._M_data);
+	return -(__s64[0] + __s64[1]);
+      }
+  }
+
+  // }}}
+  // __find_first_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_first_set(simd_mask<_Tp, _Abi> __k)
+  {
+    // TODO: the _Base implementation is not optimal for NEON
+    return _Base::__find_first_set(__k);
+  }
+
+  // }}}
+  // __find_last_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi> __k)
+  {
+    // TODO: the _Base implementation is not optimal for NEON
+    return _Base::__find_last_set(__k);
+  }
+
+  // }}}
 }; // }}}
 
 _GLIBCXX_SIMD_END_NAMESPACE

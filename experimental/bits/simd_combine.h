@@ -65,9 +65,109 @@ struct _SimdImplCombine
 //X 
   // }}}
 };
-template <int _Np, typename _Abi>
+template <int _Np, typename _MemberAbi>
 struct _MaskImplCombine
 {
+  using _Abi            = simd_abi::_Combine<_Np, _MemberAbi>;
+  using _MemberMaskImpl = typename _MemberAbi::_MaskImpl;
+  template <typename _Tp>
+  using _MemberSimdMask = simd_mask<_Tp, _MemberAbi>;
+
+  // __all_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+  {
+    bool __r =
+      _MemberMaskImpl::__all_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    __execute_n_times<_Np - 1>([&](auto __i) {
+      __r = __r && _MemberMaskImpl::__all_of(
+		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+    });
+    return __r;
+  }
+
+  // }}}
+  // __any_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+  {
+    bool __r =
+      _MemberMaskImpl::__any_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    __execute_n_times<_Np - 1>([&](auto __i) {
+      __r = __r || _MemberMaskImpl::__any_of(
+		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+    });
+    return __r;
+  }
+
+  // }}}
+  // __none_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+  {
+    bool __r =
+      _MemberMaskImpl::__none_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    __execute_n_times<_Np - 1>([&](auto __i) {
+      __r = __r && _MemberMaskImpl::__none_of(
+		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+    });
+    return __r;
+  }
+
+  // }}}
+  // __some_of {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool __some_of(simd_mask<_Tp, _Abi> __k)
+  {
+    return __any_of(__k) && !__all_of(__k);
+  }
+
+  // }}}
+  // __popcount {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+  {
+    int __count =
+      _MemberMaskImpl::__popcount(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    __execute_n_times<_Np - 1>([&](auto __i) {
+      __count += _MemberMaskImpl::__popcount(
+	_MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+    });
+    return __count;
+  }
+
+  // }}}
+  // __find_first_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_first_set(simd_mask<_Tp, _Abi> __k)
+  {
+    for (int __i = 0; __i < _Np - 1; ++__i)
+      if (_MemberMaskImpl::__any_of(
+	    _MemberSimdMask<_Tp>(__private_init, __k[__i])))
+	return __i * simd_size_v<_Tp, _MemberAbi> +
+	       _MemberMaskImpl::__find_first_set(
+		 _MemberSimdMask<_Tp>(__private_init, __k[__i]));
+    return (_Np - 1) * simd_size_v<_Tp, _MemberAbi> +
+	   __find_first_set(__k[_Abi::_S_factor - 1]);
+  }
+
+  // }}}
+  // __find_last_set {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi> __k)
+  {
+    // FIXME: I think the order of this one is reversed
+    for (int __i = 0; __i < _Np - 1; ++__i)
+      if (_MemberMaskImpl::__any_of(
+	    _MemberSimdMask<_Tp>(__private_init, __k[__i])))
+	return __i * simd_size_v<_Tp, _MemberAbi> +
+	       _MemberMaskImpl::__find_last_set(
+		 _MemberSimdMask<_Tp>(__private_init, __k[__i]));
+    return (_Np - 1) * simd_size_v<_Tp, _MemberAbi> +
+	   __find_last_set(__k[_Abi::_S_factor - 1]);
+  }
+
+  // }}}
 };
 
 _GLIBCXX_SIMD_END_NAMESPACE
