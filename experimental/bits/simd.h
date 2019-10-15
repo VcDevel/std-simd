@@ -1043,44 +1043,43 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto __as_wrapper(_V __x)
 
 // }}}
 // __intrin_bitcast{{{
-template <typename _To, typename _From> _GLIBCXX_SIMD_INTRINSIC constexpr _To __intrin_bitcast(_From __v)
+template <typename _To, typename _From>
+_GLIBCXX_SIMD_INTRINSIC constexpr _To __intrin_bitcast(_From __v)
 {
-    static_assert(__is_vector_type_v<_From> && __is_vector_type_v<_To>);
-    if constexpr (sizeof(_To) == sizeof(_From))
-      return reinterpret_cast<_To>(__v);
-    else if constexpr (sizeof(_From) > sizeof(_To))
-      {
-	if constexpr (sizeof(_To) >= 16)
-	  return reinterpret_cast<const __may_alias<_To>&>(__v);
-	else
-	  {
-	    _To __r;
-	    __builtin_memcpy(&__r, &__v, sizeof(_To));
-	    return __r;
-	  }
-#if _GLIBCXX_SIMD_X86INTRIN
-    } else if constexpr (__have_avx && sizeof(_From) == 16 && sizeof(_To) == 32) {
-        return reinterpret_cast<_To>(_mm256_castps128_ps256(
-            reinterpret_cast<__intrinsic_type_t<float, sizeof(_From) / sizeof(float)>>(__v)));
-    } else if constexpr (__have_avx512f && sizeof(_From) == 16 && sizeof(_To) == 64) {
-        return reinterpret_cast<_To>(_mm512_castps128_ps512(
-            reinterpret_cast<__intrinsic_type_t<float, sizeof(_From) / sizeof(float)>>(__v)));
-    } else if constexpr (__have_avx512f && sizeof(_From) == 32 && sizeof(_To) == 64) {
-        return reinterpret_cast<_To>(_mm512_castps256_ps512(
-            reinterpret_cast<__intrinsic_type_t<float, sizeof(_From) / sizeof(float)>>(__v)));
-#endif // _GLIBCXX_SIMD_X86INTRIN
-      }
-    else if constexpr (sizeof(__v) <= 8)
-      return reinterpret_cast<_To>(
-	__vector_type_t<__int_for_sizeof_t<_From>, sizeof(_To) / sizeof(_From)>{
-	  reinterpret_cast<__int_for_sizeof_t<_From>>(__v)});
+  static_assert(__is_vector_type_v<_From> && __is_vector_type_v<_To>);
+  if constexpr (sizeof(_To) == sizeof(_From))
+    return reinterpret_cast<_To>(__v);
+  else if constexpr (sizeof(_From) > sizeof(_To))
+    if constexpr (sizeof(_To) >= 16)
+      return reinterpret_cast<const __may_alias<_To>&>(__v);
     else
       {
-        static_assert(sizeof(_To) > sizeof(_From));
-	_To __r = {};
-	__builtin_memcpy(&__r, &__v, sizeof(_From));
+	_To __r;
+	__builtin_memcpy(&__r, &__v, sizeof(_To));
 	return __r;
       }
+#if _GLIBCXX_SIMD_X86INTRIN
+  else if constexpr (__have_avx && sizeof(_From) == 16 && sizeof(_To) == 32)
+    return reinterpret_cast<_To>(__builtin_ia32_ps256_ps(
+      reinterpret_cast<__vector_type_t<float, 4>>(__v)));
+  else if constexpr (__have_avx512f && sizeof(_From) == 16 && sizeof(_To) == 64)
+    return reinterpret_cast<_To>(__builtin_ia32_ps512_ps(
+      reinterpret_cast<__vector_type_t<float, 4>>(__v)));
+  else if constexpr (__have_avx512f && sizeof(_From) == 32 && sizeof(_To) == 64)
+    return reinterpret_cast<_To>(__builtin_ia32_ps512_256ps(
+      reinterpret_cast<__vector_type_t<float, 8>>(__v)));
+#endif // _GLIBCXX_SIMD_X86INTRIN
+  else if constexpr (sizeof(__v) <= 8)
+    return reinterpret_cast<_To>(
+      __vector_type_t<__int_for_sizeof_t<_From>, sizeof(_To) / sizeof(_From)>{
+	reinterpret_cast<__int_for_sizeof_t<_From>>(__v)});
+  else
+    {
+      static_assert(sizeof(_To) > sizeof(_From));
+      _To __r = {};
+      __builtin_memcpy(&__r, &__v, sizeof(_From));
+      return __r;
+    }
 }
 
 // }}}
