@@ -216,8 +216,8 @@ using unusable_abis = Typelist<
     Template<simd, int>, Template<simd_mask, int>>;
 
 using unusable_fixed_size =
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::fixed_size<33>>,
-                         Template<simd_mask, std::experimental::simd_abi::fixed_size<33>>>,
+    expand_list<Typelist<Template<simd, stdx::simd_abi::fixed_size<stdx::simd_abi::max_fixed_size<int> + 1>>,
+                         Template<simd_mask, stdx::simd_abi::fixed_size<stdx::simd_abi::max_fixed_size<int> + 1>>>,
                 testtypes>;
 
 using unusable_simd_types =

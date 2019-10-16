@@ -1268,8 +1268,7 @@ struct simd_abi::_Fixed
   };
   template <typename _Tp>
   struct _IsValidSizeFor
-  : __bool_constant<(_Np <=
-		     (__have_avx512bw ? 64 : simd_abi::max_fixed_size<_Tp>))>
+  : __bool_constant<(_Np <= simd_abi::max_fixed_size<_Tp>)>
   {
   };
   template <typename _Tp>

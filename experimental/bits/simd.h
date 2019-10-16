@@ -2951,7 +2951,7 @@ namespace simd_abi
 {
 // most of simd_abi is defined in simd_detail.h
 template <typename _Tp>
-inline constexpr int max_fixed_size = 32;
+inline constexpr int max_fixed_size = __have_avx512bw ? 64 : 32;
 // compatible {{{
 #if defined __x86_64__
 template <typename _Tp>
