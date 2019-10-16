@@ -5073,16 +5073,6 @@ class simd_mask : public _SimdTraits<_Tp, _Abi>::_MaskBase
     friend typename __traits::_SimdImpl;  // to construct masks on return and
                                              // inspect data on masked operations
     // }}}
-    // is_<abi> {{{
-    static constexpr bool __is_scalar() { return __is_scalar_abi<_Abi>(); }
-    static constexpr bool __is_sse() { return __is_sse_abi<_Abi>(); }
-    static constexpr bool __is_avx() { return __is_avx_abi<_Abi>(); }
-    static constexpr bool __is_avx512() { return __is_avx512_abi<_Abi>(); }
-    static constexpr bool __is_neon() { return __is_neon_abi<_Abi>(); }
-    static constexpr bool __is_fixed() { return __is_fixed_size_abi_v<_Abi>; }
-    static constexpr bool __is_combined() { return __is_combined_abi<_Abi>(); }
-
-    // }}}
 
 public:
     // member types {{{
@@ -5138,25 +5128,6 @@ public:
     {
     }
     // }}}
-    /* reference implementation for explicit simd_mask casts {{{
-    template <typename _Up, typename = enable_if<
-             (size() == simd_mask<_Up, _Abi>::size()) &&
-             conjunction<std::is_integral<_Tp>, std::is_integral<_Up>,
-             __negation<std::is_same<_Abi, simd_abi::fixed_size<size()>>>,
-             __negation<std::is_same<_Tp, _Up>>>::value>>
-    simd_mask(const simd_mask<_Up, _Abi> &__x)
-        : _M_data{__x._M_data}
-    {
-    }
-    template <typename _Up, typename _Abi2, typename = enable_if<conjunction<
-         __negation<std::is_same<abi_type, _Abi2>>,
-             std::is_same<abi_type, simd_abi::fixed_size<size()>>>::value>>
-    simd_mask(const simd_mask<_Up, _Abi2> &__x)
-    {
-        __x.copy_to(&_M_data[0], vector_aligned);
-    }
-    }}} */
-
     // load constructor {{{
     template <typename _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE simd_mask(const value_type* __mem, _Flags)
@@ -5188,7 +5159,7 @@ public:
     // scalar access {{{
     _GLIBCXX_SIMD_ALWAYS_INLINE reference operator[](size_t __i) { return {_M_data, int(__i)}; }
     _GLIBCXX_SIMD_ALWAYS_INLINE value_type operator[]([[maybe_unused]] size_t __i) const {
-        if constexpr (__is_scalar()) {
+        if constexpr (__is_scalar_abi<_Abi>()) {
             _GLIBCXX_DEBUG_ASSERT(__i == 0);
             return _M_data;
         } else {
@@ -5494,7 +5465,7 @@ public:
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr reference operator[](size_t __i) { return {_M_data, int(__i)}; }
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr value_type operator[]([[maybe_unused]] size_t __i) const
     {
-        if constexpr (__is_scalar()) {
+        if constexpr (__is_scalar_abi<_Abi>()) {
             _GLIBCXX_DEBUG_ASSERT(__i == 0);
             return _M_data;
         } else {
@@ -5585,9 +5556,6 @@ public:
     }
 
 private:
-    static constexpr bool __is_scalar() { return std::is_same_v<abi_type, simd_abi::scalar>; }
-    static constexpr bool __is_fixed() { return __is_fixed_size_abi_v<abi_type>; }
-
     _GLIBCXX_SIMD_INTRINSIC static mask_type __make_mask(typename mask_type::__member_type __k)
     {
         return {__private_init, __k};
