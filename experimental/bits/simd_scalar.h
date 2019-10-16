@@ -381,6 +381,14 @@ struct _MaskImplScalar {
   }
 
   // }}}
+  // __load {{{
+  template <typename, typename _Fp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr bool __load(const bool* __mem)
+  {
+    return __mem[0];
+  }
+
+  // }}}
   // __to_bits {{{
   _GLIBCXX_SIMD_INTRINSIC static constexpr _UChar __to_bits(bool __x)
   {

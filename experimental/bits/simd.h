@@ -5157,166 +5157,10 @@ public:
     }
     }}} */
 
-    // load __impl {{{
-private:
-    template <typename _Fp>
-    _GLIBCXX_SIMD_INTRINSIC static __member_type __load_wrapper(const value_type* __mem,
-                                                              [[maybe_unused]] _Fp __f)
-    {
-      if constexpr (__is_scalar())
-	{
-	  return __mem[0];
-	}
-      else if constexpr (__is_fixed())
-	{
-	  const fixed_size_simd<unsigned char, size()> __bools(
-	    reinterpret_cast<const __may_alias<unsigned char>*>(__mem), __f);
-	  return __data(__bools != 0);
-        }
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-      else if constexpr (__is_sse())
-	{
-	  if constexpr (size() == 2 && __have_sse2)
-	      return __vector_bitcast<_Tp>(
-		_mm_set_epi32(-int(__mem[1]), -int(__mem[1]), -int(__mem[0]),
-			      -int(__mem[0])));
-	  else if constexpr (size() == 4 && __have_sse2)
-	    {
-	      __m128i __k =
-		_mm_cvtsi32_si128(*reinterpret_cast<const int*>(__mem));
-	      __k = _mm_cmpgt_epi16(_mm_unpacklo_epi8(__k, __k),
-				    _mm_setzero_si128());
-	      return __vector_bitcast<_Tp>(_mm_unpacklo_epi16(__k, __k));
-	    }
-	  else if constexpr (size() == 4 && __have_mmx)
-	    {
-	      __m128 __k = _mm_cvtpi8_ps(
-		_mm_cvtsi32_si64(*reinterpret_cast<const int*>(__mem)));
-	      _mm_empty();
-	      return __vector_bitcast<_Tp>(_mm_cmpgt_ps(__k, __m128()));
-	    }
-	  else if constexpr (size() == 8 && __have_sse2)
-	    {
-	      const auto __k = __make_vector<long long>(
-		*reinterpret_cast<const __may_alias<long long>*>(__mem), 0);
-	      return __vector_bitcast<_Tp>(
-		__vector_bitcast<short>(_mm_unpacklo_epi8(__k, __k)) != 0);
-	    }
-	  else if constexpr (size() == 16 && __have_sse2)
-	    {
-	      return __vector_bitcast<_Tp>(_mm_cmpgt_epi8(
-		__vector_load<long long, 2>(__mem, __f), __m128i()));
-	    }
-	  else
-	    {
-	      __assert_unreachable<_Fp>();
-	    }
-	}
-      else if constexpr (__is_avx())
-	{
-	  if constexpr (size() == 4 && __have_avx)
-	    {
-	      int __bool4;
-	      __builtin_memcpy(
-		&__bool4,
-		__builtin_assume_aligned(__mem, __is_aligned_v<_Fp, 4> ? 4 : 1),
-		4);
-	      const auto __k = __to_intrin(
-		(__vector_broadcast<4>(__bool4) &
-		 __make_vector<int>(0x1, 0x100, 0x10000, 0x1000000)) != 0);
-	      return __vector_bitcast<_Tp>(__concat(_mm_unpacklo_epi32(__k, __k),
-					 _mm_unpackhi_epi32(__k, __k)));
-	    } else if constexpr (size() == 8 && __have_avx) {
-                auto __k = __vector_load<long long, 2, 8>(__mem, __f);
-                __k = _mm_cmpgt_epi16(_mm_unpacklo_epi8(__k, __k), __m128i());
-		return __vector_bitcast<_Tp>(__concat(
-		  _mm_unpacklo_epi16(__k, __k), _mm_unpackhi_epi16(__k, __k)));
-	    } else if constexpr (size() == 16 && __have_avx) {
-                const auto __k =
-                    _mm_cmpgt_epi8(__vector_load<long long, 2>(__mem, __f), __m128i());
-                return __concat(_mm_unpacklo_epi8(__k, __k), _mm_unpackhi_epi8(__k, __k));
-            } else if constexpr (size() == 32 && __have_avx2) {
-                return __vector_bitcast<_Tp>(
-                    _mm256_cmpgt_epi8(__vector_load<long long, 4>(__mem, __f), __m256i()));
-            } else {
-                __assert_unreachable<_Fp>();
-            }
-	}
-      else if constexpr (__is_avx512())
-	{
-	  if constexpr (size() == 8)
-	    {
-	      const auto __a = __vector_load<long long, 2, 8>(__mem, __f);
-	      if constexpr (__have_avx512bw_vl)
-		{
-		  return _mm_test_epi8_mask(__a, __a);
-                } else {
-                    const auto __b = _mm512_cvtepi8_epi64(__a);
-                    return _mm512_test_epi64_mask(__b, __b);
-                }
-            } else if constexpr (size() == 16) {
-                const auto __a = __vector_load<long long, 2>(__mem, __f);
-                if constexpr (__have_avx512bw_vl) {
-                    return _mm_test_epi8_mask(__a, __a);
-                } else {
-                    const auto __b = _mm512_cvtepi8_epi32(__a);
-                    return _mm512_test_epi32_mask(__b, __b);
-                }
-            } else if constexpr (size() == 32) {
-                if constexpr (__have_avx512bw_vl) {
-                    const auto __a = __vector_load<long long, 4>(__mem, __f);
-                    return _mm256_test_epi8_mask(__a, __a);
-                } else {
-                    const auto __a =
-                        _mm512_cvtepi8_epi32(__vector_load<long long, 2>(__mem, __f));
-                    const auto __b =
-                        _mm512_cvtepi8_epi32(__vector_load<long long, 2>(__mem + 16, __f));
-                    return _mm512_test_epi32_mask(__a, __a) |
-                           (_mm512_test_epi32_mask(__b, __b) << 16);
-                }
-            } else if constexpr (size() == 64) {
-                if constexpr (__have_avx512bw) {
-                    const auto __a = __vector_load<long long, 8>(__mem, __f);
-                    return _mm512_test_epi8_mask(__a, __a);
-                } else {
-                    const auto __a =
-                        _mm512_cvtepi8_epi32(__vector_load<long long, 2>(__mem, __f));
-                    const auto __b = _mm512_cvtepi8_epi32(
-                        __vector_load<long long, 2>(__mem + 16, __f));
-                    const auto __c = _mm512_cvtepi8_epi32(
-                        __vector_load<long long, 2>(__mem + 32, __f));
-                    const auto __d = _mm512_cvtepi8_epi32(
-                        __vector_load<long long, 2>(__mem + 48, __f));
-                    return _mm512_test_epi32_mask(__a, __a) |
-                           (_mm512_test_epi32_mask(__b, __b) << 16) |
-                           (_mm512_test_epi32_mask(__c, __c) << 32) |
-                           (_mm512_test_epi32_mask(__d, __d) << 48);
-                }
-            } else {
-                __assert_unreachable<_Fp>();
-            }
-        }
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-      else if constexpr (sizeof(_Tp) == sizeof(value_type) &&
-			 is_integral_v<_Tp>)
-	{
-	  const auto __bools = __vector_load<_Tp, size()>(__mem, __f);
-	  return __vector_bitcast<_Tp>(__bools > 0);
-	}
-      else
-	{
-	  using _I = __int_for_sizeof_t<_Tp>;
-	  return __vector_bitcast<_Tp>(__generate_vector<_I, size()>(
-	    [&](auto __i) constexpr { return __mem[__i] ? ~_I() : _I(); }));
-	}
-    }
-
-public :
-    // }}}
     // load constructor {{{
     template <typename _Flags>
-    _GLIBCXX_SIMD_ALWAYS_INLINE simd_mask(const value_type* __mem, _Flags __f)
-        : _M_data(__load_wrapper(__mem, __f))
+    _GLIBCXX_SIMD_ALWAYS_INLINE simd_mask(const value_type* __mem, _Flags)
+    : _M_data(__impl::template __load<_Tp, _Flags>(__mem))
     {
     }
     template <typename _Flags>
@@ -5327,9 +5171,10 @@ public :
 
     // }}}
     // loads [simd_mask.load] {{{
-    template <typename _Flags> _GLIBCXX_SIMD_ALWAYS_INLINE void copy_from(const value_type *__mem, _Flags __f)
+    template <typename _Flags>
+    _GLIBCXX_SIMD_ALWAYS_INLINE void copy_from(const value_type* __mem, _Flags)
     {
-        _M_data = __load_wrapper(__mem, __f);
+      _M_data = __impl::template __load<_Tp, _Flags>(__mem);
     }
 
     // }}}

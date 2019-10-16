@@ -3299,6 +3299,149 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
   }
 
   // }}}
+  // __load {{{
+  template <typename _Tp, typename _Flags>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+    __load(const bool* __mem)
+  {
+    if constexpr (__is_sse_abi<_Abi>())
+      {
+	if constexpr (size<_Tp> == 2 && __have_sse2)
+	  return __vector_bitcast<_Tp>(_mm_set_epi32(
+	    -int(__mem[1]), -int(__mem[1]), -int(__mem[0]), -int(__mem[0])));
+	else if constexpr (size<_Tp> == 4 && __have_sse2)
+	  {
+	    __m128i __k =
+	      _mm_cvtsi32_si128(*reinterpret_cast<const int*>(__mem));
+	    __k =
+	      _mm_cmpgt_epi16(_mm_unpacklo_epi8(__k, __k), _mm_setzero_si128());
+	    return __vector_bitcast<_Tp>(_mm_unpacklo_epi16(__k, __k));
+	  }
+	else if constexpr (size<_Tp> == 4 && __have_mmx)
+	  {
+	    __m128 __k = _mm_cvtpi8_ps(
+	      _mm_cvtsi32_si64(*reinterpret_cast<const int*>(__mem)));
+	    _mm_empty();
+	    return __vector_bitcast<_Tp>(_mm_cmpgt_ps(__k, __m128()));
+	  }
+	else if constexpr (size<_Tp> == 8 && __have_sse2)
+	  {
+	    const auto __k = __make_vector<long long>(
+	      *reinterpret_cast<const __may_alias<long long>*>(__mem), 0);
+	    return __vector_bitcast<_Tp>(
+	      __vector_bitcast<short>(_mm_unpacklo_epi8(__k, __k)) != 0);
+	  }
+	else if constexpr (size<_Tp> == 16 && __have_sse2)
+	  return __vector_bitcast<_Tp>(_mm_cmpgt_epi8(
+	    __vector_load<long long, 2>(__mem, _Flags()), __m128i()));
+	else
+	  __assert_unreachable<_Flags>();
+      }
+    else if constexpr (__is_avx_abi<_Abi>())
+      {
+	if constexpr (size<_Tp> == 4 && __have_avx)
+	  {
+	    int __bool4;
+	    __builtin_memcpy(
+	      &__bool4,
+	      __builtin_assume_aligned(__mem, __is_aligned_v<_Flags, 4> ? 4 : 1),
+	      4);
+	    const auto __k = __to_intrin(
+	      (__vector_broadcast<4>(__bool4) &
+	       __make_vector<int>(0x1, 0x100, 0x10000, 0x1000000)) != 0);
+	    return __vector_bitcast<_Tp>(__concat(
+	      _mm_unpacklo_epi32(__k, __k), _mm_unpackhi_epi32(__k, __k)));
+	  }
+	else if constexpr (size<_Tp> == 8 && __have_avx)
+	  {
+	    auto __k = __vector_load<long long, 2, 8>(__mem, _Flags());
+	    __k      = _mm_cmpgt_epi16(_mm_unpacklo_epi8(__k, __k), __m128i());
+	    return __vector_bitcast<_Tp>(__concat(
+	      _mm_unpacklo_epi16(__k, __k), _mm_unpackhi_epi16(__k, __k)));
+	  }
+	else if constexpr (size<_Tp> == 16 && __have_avx)
+	  {
+	    const auto __k = _mm_cmpgt_epi8(
+	      __vector_load<long long, 2>(__mem, _Flags()), __m128i());
+	    return __concat(_mm_unpacklo_epi8(__k, __k),
+			    _mm_unpackhi_epi8(__k, __k));
+	  }
+	else if constexpr (size<_Tp> == 32 && __have_avx2)
+	  return __vector_bitcast<_Tp>(_mm256_cmpgt_epi8(
+	    __vector_load<long long, 4>(__mem, _Flags()), __m256i()));
+	else
+	  __assert_unreachable<_Flags>();
+      }
+    else if constexpr (__is_avx512_abi<_Abi>())
+      {
+	if constexpr (size<_Tp> == 8)
+	  {
+	    const auto __a = __vector_load<long long, 2, 8>(__mem, _Flags());
+	    if constexpr (__have_avx512bw_vl)
+	      return _mm_test_epi8_mask(__a, __a);
+	    else
+	      {
+		const auto __b = _mm512_cvtepi8_epi64(__a);
+		return _mm512_test_epi64_mask(__b, __b);
+	      }
+	  }
+	else if constexpr (size<_Tp> == 16)
+	  {
+	    const auto __a = __vector_load<long long, 2>(__mem, _Flags());
+	    if constexpr (__have_avx512bw_vl)
+	      return _mm_test_epi8_mask(__a, __a);
+	    else
+	      {
+		const auto __b = _mm512_cvtepi8_epi32(__a);
+		return _mm512_test_epi32_mask(__b, __b);
+	      }
+	  }
+	else if constexpr (size<_Tp> == 32)
+	  {
+	    if constexpr (__have_avx512bw_vl)
+	      {
+		const auto __a = __vector_load<long long, 4>(__mem, _Flags());
+		return _mm256_test_epi8_mask(__a, __a);
+	      }
+	    else
+	      {
+		const auto __a =
+		  _mm512_cvtepi8_epi32(__vector_load<long long, 2>(__mem, _Flags()));
+		const auto __b = _mm512_cvtepi8_epi32(
+		  __vector_load<long long, 2>(__mem + 16, _Flags()));
+		return _mm512_test_epi32_mask(__a, __a) |
+		       (_mm512_test_epi32_mask(__b, __b) << 16);
+	      }
+	  }
+	else if constexpr (size<_Tp> == 64)
+	  {
+	    if constexpr (__have_avx512bw)
+	      {
+		const auto __a = __vector_load<long long, 8>(__mem, _Flags());
+		return _mm512_test_epi8_mask(__a, __a);
+	      }
+	    else
+	      {
+		const auto __a =
+		  _mm512_cvtepi8_epi32(__vector_load<long long, 2>(__mem, _Flags()));
+		const auto __b = _mm512_cvtepi8_epi32(
+		  __vector_load<long long, 2>(__mem + 16, _Flags()));
+		const auto __c = _mm512_cvtepi8_epi32(
+		  __vector_load<long long, 2>(__mem + 32, _Flags()));
+		const auto __d = _mm512_cvtepi8_epi32(
+		  __vector_load<long long, 2>(__mem + 48, _Flags()));
+		return _mm512_test_epi32_mask(__a, __a) |
+		       (_mm512_test_epi32_mask(__b, __b) << 16) |
+		       (_mm512_test_epi32_mask(__c, __c) << 32) |
+		       (_mm512_test_epi32_mask(__d, __d) << 48);
+	      }
+	  }
+	else
+	  __assert_unreachable<_Flags>();
+      }
+  }
+
+  // }}}
   // __convert {{{
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<bool, _Np> __x)

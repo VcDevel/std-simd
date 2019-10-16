@@ -1696,6 +1696,24 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   }
 
   // }}}
+  // __load {{{
+  template <typename _Tp, typename _Flags>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+    __load(const bool* __mem)
+  {
+    using _I = __int_for_sizeof_t<_Tp>;
+    if constexpr (sizeof(_Tp) == sizeof(bool))
+      {
+	const auto __bools = __vector_load<_I, size<_Tp>>(__mem, _Flags());
+	// bool is {0, 1}, everything else is UB
+	return __vector_bitcast<_Tp>(__bools > 0);
+      }
+    else
+      return __vector_bitcast<_Tp>(__generate_vector<_I, size<_Tp>>([&](
+	auto __i) constexpr { return __mem[__i] ? ~_I() : _I(); }));
+  }
+
+  // }}}
   // __convert {{{
   template <typename _Tp, typename _Up, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<_Up, _Np> __x)

@@ -1756,6 +1756,17 @@ template <int _Np> struct _MaskImplFixedSize {
   }
 
   // }}}
+  // __load {{{
+  template <typename, typename _Fp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember __load(const bool* __mem)
+  {
+    using _Up = make_unsigned_t<__int_for_sizeof_t<bool>>;
+    const simd<_Up, _Abi> __bools(
+      reinterpret_cast<const __may_alias<_Up>*>(__mem), _Fp());
+    return __data(__bools != 0);
+  }
+
+  // }}}
   // __to_bits {{{
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto
     __to_bits(std::bitset<_Np> __x)
