@@ -5102,6 +5102,10 @@ public:
 
     // }}}
     // bitset interface (extension to be proposed) {{{
+    // TS_FEEDBACK:
+    // Conversion of simd_mask to and from bitset makes it much easier to
+    // interface with other facilities. I suggest adding `static
+    // simd_mask::from_bitset` and `simd_mask::to_bitset`.
     _GLIBCXX_SIMD_ALWAYS_INLINE static simd_mask __from_bitset(std::bitset<size()> bs)
     {
         return {__bitset_init, bs};
@@ -5253,6 +5257,10 @@ public:
 
     // }}}
     // __cvt {{{
+    // TS_FEEDBACK:
+    // The conversion operator this implements should be a ctor on simd_mask.
+    // Once you call .__cvt() on a simd_mask it converts conveniently.
+    // A useful variation: add `explicit(sizeof(_Tp) != sizeof(_Up))`
     struct _CvtProxy
     {
       template <
