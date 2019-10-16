@@ -3287,6 +3287,18 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
   using _Base = _MaskImplBuiltin<_Abi>;
 
   // }}}
+  // __broadcast {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+    __broadcast(bool __x)
+  {
+    if constexpr (__is_avx512_abi<_Abi>())
+      return __x ? _Abi::__masked(_MaskMember<_Tp>(-1)) : _MaskMember<_Tp>();
+    else
+      return _Base::template __broadcast<_Tp>(__x);
+  }
+
+  // }}}
   // __convert {{{
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<bool, _Np> __x)

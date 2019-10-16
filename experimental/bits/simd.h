@@ -5122,7 +5122,10 @@ public:
 
     // }}}
     // explicit broadcast constructor {{{
-    _GLIBCXX_SIMD_ALWAYS_INLINE explicit constexpr simd_mask(value_type __x) : _M_data(__broadcast(__x)) {}
+    _GLIBCXX_SIMD_ALWAYS_INLINE explicit constexpr simd_mask(value_type __x)
+    : _M_data(__impl::template __broadcast<_Tp>(__x))
+    {
+    }
 
     // }}}
     // implicit type conversion constructor {{{
@@ -5451,26 +5454,6 @@ public :
     // }}}
 
 private:
-    _GLIBCXX_SIMD_INTRINSIC static constexpr __member_type __broadcast(value_type __x)  // {{{
-    {
-      if constexpr (__is_scalar())
-	return __x;
-      else if constexpr (__is_fixed())
-	return __x ? ~__member_type() : __member_type();
-      else if constexpr (__is_avx512())
-	{
-	  using mmask_type = typename __bool_storage_member_type<size()>::type;
-	  return __x ? _Abi::__masked(_SimdWrapper<bool, size()>(~mmask_type()))
-		     : _SimdWrapper<bool, size()>();
-	}
-      else
-	{
-	  using _Up = __vector_type_t<__int_for_sizeof_t<_Tp>, size()>;
-	  return __vector_bitcast<_Tp>(__x ? _Abi::__masked(~_Up()) : _Up());
-	}
-    }
-
-    // }}}
     friend const auto &__data<_Tp, abi_type>(const simd_mask &);
     friend auto &__data<_Tp, abi_type>(simd_mask &);
     alignas(__traits::_S_mask_align) __member_type _M_data;

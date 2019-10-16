@@ -373,6 +373,14 @@ struct _MaskImplScalar {
   using _TypeTag = _Tp*;
 
   // }}}
+  // __broadcast {{{
+  template <typename>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr bool __broadcast(bool __x)
+  {
+    return __x;
+  }
+
+  // }}}
   // __to_bits {{{
   _GLIBCXX_SIMD_INTRINSIC static constexpr _UChar __to_bits(bool __x)
   {

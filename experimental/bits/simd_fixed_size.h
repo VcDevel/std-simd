@@ -1748,6 +1748,14 @@ template <int _Np> struct _MaskImplFixedSize {
   using _TypeTag = _Tp*;
 
   // }}}
+  // __broadcast {{{
+  template <typename>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember __broadcast(bool __x)
+  {
+    return __x ? ~_MaskMember() : _MaskMember();
+  }
+
+  // }}}
   // __to_bits {{{
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto
     __to_bits(std::bitset<_Np> __x)

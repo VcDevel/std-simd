@@ -1686,6 +1686,16 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   static constexpr size_t size = simd_size_v<_Tp, _Abi>;
 
   // }}}
+  // __broadcast {{{
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+    __broadcast(bool __x)
+  {
+    using _UV = __vector_type_t<__int_for_sizeof_t<_Tp>, size<_Tp>>;
+    return __vector_bitcast<_Tp>(__x ? _Abi::__masked(~_UV()) : _UV());
+  }
+
+  // }}}
   // __convert {{{
   template <typename _Tp, typename _Up, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<_Up, _Np> __x)
