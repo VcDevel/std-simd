@@ -32,6 +32,119 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
+// simd_abi::_Combine {{{
+template <int _Np, typename _Abi>
+struct simd_abi::_Combine
+{
+  template <typename _Tp>
+  static constexpr size_t size = _Np* _Abi::template size<_Tp>;
+  template <typename _Tp>
+  static constexpr size_t _S_full_size = size<_Tp>;
+
+  static constexpr int _S_factor = _Np;
+  using _MemberAbi               = _Abi;
+
+  // validity traits {{{
+  // allow 2x, 3x, and 4x "unroll"
+  struct _IsValidAbiTag : conjunction<__bool_constant<(_Np > 1 && _Np <= 4)>,
+				      typename _Abi::_IsValidAbiTag>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValidSizeFor : _Abi::template _IsValidSizeFor<_Tp>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValid
+  : conjunction<_IsValidAbiTag, typename _Abi::template _IsValid<_Tp>>
+  {
+  };
+  template <typename _Tp>
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
+
+  // }}}
+  // _SimdImpl/_MaskImpl {{{
+  using _SimdImpl = _SimdImplCombine<_Np, _Abi>;
+  using _MaskImpl = _MaskImplCombine<_Np, _Abi>;
+
+  // }}}
+  // __traits {{{
+  template <typename _Tp, bool = _S_is_valid_v<_Tp>>
+  struct __traits : _InvalidTraits
+  {
+  };
+
+  template <typename _Tp>
+  struct __traits<_Tp, true>
+  {
+    using _IsValid  = true_type;
+    using _SimdImpl = _SimdImplCombine<_Np, _Abi>;
+    using _MaskImpl = _MaskImplCombine<_Np, _Abi>;
+
+    // simd and simd_mask member types {{{
+    using _SimdMember =
+      std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
+    using _MaskMember =
+      std::array<typename _Abi::template __traits<_Tp>::_MaskMember, _Np>;
+    static constexpr size_t _S_simd_align =
+      _Abi::template __traits<_Tp>::_S_simd_align;
+    static constexpr size_t _S_mask_align =
+      _Abi::template __traits<_Tp>::_S_mask_align;
+
+    // }}}
+    // _SimdBase / base class for simd, providing extra conversions {{{
+    struct _SimdBase
+    {
+      explicit operator const _SimdMember&() const
+      {
+	return static_cast<const simd<_Tp, _Combine>*>(this)->_M_data;
+      }
+    };
+
+    // }}}
+    // _MaskBase {{{
+    // empty. The std::bitset interface suffices
+    struct _MaskBase
+    {
+      explicit operator const _MaskMember&() const
+      {
+	return static_cast<const simd_mask<_Tp, _Combine>*>(this)->_M_data;
+      }
+    };
+
+    // }}}
+    // _SimdCastType {{{
+    struct _SimdCastType
+    {
+      _SimdCastType(const _SimdMember& dd)
+      : _M_data(dd)
+      {
+      }
+      explicit operator const _SimdMember&() const { return _M_data; }
+
+    private:
+      const _SimdMember& _M_data;
+    };
+
+    // }}}
+    // _MaskCastType {{{
+    struct _MaskCastType
+    {
+      _MaskCastType(const _MaskMember& dd)
+      : _M_data(dd)
+      {
+      }
+      explicit operator const _MaskMember&() const { return _M_data; }
+
+    private:
+      const _MaskMember& _M_data;
+    };
+    //}}}
+  };
+  //}}}
+};
+
+// }}}
 template <int _Np, typename _Abi>
 struct _SimdImplCombine
 {

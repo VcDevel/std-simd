@@ -49,6 +49,48 @@ _GLIBCXX_SIMD_INTRINSIC constexpr decltype(auto)
 
 // }}}
 
+// simd_abi::_Scalar {{{
+struct simd_abi::_Scalar {
+    template <typename _Tp> static constexpr size_t size = 1;
+    template <typename _Tp> static constexpr size_t _S_full_size = 1;
+    static constexpr bool                        _S_is_partial = false;
+    struct _IsValidAbiTag : true_type {};
+    template <typename _Tp> struct _IsValidSizeFor : true_type {};
+    template <typename _Tp> struct _IsValid : __is_vectorizable<_Tp> {};
+    template <typename _Tp> static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
+
+    _GLIBCXX_SIMD_INTRINSIC static constexpr bool __masked(bool __x)
+    {
+      return __x;
+    }
+
+    using _SimdImpl = _SimdImplScalar;
+    using _MaskImpl = _MaskImplScalar;
+
+    template <typename _Tp, bool = _S_is_valid_v<_Tp>> struct __traits : _InvalidTraits {
+    };
+
+    template <typename _Tp> struct __traits<_Tp, true> {
+        using _IsValid = true_type;
+        using _SimdImpl = _SimdImplScalar;
+        using _MaskImpl = _MaskImplScalar;
+        using _SimdMember = _Tp;
+        using _MaskMember = bool;
+        static constexpr size_t _S_simd_align = alignof(_SimdMember);
+        static constexpr size_t _S_mask_align = alignof(_MaskMember);
+
+        // nothing the user can spell converts to/from simd/simd_mask
+        struct _SimdCastType {
+            _SimdCastType() = delete;
+        };
+        struct _MaskCastType {
+            _MaskCastType() = delete;
+        };
+        struct _SimdBase {};
+        struct _MaskBase {};
+    };
+};
+// }}}
 // _SimdImplScalar {{{
 struct _SimdImplScalar {
   // member types {{{2

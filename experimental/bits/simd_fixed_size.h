@@ -1254,6 +1254,124 @@ template <typename _Tp> struct __autocvt_to_simd<_Tp, true> {
 
 // }}}
 
+// simd_abi::_Fixed {{{
+template <int _Np>
+struct simd_abi::_Fixed
+{
+  template <typename _Tp>
+  static constexpr size_t size = _Np;
+  template <typename _Tp>
+  static constexpr size_t _S_full_size = _Np;
+  // validity traits {{{
+  struct _IsValidAbiTag : public __bool_constant<(_Np > 0)>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValidSizeFor
+  : __bool_constant<(_Np <=
+		     (__have_avx512bw ? 64 : simd_abi::max_fixed_size<_Tp>))>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValid
+  : conjunction<_IsValidAbiTag, __is_vectorizable<_Tp>, _IsValidSizeFor<_Tp>>
+  {
+  };
+  template <typename _Tp>
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
+
+  // }}}
+  // __masked {{{
+  _GLIBCXX_SIMD_INTRINSIC static constexpr std::bitset<_Np>
+    __masked(std::bitset<_Np> __x)
+  {
+    return __x;
+  }
+
+  // }}}
+  // simd/_MaskImpl {{{
+  using _SimdImpl = _SimdImplFixedSize<_Np>;
+  using _MaskImpl = _MaskImplFixedSize<_Np>;
+
+  // }}}
+  // __traits {{{
+  template <typename _Tp, bool = _S_is_valid_v<_Tp>>
+  struct __traits : _InvalidTraits
+  {
+  };
+
+  template <typename _Tp>
+  struct __traits<_Tp, true>
+  {
+    using _IsValid  = true_type;
+    using _SimdImpl = _SimdImplFixedSize<_Np>;
+    using _MaskImpl = _MaskImplFixedSize<_Np>;
+
+    // simd and simd_mask member types {{{
+    using _SimdMember = __fixed_size_storage_t<_Tp, _Np>;
+    using _MaskMember = std::bitset<_Np>;
+    static constexpr size_t _S_simd_align =
+      __next_power_of_2(_Np * sizeof(_Tp));
+    static constexpr size_t _S_mask_align = alignof(_MaskMember);
+
+    // }}}
+    // _SimdBase / base class for simd, providing extra conversions {{{
+    struct _SimdBase
+    {
+      // The following ensures, function arguments are passed via the stack.
+      // This is important for ABI compatibility across TU boundaries
+      _SimdBase(const _SimdBase&) {}
+      _SimdBase() = default;
+
+      explicit operator const _SimdMember&() const
+      {
+	return static_cast<const simd<_Tp, _Fixed>*>(this)->_M_data;
+      }
+      explicit operator std::array<_Tp, _Np>() const
+      {
+	std::array<_Tp, _Np> __r;
+	// _SimdMember can be larger because of higher alignment
+	static_assert(sizeof(__r) <= sizeof(_SimdMember), "");
+	std::memcpy(__r.data(), &static_cast<const _SimdMember&>(*this),
+		    sizeof(__r));
+	return __r;
+      }
+    };
+
+    // }}}
+    // _MaskBase {{{
+    // empty. The std::bitset interface suffices
+    struct _MaskBase
+    {
+    };
+
+    // }}}
+    // _SimdCastType {{{
+    struct _SimdCastType
+    {
+      _SimdCastType(const std::array<_Tp, _Np>&);
+      _SimdCastType(const _SimdMember& dd)
+      : _M_data(dd)
+      {
+      }
+      explicit operator const _SimdMember&() const { return _M_data; }
+
+    private:
+      const _SimdMember& _M_data;
+    };
+
+    // }}}
+    // _MaskCastType {{{
+    class _MaskCastType
+    {
+      _MaskCastType() = delete;
+    };
+    // }}}
+  };
+  // }}}
+};
+
+// }}}
 // _SimdImplFixedSize {{{1
 // fixed_size should not inherit from _SimdMathFallback in order for
 // specializations in the used _SimdTuple Abis to get used
@@ -1865,7 +1983,6 @@ template <int _Np> struct _MaskImplFixedSize {
 	}
       else if constexpr (__have_sse2)
 	{ // !AVX512BW && !BMI2
-	  using _V       = simd<_UChar, simd_abi::__sse>;
 	  _ULLong __bits = __bs.to_ullong();
 	  __execute_n_times<(_Np + 15) / 16>([&](auto __i) {
 	    constexpr size_t __offset    = __i * 16;
@@ -1887,19 +2004,19 @@ template <int _Np> struct _MaskImplFixedSize {
 		  0x0101010101010101ULL;
 		std::memcpy(&__mem[__offset], &bool8, __remaining);
 	      }
-	    else if constexpr (__have_sse2)
+	    else
 	      {
+		using _V   = __vector_type_t<_UChar, 16>;
 		auto __tmp = _mm_cvtsi32_si128(__bits >> __offset);
 		__tmp      = _mm_unpacklo_epi8(__tmp, __tmp);
 		__tmp      = _mm_unpacklo_epi16(__tmp, __tmp);
 		__tmp      = _mm_unpacklo_epi32(__tmp, __tmp);
-		_V __tmp2(__tmp);
-		__tmp2 &= _V([](auto __j) {
+		_V __tmp2 = reinterpret_cast<_V>(__tmp);
+		__tmp2 &= __generate_vector<_V>([](auto __j) {
 		  return static_cast<_UChar>(1 << (__j % CHAR_BIT));
 		}); // mask bit index
 		const __m128i __bool16 = __intrin_bitcast<__m128i>(
-		  __vector_bitcast<_UChar>(__data(__tmp2 == 0)) +
-		  1); // 0xff -> 0x00 | 0x00 -> 0x01
+		  (__tmp2 == 0) + 1); // 0xff -> 0x00 | 0x00 -> 0x01
 		if constexpr (__remaining >= 16)
 		  {
 		    __vector_store<16>(__bool16, &__mem[__offset], _Fp());
@@ -1923,8 +2040,6 @@ template <int _Np> struct _MaskImplFixedSize {
 		      }
 		  }
 	      }
-	    else
-	      __assert_unreachable<_Fp>();
 	  });
 	}
       else

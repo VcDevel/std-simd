@@ -485,6 +485,356 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 
 // }}}
 
+// _GnuTraits {{{
+template <typename _Tp, typename _Mp, typename _Abi, size_t _Np>
+struct _GnuTraits
+{
+  using _IsValid  = true_type;
+  using _SimdImpl = typename _Abi::_SimdImpl;
+  using _MaskImpl = typename _Abi::_MaskImpl;
+
+  // simd and simd_mask member types {{{
+  using _SimdMember                     = _SimdWrapper<_Tp, _Np>;
+  using _MaskMember                     = _SimdWrapper<_Mp, _Np>;
+  static constexpr size_t _S_simd_align = alignof(_SimdMember);
+  static constexpr size_t _S_mask_align = alignof(_MaskMember);
+
+  // }}}
+  // _SimdBase / base class for simd, providing extra conversions {{{
+  struct _SimdBase2
+  {
+    explicit operator __intrinsic_type_t<_Tp, _Np>() const
+    {
+      return __to_intrin(static_cast<const simd<_Tp, _Abi>*>(this)->_M_data);
+    }
+    explicit operator __vector_type_t<_Tp, _Np>() const
+    {
+      return static_cast<const simd<_Tp, _Abi>*>(this)->_M_data.__builtin();
+    }
+  };
+  struct _SimdBase1
+  {
+    explicit operator __intrinsic_type_t<_Tp, _Np>() const
+    {
+      return __data(*static_cast<const simd<_Tp, _Abi>*>(this));
+    }
+  };
+  using _SimdBase =
+    std::conditional_t<std::is_same<__intrinsic_type_t<_Tp, _Np>,
+				    __vector_type_t<_Tp, _Np>>::value,
+		       _SimdBase1,
+		       _SimdBase2>;
+
+  // }}}
+  // _MaskBase {{{
+  struct _MaskBase2
+  {
+    explicit operator __intrinsic_type_t<_Tp, _Np>() const
+    {
+      return static_cast<const simd_mask<_Tp, _Abi>*>(this)->_M_data.__intrin();
+    }
+    explicit operator __vector_type_t<_Tp, _Np>() const
+    {
+      return static_cast<const simd_mask<_Tp, _Abi>*>(this)->_M_data._M_data;
+    }
+  };
+  struct _MaskBase1
+  {
+    explicit operator __intrinsic_type_t<_Tp, _Np>() const
+    {
+      return __data(*static_cast<const simd_mask<_Tp, _Abi>*>(this));
+    }
+  };
+  using _MaskBase =
+    std::conditional_t<std::is_same<__intrinsic_type_t<_Tp, _Np>,
+				    __vector_type_t<_Tp, _Np>>::value,
+		       _MaskBase1,
+		       _MaskBase2>;
+
+  // }}}
+  // _MaskCastType {{{
+  // parameter type of one explicit simd_mask constructor
+  class _MaskCastType
+  {
+    using _Up = __intrinsic_type_t<_Tp, _Np>;
+    _Up _M_data;
+
+  public:
+    _MaskCastType(_Up __x)
+    : _M_data(__x)
+    {
+    }
+    operator _MaskMember() const { return _M_data; }
+  };
+
+  // }}}
+  // _SimdCastType {{{
+  // parameter type of one explicit simd constructor
+  class _SimdCastType1
+  {
+    using _A = __intrinsic_type_t<_Tp, _Np>;
+    _SimdMember _M_data;
+
+  public:
+    _SimdCastType1(_A __a)
+    : _M_data(__vector_bitcast<_Tp>(__a))
+    {
+    }
+    operator _SimdMember() const { return _M_data; }
+  };
+
+  class _SimdCastType2
+  {
+    using _A = __intrinsic_type_t<_Tp, _Np>;
+    using _B = __vector_type_t<_Tp, _Np>;
+    _SimdMember _M_data;
+
+  public:
+    _SimdCastType2(_A __a)
+    : _M_data(__vector_bitcast<_Tp>(__a))
+    {
+    }
+    _SimdCastType2(_B __b)
+    : _M_data(__b)
+    {
+    }
+    operator _SimdMember() const { return _M_data; }
+  };
+
+  using _SimdCastType =
+    std::conditional_t<std::is_same<__intrinsic_type_t<_Tp, _Np>,
+				    __vector_type_t<_Tp, _Np>>::value,
+		       _SimdCastType1,
+		       _SimdCastType2>;
+  //}}}
+};
+
+// }}}
+// simd_abi::_VecBuiltin {{{
+template <int _UsedBytes>
+struct simd_abi::_VecBuiltin
+{
+  template <typename _Tp>
+  static constexpr size_t size = _UsedBytes / sizeof(_Tp);
+  template <typename _Tp>
+  static constexpr size_t
+			_S_full_size = sizeof(__vector_type_t<_Tp, size<_Tp>>) / sizeof(_Tp);
+  static constexpr bool _S_is_partial = (_UsedBytes & (_UsedBytes - 1)) != 0;
+
+  // validity traits {{{
+  struct _IsValidAbiTag : __bool_constant<(_UsedBytes > 1)>
+  {
+  };
+
+  template <typename _Tp>
+  struct _IsValidSizeFor
+  : std::conjunction<
+      __bool_constant<(_UsedBytes / sizeof(_Tp) > 1 &&
+		       _UsedBytes % sizeof(_Tp) == 0)>,
+      __can_vectorize<_Tp>,
+      __bool_constant<(
+	_UsedBytes <=
+	(__have_avx512bw || (__have_avx512f && sizeof(_Tp) >= 4)
+	   ? 64
+	   : __have_avx2 || (__have_avx && std::is_floating_point_v<_Tp>)
+	       ? 32
+	       : __have_sse || __have_neon ? 16 : 0))>>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValid : std::conjunction<_IsValidAbiTag,
+				     __is_vectorizable<_Tp>,
+				     _IsValidSizeFor<_Tp>>
+  {
+  };
+  template <typename _Tp>
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
+
+  // }}}
+  // _SimdImpl/_MaskImpl {{{
+#if _GLIBCXX_SIMD_X86INTRIN
+  using _SimdImpl = _SimdImplX86<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_VecBuiltin<_UsedBytes>>;
+#elif _GLIBCXX_SIMD_HAVE_NEON
+  using _SimdImpl = _SimdImplNeon<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplNeon<_VecBuiltin<_UsedBytes>>;
+#else
+  using _SimdImpl = _SimdImplBuiltin<_VecBuiltin<_UsedBytes>>;
+  using _MaskImpl = _MaskImplBuiltin<_VecBuiltin<_UsedBytes>>;
+#endif
+
+  // }}}
+  // __traits {{{
+  template <typename _Tp>
+  using __traits =
+    std::conditional_t<_S_is_valid_v<_Tp>,
+		       _GnuTraits<_Tp, _Tp, _VecBuiltin<_UsedBytes>, size<_Tp>>,
+		       _InvalidTraits>;
+  //}}}
+  // implicit masks {{{
+  template <typename _Tp>
+  static constexpr auto __implicit_mask()
+  {
+    constexpr auto __size = _S_full_size<_Tp>;
+    using _ImplicitMask   = __vector_type_t<__int_for_sizeof_t<_Tp>, __size>;
+    return reinterpret_cast<__vector_type_t<_Tp, __size>>(
+      !_S_is_partial ? ~_ImplicitMask()
+		     : __generate_vector<_ImplicitMask>([](auto __i) constexpr {
+			 return __i < _UsedBytes / sizeof(_Tp) ? -1 : 0;
+		       }));
+  }
+
+  template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+  static constexpr _Tp __masked(_Tp __x)
+  {
+    using _Up = typename _TVT::value_type;
+    if constexpr (_S_is_partial)
+      return __and(__as_vector(__x), __implicit_mask<_Up>());
+    else
+      return __x;
+  }
+
+  template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+  static constexpr auto __make_padding_nonzero(_Tp __x)
+  {
+    if constexpr (!_S_is_partial)
+      return __x;
+    else
+      {
+	using _Up = typename _TVT::value_type;
+	if constexpr (std::is_integral_v<_Up>)
+	  return __or(__x, ~__implicit_mask<_Up>());
+	else
+	  {
+	    constexpr auto __one =
+	      __andnot(__implicit_mask<_Up>(),
+		       __vector_broadcast<_S_full_size<_Up>>(_Up(1)));
+	    return __or(__x, __one);
+	  }
+      }
+  }
+  // }}}
+};
+
+// }}}
+// simd_abi::_VecBltnBtmsk {{{
+template <int _UsedBytes>
+struct simd_abi::_VecBltnBtmsk
+{
+  template <typename _Tp>
+  static constexpr size_t size = _UsedBytes / sizeof(_Tp);
+  template <typename _Tp>
+  static constexpr size_t
+			_S_full_size = sizeof(__vector_type_t<_Tp, size<_Tp>>) / sizeof(_Tp);
+  static constexpr bool _S_is_partial = (_UsedBytes & (_UsedBytes - 1)) != 0;
+
+  // validity traits {{{
+  struct _IsValidAbiTag : __bool_constant<(_UsedBytes > 1)>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValidSizeFor
+  : __bool_constant<(_UsedBytes / sizeof(_Tp) > 1 &&
+		     _UsedBytes % sizeof(_Tp) == 0 && _UsedBytes <= 64 &&
+		     (_UsedBytes > 32 || __have_avx512vl))>
+  {
+  };
+  template <typename _Tp>
+  struct _IsValid : conjunction<_IsValidAbiTag,
+				__avx512_is_vectorizable<_Tp>,
+				_IsValidSizeFor<_Tp>>
+  {
+  };
+  template <typename _Tp>
+  static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
+
+  // }}}
+  // implicit mask {{{
+private:
+  template <typename _Tp>
+  using _ImplicitMask = __bool_storage_member_type_t<_S_full_size<_Tp>>;
+
+public:
+  template <size_t _Np>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr __bool_storage_member_type_t<_Np>
+    __implicit_mask_n()
+  {
+    using _Tp = __bool_storage_member_type_t<_Np>;
+    return _Np < sizeof(_Tp) * CHAR_BIT ? _Tp((1ULL << _Np) - 1) : ~_Tp();
+  }
+
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _ImplicitMask<_Tp> __implicit_mask()
+  {
+    return __implicit_mask_n<size<_Tp>>();
+  }
+
+  template <typename _Tp, size_t _Np>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+    __masked(_SimdWrapper<_Tp, _Np> __x)
+  {
+    if constexpr (is_same_v<_Tp, bool>)
+      if constexpr (_S_is_partial || _Np < 8)
+	return _MaskImpl::__bit_and(
+	  __x, _SimdWrapper<_Tp, _Np>(
+		 __bool_storage_member_type_t<_Np>((1ULL << _Np) - 1)));
+      else
+	return __x;
+    else
+      return __masked(__x._M_data);
+  }
+
+  template <typename _TV>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _TV __masked(_TV __x)
+  {
+    static_assert(!__is_bitmask_v<_TV>,
+		  "_VecBltnBtmsk::__masked cannot work on bitmasks, since it doesn't "
+		  "know the number of elements. Use _SimdWrapper<bool, N> instead.");
+    if constexpr (_S_is_partial)
+      {
+	using _Tp = typename _VectorTraits<_TV>::value_type;
+	return __blend(__implicit_mask<_Tp>(), _TV(), __x);
+      }
+    else
+      return __x;
+  }
+
+  template <typename _TV, typename _TVT = _VectorTraits<_TV>>
+  static constexpr auto __make_padding_nonzero(_TV __x)
+  {
+    if constexpr (!_S_is_partial)
+      return __x;
+    else
+      {
+	using _Up = typename _TVT::value_type;
+	return __blend(__implicit_mask<_Up>(),
+		       __vector_broadcast<_S_full_size<_Up>>(_Up(1)), __x);
+      }
+  }
+
+  // }}}
+  // simd/_MaskImpl {{{
+#if _GLIBCXX_SIMD_X86INTRIN
+  using _SimdImpl = _SimdImplX86<_VecBltnBtmsk<_UsedBytes>>;
+  using _MaskImpl = _MaskImplX86<_VecBltnBtmsk<_UsedBytes>>;
+#else
+  template <int>
+  struct _MissingImpl;
+  using _SimdImpl = _MissingImpl<_UsedBytes>;
+  using _MaskImpl = _MissingImpl<_UsedBytes>;
+#endif
+
+  // }}}
+  // __traits {{{
+  template <typename _Tp>
+  using __traits =
+    std::conditional_t<_S_is_valid_v<_Tp>,
+		       _GnuTraits<_Tp, bool, _VecBltnBtmsk<_UsedBytes>, size<_Tp>>,
+		       _InvalidTraits>;
+  //}}}
+};
+
+//}}}
 // _SimdImplBuiltinMixin {{{
 struct _SimdImplBuiltinMixin
 {
