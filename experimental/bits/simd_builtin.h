@@ -48,6 +48,38 @@ template <typename _V, typename = _VectorTraits<_V>>
 static inline constexpr _V _S_absmask = __andnot(_S_signmask<_V>, _S_allbits<_V>);
 
 //}}}
+// __vector_permute<Indices...>{{{
+// Index == -1 requests zeroing of the output element
+template <int... _Indices, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_Tp __vector_permute(_Tp __x)
+{
+  static_assert(sizeof...(_Indices) == _TVT::_S_width);
+  return __make_vector<typename _TVT::value_type>(
+    (_Indices == -1 ? 0 : __x[_Indices == -1 ? 0 : _Indices])...);
+}
+
+// }}}
+// __vector_shuffle<Indices...>{{{
+// Index == -1 requests zeroing of the output element
+template <int... _Indices, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_Tp __vector_shuffle(_Tp __x, _Tp __y)
+{
+  return _Tp{(_Indices == -1 ? 0
+			     : _Indices < _TVT::_S_width
+				 ? __x[_Indices]
+				 : __y[_Indices - _TVT::_S_width])...};
+}
+
+// }}}
+// __make_wrapper{{{
+template <typename _Tp, typename... _Args>
+_GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, sizeof...(_Args)>
+  __make_wrapper(_Args&&... __args)
+{
+  return __make_vector<_Tp>(std::forward<_Args>(__args)...);
+}
+
+// }}}
 // __shift_elements_right{{{
 // if (__shift % 2ⁿ == 0) => the low n Bytes are correct
 template <unsigned __shift, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
@@ -485,6 +517,44 @@ _GLIBCXX_SIMD_INTRINSIC auto __convert_all(_From __v)
 
 // }}}
 
+// __can_vectorize {{{
+template <typename _Tp>
+struct __can_vectorize
+: conjunction<
+    __is_vectorizable<_Tp>,
+    __bool_constant<(__have_sse2 || (__have_sse && is_same_v<_Tp, float>) ||
+		     __have_neon_a64 ||
+		     (__have_neon_a32 && !is_same_v<_Tp, double>) ||
+		     (__have_neon && sizeof(_Tp) < 8))>>
+{
+};
+template <>
+struct __can_vectorize<long double> : false_type
+{
+};
+
+template <typename _Tp>
+inline constexpr bool __can_vectorize_v = __can_vectorize<_Tp>::value;
+
+// }}}
+// __avx512_is_vectorizable {{{1
+template <typename _Tp>
+struct __avx512_is_vectorizable
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+: std::conditional_t<__have_avx512bw || (sizeof(_Tp) >= 4 && __have_avx512f),
+		     __is_vectorizable<_Tp>,
+		     std::false_type>
+#else
+: std::false_type
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
+{
+};
+template <>
+struct __avx512_is_vectorizable<long double> : false_type
+{
+};
+
+// }}}
 // _GnuTraits {{{
 template <typename _Tp, typename _Mp, typename _Abi, size_t _Np>
 struct _GnuTraits
@@ -610,6 +680,12 @@ struct _GnuTraits
 };
 
 // }}}
+template <typename _Abi> struct _SimdImplBuiltin;
+template <typename _Abi> struct _MaskImplBuiltin;
+template <typename _Abi> struct _SimdImplX86;
+template <typename _Abi> struct _MaskImplX86;
+template <typename _Abi> struct _SimdImplNeon;
+template <typename _Abi> struct _MaskImplNeon;
 // simd_abi::_VecBuiltin {{{
 template <int _UsedBytes>
 struct simd_abi::_VecBuiltin
@@ -1357,7 +1433,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	{
 	  if constexpr (_Np == 16)
 	    {
-	      const auto __y = __x._M_data;
+	      const auto __y = __data(__x);
 	      __x            = __binary_op(
                 __make_simd<_Tp, _Np>(__vector_permute<0, 0, 1, 1, 2, 2, 3, 3, 4,
                                                     4, 5, 5, 6, 6, 7, 7>(__y)),
@@ -1367,7 +1443,7 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	    }
 	  if constexpr (_Np >= 8)
 	    {
-	      const auto __y = __vector_bitcast<short>(__x._M_data);
+	      const auto __y = __vector_bitcast<short>(__data(__x));
 	      __x =
 		__binary_op(__make_simd<_Tp, _Np>(__vector_bitcast<_Tp>(
 			      __vector_permute<0, 0, 1, 1, 2, 2, 3, 3>(__y))),
@@ -1378,13 +1454,13 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	    {
 	      using _Up =
 		std::conditional_t<std::is_floating_point_v<_Tp>, float, int>;
-	      const auto __y = __vector_bitcast<_Up>(__x._M_data);
+	      const auto __y = __vector_bitcast<_Up>(__data(__x));
 	      __x = __binary_op(__x, __make_simd<_Tp, _Np>(__vector_bitcast<_Tp>(
 				       __vector_permute<3, 2, 1, 0>(__y))));
 	    }
 	  using _Up =
 	    std::conditional_t<std::is_floating_point_v<_Tp>, double, _LLong>;
-	  const auto __y = __vector_bitcast<_Up>(__x._M_data);
+	  const auto __y = __vector_bitcast<_Up>(__data(__x));
 	  __x = __binary_op(__x, __make_simd<_Tp, _Np>(__vector_bitcast<_Tp>(
 				   __vector_permute<1, 1>(__y))));
 	  return __x[0];
@@ -1399,8 +1475,8 @@ struct _SimdImplBuiltin : _SimdImplBuiltinMixin
 	  using _V = std::experimental::simd<_Tp, _A>;
 	  return _A::_SimdImpl::__reduce(
 	    __binary_op(
-	      _V(__private_init, __extract<0, 2>(__data(__x)._M_data)),
-	      _V(__private_init, __extract<1, 2>(__data(__x)._M_data))),
+	      _V(__private_init, __extract<0, 2>(__as_vector(__x))),
+	      _V(__private_init, __extract<1, 2>(__as_vector(__x)))),
 	    std::forward<_BinaryOperation>(__binary_op));
 	}
     }

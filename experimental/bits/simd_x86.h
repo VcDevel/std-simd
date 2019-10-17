@@ -36,6 +36,230 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
+// __interleave128_lo {{{
+template <typename _A,
+	  typename _B,
+	  typename _Tp    = std::common_type_t<_A, _B>,
+	  typename _Trait = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
+  __interleave128_lo(const _A& _a, const _B& _b)
+{
+  const _Tp __a(_a);
+  const _Tp __b(_b);
+  if constexpr (sizeof(_Tp) == 16)
+    return __interleave_lo(__a, __b);
+  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 4)
+    return _Tp{__a[0], __b[0], __a[2], __b[2]};
+  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 8)
+    return _Tp{__a[0], __b[0], __a[1], __b[1], __a[4], __b[4], __a[5], __b[5]};
+  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 16)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1], __a[2], __b[2],
+	       __a[3],  __b[3],  __a[8],  __b[8], __a[9], __b[9],
+	       __a[10], __b[10], __a[11], __b[11]};
+  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 32)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],
+	       __b[3],  __a[4],  __b[4],  __a[5],  __b[5],  __a[6],  __b[6],
+	       __a[7],  __b[7],  __a[16], __b[16], __a[17], __b[17], __a[18],
+	       __b[18], __a[19], __b[19], __a[20], __b[20], __a[21], __b[21],
+	       __a[22], __b[22], __a[23], __b[23]};
+  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 64)
+    return _Tp{
+      __a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],  __b[3],
+      __a[4],  __b[4],  __a[5],  __b[5],  __a[6],  __b[6],  __a[7],  __b[7],
+      __a[8],  __b[8],  __a[9],  __b[9],  __a[10], __b[10], __a[11], __b[11],
+      __a[12], __b[12], __a[13], __b[13], __a[14], __b[14], __a[15], __b[15],
+      __a[32], __b[32], __a[33], __b[33], __a[34], __b[34], __a[35], __b[35],
+      __a[36], __b[36], __a[37], __b[37], __a[38], __b[38], __a[39], __b[39],
+      __a[40], __b[40], __a[41], __b[41], __a[42], __b[42], __a[43], __b[43],
+      __a[44], __b[44], __a[45], __b[45], __a[46], __b[46], __a[47], __b[47]};
+  else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 8)
+    return _Tp{__a[0], __b[0], __a[2], __b[2], __a[4], __b[4], __a[6], __b[6]};
+  else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 16)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1], __a[4], __b[4],
+	       __a[5],  __b[5],  __a[8],  __b[8], __a[9], __b[9],
+	       __a[12], __b[12], __a[13], __b[13]};
+  else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 32)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],
+	       __b[3],  __a[8],  __b[8],  __a[9],  __b[9],  __a[10], __b[10],
+	       __a[11], __b[11], __a[16], __b[16], __a[17], __b[17], __a[18],
+	       __b[18], __a[19], __b[19], __a[24], __b[24], __a[25], __b[25],
+	       __a[26], __b[26], __a[27], __b[27]};
+  else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 64)
+    return _Tp{
+      __a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],  __b[3],
+      __a[4],  __b[4],  __a[5],  __b[5],  __a[6],  __b[6],  __a[7],  __b[7],
+      __a[16], __b[16], __a[17], __b[17], __a[18], __b[18], __a[19], __b[19],
+      __a[20], __b[20], __a[21], __b[21], __a[22], __b[22], __a[23], __b[23],
+      __a[32], __b[32], __a[33], __b[33], __a[34], __b[34], __a[35], __b[35],
+      __a[36], __b[36], __a[37], __b[37], __a[38], __b[38], __a[39], __b[39],
+      __a[48], __b[48], __a[49], __b[49], __a[50], __b[50], __a[51], __b[51],
+      __a[52], __b[52], __a[53], __b[53], __a[54], __b[54], __a[55], __b[55]};
+  else
+    __assert_unreachable<_Tp>();
+}
+
+// }}}
+// __is_zero{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr bool __is_zero(_Tp __a)
+{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (_TVT::template __is<float, 8>)
+	    return _mm256_testz_ps(__a, __a);
+	  else if constexpr (_TVT::template __is<double, 4>)
+	    return _mm256_testz_pd(__a, __a);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__a));
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testz_ps(__to_intrin(__a), __to_intrin(__a));
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testz_pd(__a, __a);
+	  else
+	    return _mm_testz_si128(__to_intrin(__a), __to_intrin(__a));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testz_si128(__intrin_bitcast<__m128i>(__a),
+			       __intrin_bitcast<__m128i>(__a));
+    }
+  else if constexpr (sizeof(_Tp) <= 8)
+    return reinterpret_cast<__int_for_sizeof_t<_Tp>>(__a) == 0;
+  else
+    {
+      const auto __b = __vector_bitcast<_LLong>(__a);
+      if constexpr (sizeof(__b) == 16)
+	return (__b[0] | __b[1]) == 0;
+      else if constexpr (sizeof(__b) == 32)
+	return __is_zero(__lo128(__b) | __hi128(__b));
+      else if constexpr (sizeof(__b) == 64)
+	return __is_zero(__lo256(__b) | __hi256(__b));
+      else
+	__assert_unreachable<_Tp>();
+    }
+}
+// }}}
+// __movemask{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST int __movemask(_Tp __a)
+{
+  if constexpr (__have_sse && _TVT::template __is<float, 4>)
+    return _mm_movemask_ps(__a);
+  else if constexpr (__have_avx && _TVT::template __is<float, 8>)
+    return _mm256_movemask_ps(__a);
+  else if constexpr (__have_sse2 && _TVT::template __is<double, 2>)
+    return _mm_movemask_pd(__a);
+  else if constexpr (__have_avx && _TVT::template __is<double, 4>)
+    return _mm256_movemask_pd(__a);
+  else if constexpr (__have_sse2 && sizeof(_Tp) == 16)
+    return _mm_movemask_epi8(__a);
+  else if constexpr (__have_avx2 && sizeof(_Tp) == 32)
+    return _mm256_movemask_epi8(__a);
+  else
+    __assert_unreachable<_Tp>();
+}
+
+// }}}
+// __testz{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
+			__testz(_Tp __a, _Tp __b)
+{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (_TVT::template __is<float, 8>)
+	    return _mm256_testz_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 4>)
+	    return _mm256_testz_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testz_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testz_ps(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testz_pd(__a, __b);
+	  else
+	    return _mm_testz_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testz_si128(__intrin_bitcast<__m128i>(__a),
+			       __intrin_bitcast<__m128i>(__b));
+      else
+	return __movemask(0 == __and(__a, __b)) != 0;
+    }
+  else
+    return __is_zero(__and(__a, __b));
+}
+
+// }}}
+// __testc{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int
+			__testc(_Tp __a, _Tp __b)
+{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (_TVT::template __is<float, 8>)
+	    return _mm256_testc_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 4>)
+	    return _mm256_testc_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testc_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float>)
+	    return _mm_testc_ps(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testc_pd(__a, __b);
+	  else
+	    return _mm_testc_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testc_si128(__intrin_bitcast<__m128i>(__a),
+			       __intrin_bitcast<__m128i>(__b));
+      else
+	return __movemask(0 == __andnot(__a, __b)) != 0;
+    }
+  else
+    return __is_zero(__andnot(__a, __b));
+}
+
+// }}}
+// __testnzc{{{
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST constexpr int __testnzc(_Tp __a, _Tp __b)
+{
+  if (!__builtin_is_constant_evaluated())
+    {
+      if constexpr (__have_avx)
+	{
+	  if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<float>)
+	    return _mm256_testnzc_ps(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32 && _TVT::template __is<double>)
+	    return _mm256_testnzc_pd(__a, __b);
+	  else if constexpr (sizeof(_Tp) == 32)
+	    return _mm256_testnzc_si256(__to_intrin(__a), __to_intrin(__b));
+	  else if constexpr (_TVT::template __is<float, 4>)
+	    return _mm_testnzc_ps(__a, __b);
+	  else if constexpr (_TVT::template __is<double, 2>)
+	    return _mm_testnzc_pd(__a, __b);
+	  else
+	    return _mm_testnzc_si128(__to_intrin(__a), __to_intrin(__b));
+	}
+      else if constexpr (__have_sse4_1)
+	return _mm_testnzc_si128(__vector_bitcast<_LLong>(__a),
+				 __vector_bitcast<_LLong>(__b));
+      else
+	return __movemask(0 == __and(__a, __b)) == 0 &&
+	       __movemask(0 == __andnot(__a, __b)) == 0;
+    }
+  else
+    return !(__is_zero(__and(__a, __b)) || __is_zero(__andnot(__a, __b)));
+}
+
+// }}}
 // __xzyw{{{
 // shuffles the complete vector, swapping the inner two quarters. Often useful
 // for AVX for fixing up a shuffle result.

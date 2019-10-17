@@ -1254,6 +1254,8 @@ template <typename _Tp> struct __autocvt_to_simd<_Tp, true> {
 
 // }}}
 
+template <int _Np> struct _SimdImplFixedSize;
+template <int _Np> struct _MaskImplFixedSize;
 // simd_abi::_Fixed {{{
 template <int _Np>
 struct simd_abi::_Fixed

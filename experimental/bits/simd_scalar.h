@@ -49,6 +49,8 @@ _GLIBCXX_SIMD_INTRINSIC constexpr decltype(auto)
 
 // }}}
 
+struct _SimdImplScalar;
+struct _MaskImplScalar;
 // simd_abi::_Scalar {{{
 struct simd_abi::_Scalar {
     template <typename _Tp> static constexpr size_t size = 1;

@@ -32,6 +32,8 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
+template <int _Np, typename _Abi> struct _SimdImplCombine;
+template <int _Np, typename _Abi> struct _MaskImplCombine;
 // simd_abi::_Combine {{{
 template <int _Np, typename _Abi>
 struct simd_abi::_Combine
