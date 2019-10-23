@@ -1943,118 +1943,13 @@ template <int _Np> struct _MaskImplFixedSize {
     template <typename _Fp>
     static inline void __store(_MaskMember __bs, bool *__mem, _Fp) noexcept
     {
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-      if constexpr (__have_avx512bw)
-	{
-	  const __m512i bool64 =
-	    _mm512_movm_epi8(__bs.to_ullong()) & 0x0101010101010101ULL;
-	  __vector_store<_Np>(bool64, __mem, _Fp());
-	}
-      else if constexpr (__have_bmi2)
-	{
-#ifdef __x86_64__
-	  __execute_n_times<_Np / 8>([&](auto __i) {
-	    constexpr size_t __offset = __i * 8;
-	    const _ULLong    bool8 =
-	      _pdep_u64(__bs.to_ullong() >> __offset, 0x0101010101010101ULL);
-	    std::memcpy(&__mem[__offset], &bool8, 8);
-	  });
-	  if (_Np % 8 > 0)
-	    {
-	      constexpr size_t __offset = (_Np / 8) * 8;
-	      const _ULLong    bool8 =
-		_pdep_u64(__bs.to_ullong() >> __offset, 0x0101010101010101ULL);
-	      std::memcpy(&__mem[__offset], &bool8, _Np % 8);
-	    }
-#else  // __x86_64__
-	  __execute_n_times<_Np / 4>([&](auto __i) {
-	    constexpr size_t __offset = __i * 4;
-	    const _ULLong __bool4 =
-	      _pdep_u32(__bs.to_ullong() >> __offset, 0x01010101U);
-	    std::memcpy(&__mem[__offset], &__bool4, 4);
-	  });
-	  if (_Np % 4 > 0)
-	    {
-	      constexpr size_t __offset = (_Np / 4) * 4;
-	      const _ULLong __bool4 =
-		_pdep_u32(__bs.to_ullong() >> __offset, 0x01010101U);
-	      std::memcpy(&__mem[__offset], &__bool4, _Np % 4);
-	    }
-#endif // __x86_64__
-	}
-      else if constexpr (__have_sse2)
-	{ // !AVX512BW && !BMI2
-	  _ULLong __bits = __bs.to_ullong();
-	  __execute_n_times<(_Np + 15) / 16>([&](auto __i) {
-	    constexpr size_t __offset    = __i * 16;
-	    constexpr size_t __remaining = _Np - __offset;
-	    if constexpr (__remaining == 1)
-	      {
-		__mem[__offset] = static_cast<bool>(__bits >> __offset);
-	      }
-	    else if constexpr (__remaining <= 4)
-	      {
-		const _UInt __bool4 =
-		  ((__bits >> __offset) * 0x00204081U) & 0x01010101U;
-		std::memcpy(&__mem[__offset], &__bool4, __remaining);
-	      }
-	    else if constexpr (__remaining <= 7)
-	      {
-		const _ULLong bool8 =
-		  ((__bits >> __offset) * 0x40810204081ULL) &
-		  0x0101010101010101ULL;
-		std::memcpy(&__mem[__offset], &bool8, __remaining);
-	      }
-	    else
-	      {
-		using _V   = __vector_type_t<_UChar, 16>;
-		auto __tmp = _mm_cvtsi32_si128(__bits >> __offset);
-		__tmp      = _mm_unpacklo_epi8(__tmp, __tmp);
-		__tmp      = _mm_unpacklo_epi16(__tmp, __tmp);
-		__tmp      = _mm_unpacklo_epi32(__tmp, __tmp);
-		_V __tmp2 = reinterpret_cast<_V>(__tmp);
-		__tmp2 &= __generate_vector<_V>([](auto __j) {
-		  return static_cast<_UChar>(1 << (__j % CHAR_BIT));
-		}); // mask bit index
-		const __m128i __bool16 = __intrin_bitcast<__m128i>(
-		  (__tmp2 == 0) + 1); // 0xff -> 0x00 | 0x00 -> 0x01
-		if constexpr (__remaining >= 16)
-		  {
-		    __vector_store<16>(__bool16, &__mem[__offset], _Fp());
-		  }
-		else if constexpr (__remaining & 3)
-		  {
-		    constexpr int to_shift = 16 - int(__remaining);
-		    _mm_maskmoveu_si128(
-		      __bool16, _mm_srli_si128(~__m128i(), to_shift),
-		      reinterpret_cast<char*>(&__mem[__offset]));
-		  }
-		else // at this point: 8 < __remaining < 16
-		  if constexpr (__remaining >= 8)
-		  {
-		    __vector_store<8>(__bool16, &__mem[__offset], _Fp());
-		    if constexpr (__remaining == 12)
-		      {
-			__vector_store<4>(
-			  _mm_unpackhi_epi64(__bool16, __bool16),
-			  &__mem[__offset + 8], _Fp());
-		      }
-		  }
-	      }
-	  });
-	}
+      if constexpr (_Np == 1)
+	__mem[0] = __bs[0];
       else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
 	{
-	  // TODO: _UChar is not necessarily the best type to use here. For
-	  // smaller _Np _UShort, _UInt, _ULLong, float, and double can be more
-	  // efficient.
-	  using _Vs = __fixed_size_storage_t<_UChar, _Np>;
-	  __for_each(_Vs{}, [&](auto __meta, auto) {
-	    __meta._S_mask_impl.__store(__meta.__make_mask(__bs),
-					&__mem[__meta._S_offset], _Fp());
-	  });
-	  //__execute_n_times<_Np>([&](auto __i) { __mem[__i] = __bs[__i]; });
+	  const auto __bools =
+	    simd_abi::deduce_t<_UChar, _Np>::_MaskImpl::__to_boolvector(__bs);
+	  __vector_store<_Np>(__bools, __mem, _Fp());
 	}
     }
 

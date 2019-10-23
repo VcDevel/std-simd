@@ -2834,6 +2834,92 @@ struct _MaskImplX86Mixin
   }
 
   // }}}
+  // __to_boolvector(bitset) {{{
+  // note: _ToN == 1 is not allowed
+  template <size_t _UpN = 0, size_t _FromN, size_t _ToN = _UpN == 0 ? _FromN : _UpN>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_UChar, _ToN>
+    __to_boolvector(std::bitset<_FromN> __x)
+  {
+    constexpr size_t _Np = std::min(_ToN, _FromN);
+    if constexpr (__have_avx512bw_vl) // don't care for BW w/o VL
+      return 1 & __vector_bitcast<_UChar>([=]() constexpr {
+	       if constexpr (_Np <= 16)
+		 return _mm_movm_epi8(__x.to_ulong());
+	       else if constexpr (_Np <= 32)
+		 return _mm256_movm_epi8(__x.to_ulong());
+	       else if constexpr (_Np <= 64)
+		 return _mm512_movm_epi8(__x.to_ullong());
+	       else
+		 __assert_unreachable<_SizeConstant<_Np>>();
+	     }());
+    else if constexpr (__have_bmi2)
+      return __vector_bitcast<_UChar, _ToN>(
+#ifdef __x86_64__
+	__generate_from_n_evaluations<
+	  __div_roundup(_Np, 8),
+	  __vector_type_t<_ULLong, __div_roundup(_ToN, 8)>>([&](auto __i) {
+	  constexpr size_t __offset = __i * 8;
+	  return _pdep_u64(__x.to_ullong() >> __offset, 0x0101010101010101ULL);
+	})
+#else  // __x86_64__
+	__generate_from_n_evaluations<
+	  __div_roundup(_Np, 4),
+	  __vector_type_t<_UInt, __div_roundup(_ToN, 4)>>([&](auto __i) {
+	  constexpr size_t __offset = __i * 4;
+	  return _pdep_u32(__x.to_ullong() >> __offset, 0x01010101U);
+	})
+#endif // __x86_64__
+      );
+    else if constexpr (__have_sse2 && _Np > 7 && _Np <= 16)
+      return __call_with_n_evaluations<__div_roundup(_Np, 16)>(
+	[](auto... __bool16) {
+	  if constexpr (sizeof...(__bool16) == 1)
+	    return [](__m128i __a) {
+	      return __vector_bitcast<_UChar, _Np>(__a);
+	    }(__bool16...);
+	  else if constexpr (sizeof...(__bool16) == 2)
+	    return __concat(__bool16...);
+	  else if constexpr (sizeof...(__bool16) == 3)
+	    return [](__m128i __a, __m128i __b, __m128i __c) {
+	      return __concat(__concat(__a, __b), __m256i(__zero_extend(__c)));
+	    }(__bool16...);
+	  else if constexpr (sizeof...(__bool16) == 4)
+	    return [](__m128i __a, __m128i __b, __m128i __c, __m128i __d) {
+	      return __concat(__concat(__a, __b), __concat(__c, __d));
+	    }(__bool16...);
+	  else
+	    __assert_unreachable<_SizeConstant<sizeof...(__bool16)>>();
+	},
+	[&](auto __i) {
+	  const auto __bits = (__x >> (__i * 16)).to_ulong();
+	  if constexpr (__have_avx512f)
+	    {
+	      auto __as32bits = _mm512_maskz_mov_epi32(
+		__bits, __to_intrin(__vector_broadcast<16>(1)));
+	      auto __as16bits = __xzyw(
+		_mm256_packs_epi32(__lo256(__as32bits),
+				   _Np > 8 ? __hi256(__as32bits) : __m256i()));
+	      return _mm_packs_epi16(__lo128(__as16bits), __hi128(__as16bits));
+	    }
+	  else
+	    {
+	      using _V            = __vector_type_t<_UChar, 16>;
+	      auto __tmp          = _mm_cvtsi32_si128(__bits);
+	      __tmp               = _mm_unpacklo_epi8(__tmp, __tmp);
+	      __tmp               = _mm_unpacklo_epi16(__tmp, __tmp);
+	      __tmp               = _mm_unpacklo_epi32(__tmp, __tmp);
+	      _V           __tmp2 = reinterpret_cast<_V>(__tmp);
+	      __tmp2 &= _V{1, 2, 4, 8, 16, 32, 64, 128,
+			   1, 2, 4, 8, 16, 32, 64, 128}; // mask bit index
+	      return __intrin_bitcast<__m128i>(
+		(__tmp2 == 0) + 1); // 0xff -> 0x00 | 0x00 -> 0x01
+	    }
+	});
+    else
+      return _Base::__to_boolvector(__x);
+  }
+
+  // }}}
   // __to_maskvector(bitset) {{{
   template <typename _Up,
 	    size_t _UpN = 0,
@@ -3541,6 +3627,7 @@ struct _MaskImplX86Mixin
 template <typename _Abi>
 struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 {
+  using _MaskImplX86Mixin::__to_boolvector;
   using _MaskImplX86Mixin::__to_maskvector;
   using _MaskImplX86Mixin::__to_bits;
 

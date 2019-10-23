@@ -2321,6 +2321,45 @@ struct _MaskImplBuiltinMixin {
   template <typename _Tp>
   using _TypeTag = _Tp*;
 
+  // __to_boolvector(bitset) {{{
+  // note: _ToN == 1 is not allowed
+  template <size_t _UpN = 0, size_t _FromN, size_t _ToN = _UpN == 0 ? _FromN : _UpN>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_UChar, _ToN>
+    __to_boolvector(std::bitset<_FromN> __x)
+  {
+    constexpr size_t _Np = std::min(_ToN, _FromN);
+    if constexpr (_ToN == 2)
+      {
+	short __bool2 = (__x.to_ulong() * 0x81) & 0x0101;
+	return __bit_cast<__vector_type_t<_UChar, _ToN>>(__bool2);
+      }
+    else if constexpr (_ToN == 3)
+      {
+	int __bool3 = (__x.to_ulong() * 0x4081) & 0x010101;
+	return __bit_cast<__vector_type_t<_UChar, _ToN>>(__bool3);
+      }
+    else if constexpr (_ToN == 4)
+      {
+	int __bool4 = (__x.to_ulong() * 0x204081) & 0x01010101;
+	return __bit_cast<__vector_type_t<_UChar, _ToN>>(__bool4);
+      }
+    else if constexpr (_Np > 4 && _Np <= 7)
+      {
+	const _ULLong __bool7 =
+	  (__x.to_ulong() * 0x40810204081ULL) & 0x0101010101010101ULL;
+	return __bit_cast<__vector_type_t<_UChar, _ToN>>(__bool7);
+      }
+    else
+      return __vector_bitcast<_UChar, _ToN>(
+	__generate_from_n_evaluations<
+	  __div_roundup(_Np, 4),
+	  __vector_type_t<_UInt, __div_roundup(_ToN, 4)>>([&](auto __i) {
+	  constexpr size_t __offset = __i * 4;
+	  return ((__x >> __offset).to_ulong() * 0x00204081U) & 0x01010101U;
+	}));
+  }
+
+  // }}}
   // __to_maskvector {{{
   template <typename _Up, size_t _ToN = 1>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
@@ -2427,6 +2466,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 {
   using _MaskImplBuiltinMixin::__to_bits;
   using _MaskImplBuiltinMixin::__to_maskvector;
+  using _MaskImplBuiltinMixin::__to_boolvector;
 
   // member types {{{
   template <typename _Tp>
