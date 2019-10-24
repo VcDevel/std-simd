@@ -274,7 +274,8 @@ TEST_TYPES(M, load_store, all_test_types)  //{{{1
         COMPARE(mem[i], false);
     }
     for (; i < 2 * M::size(); ++i) {
-        COMPARE(mem[i], true) << "i: " << i << ", x: " << x;
+	COMPARE(mem[i], true)
+	  .on_failure("i: ", i, ", x: ", x, ", mem: ", vir::test::asBytes(mem));
     }
     for (; i < 3 * M::size(); ++i) {
         COMPARE(mem[i], false);
