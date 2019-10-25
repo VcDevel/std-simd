@@ -54,24 +54,7 @@ TEST_TYPES(VU, load_store, outer_product<all_test_types, MemTypes>)
     // 2 * sizeof(U). I.e. if the first address is aligned to 8 * sizeof(U), then the next
     // address is 6 * sizeof(U) larger, thus only aligned to 2 * sizeof(U).
     // => the LSB determines the stride alignment
-    constexpr size_t stride_alignment =
-        V::size() & 1 ? 1 : V::size() & 2
-                                ? 2
-                                : V::size() & 4
-                                      ? 4
-                                      : V::size() & 8
-                                            ? 8
-                                            : V::size() & 16
-                                                  ? 16
-                                                  : V::size() & 32
-                                                        ? 32
-                                                        : V::size() & 64
-                                                              ? 64
-                                                              : V::size() & 128
-                                                                    ? 128
-                                                                    : V::size() & 256
-                                                                          ? 256
-                                                                          : 512;
+    constexpr size_t stride_alignment = size_t(1) << __builtin_ctz(V::size());
     using stride_aligned_t =
         std::conditional_t<V::size() == stride_alignment, decltype(vector_aligned),
                            std::experimental::overaligned_tag<stride_alignment * sizeof(U)>>;
