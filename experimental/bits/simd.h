@@ -1253,44 +1253,6 @@ __vector_type16_t<_Tp> __vector_load16(const void* __p, _Fp __f)
 }
 
 // }}}
-// __vector_store{{{
-template <size_t _M         = 0, // only sets number of bytes to store
-	  size_t _NElements = 0, // modifies vector_alignment
-	  typename _B,
-	  typename _BVT = _VectorTraits<_B>,
-	  typename _Fp>
-void __vector_store(const _B __v, void* __p, _Fp)
-{
-  using _Tp               = typename _BVT::value_type;
-  constexpr size_t _Np     = _NElements == 0 ? _BVT::_S_width : _NElements;
-  constexpr size_t _Bytes = _M == 0 ? _Np * sizeof(_Tp) : _M;
-  static_assert(_Bytes <= sizeof(__v));
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR90424
-  using _Up = std::conditional_t<
-    (std::is_integral_v<_Tp> || _Bytes < 4),
-    std::conditional_t<(sizeof(_B) > sizeof(long long)), long long, _Tp>,
-    std::conditional_t<(std::is_same_v<_Tp, double> || _Bytes < 8), float,
-		       _Tp>>;
-  const auto __vv = __vector_bitcast<_Up>(__v);
-#else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
-  const __vector_type_t<_Tp, _Np> __vv          = __v;
-#endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
-  if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
-    __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _Np>));
-  else if constexpr (!std::is_same_v<_Fp, element_aligned_tag>)
-    __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
-  if constexpr ((_Bytes & (_Bytes - 1)) != 0)
-    {
-      constexpr size_t         _MoreBytes = __next_power_of_2(_Bytes);
-      alignas(decltype(__vv)) char __tmp[_MoreBytes];
-      std::memcpy(__tmp, &__vv, _MoreBytes);
-      std::memcpy(__p, __tmp, _Bytes);
-    }
-  else
-    std::memcpy(__p, &__vv, _Bytes);
-}
-
-// }}}
 // __xor{{{
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
@@ -2129,6 +2091,7 @@ struct _SimdWrapper<
   using _BuiltinType               = __vector_type_t<_Tp, _Width>;
   using value_type                 = _Tp;
   static constexpr size_t _S_width = sizeof(_BuiltinType) / sizeof(value_type);
+  static inline constexpr int __size = _Width;
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, _S_width>
     __as_full_vector() const

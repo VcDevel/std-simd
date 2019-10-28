@@ -36,6 +36,16 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
+// _CommonImplNeon {{{
+struct _CommonImplNeon : _CommonImplBuiltin
+{
+  // __store {{{
+  using _CommonImplBuiltin::__store;
+
+  // }}}
+};
+
+// }}}
 // _SimdImplNeon {{{
 template <typename _Abi>
 struct _SimdImplNeon : _SimdImplBuiltin<_Abi>

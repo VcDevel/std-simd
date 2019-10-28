@@ -1254,6 +1254,7 @@ template <typename _Tp> struct __autocvt_to_simd<_Tp, true> {
 
 // }}}
 
+struct _CommonImplFixedSize;
 template <int _Np> struct _SimdImplFixedSize;
 template <int _Np> struct _MaskImplFixedSize;
 // simd_abi::_Fixed {{{
@@ -1290,7 +1291,8 @@ struct simd_abi::_Fixed
   }
 
   // }}}
-  // simd/_MaskImpl {{{
+  // _*Impl {{{
+  using _CommonImpl = _CommonImplFixedSize;
   using _SimdImpl = _SimdImplFixedSize<_Np>;
   using _MaskImpl = _MaskImplFixedSize<_Np>;
 
@@ -1369,6 +1371,27 @@ struct simd_abi::_Fixed
     };
     // }}}
   };
+  // }}}
+};
+
+// }}}
+// _CommonImplFixedSize {{{
+struct _CommonImplFixedSize
+{
+  // __store {{{
+  template <typename _Flags, typename _Tp, typename... _As>
+  _GLIBCXX_SIMD_INTRINSIC static void
+    __store(const _SimdTuple<_Tp, _As...>& __x, void* __addr, _Flags)
+  {
+    constexpr size_t _Np = _SimdTuple<_Tp, _As...>::size();
+    if constexpr (std::is_same_v<_Flags, vector_aligned_tag>)
+      __addr = __builtin_assume_aligned(
+	__addr, memory_alignment_v<fixed_size_simd<_Tp, _Np>, _Tp>);
+    else if constexpr (!std::is_same_v<_Flags, element_aligned_tag>)
+      __addr = __builtin_assume_aligned(__addr, _Flags::_S_alignment);
+    __builtin_memcpy(__addr, &__x, _Np * sizeof(_Tp));
+  }
+
   // }}}
 };
 
@@ -1862,6 +1885,8 @@ template <int _Np> struct _MaskImplFixedSize {
 
   // member types {{{
   using _Abi = simd_abi::fixed_size<_Np>;
+  template <typename _Tp>
+  using _FirstAbi   = typename __fixed_size_storage_t<_Tp, _Np>::_FirstAbi;
   using _MaskMember = std::bitset<_Np>;
   template <typename _Tp>
   using _TypeTag = _Tp*;
@@ -1946,11 +1971,7 @@ template <int _Np> struct _MaskImplFixedSize {
       if constexpr (_Np == 1)
 	__mem[0] = __bs[0];
       else
-	{
-	  const auto __bools =
-	    simd_abi::deduce_t<_UChar, _Np>::_MaskImpl::__to_boolvector(__bs);
-	  __vector_store<_Np>(__bools, __mem, _Fp());
-	}
+	_FirstAbi<_UChar>::_CommonImpl::__store_bool_array(__bs, __mem, _Fp());
     }
 
     // __masked_store {{{2

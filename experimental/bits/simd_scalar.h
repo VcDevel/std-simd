@@ -49,6 +49,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr decltype(auto)
 
 // }}}
 
+struct _CommonImplScalar;
 struct _SimdImplScalar;
 struct _MaskImplScalar;
 // simd_abi::_Scalar {{{
@@ -66,6 +67,7 @@ struct simd_abi::_Scalar {
       return __x;
     }
 
+    using _CommonImpl = _CommonImplScalar;
     using _SimdImpl = _SimdImplScalar;
     using _MaskImpl = _MaskImplScalar;
 
@@ -92,6 +94,17 @@ struct simd_abi::_Scalar {
         struct _MaskBase {};
     };
 };
+// }}}
+// _CommonImplScalar {{{
+struct _CommonImplScalar
+{
+  template <typename _Flags, typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static void __store(_Tp __x, void* __addr, _Flags)
+  {
+    __builtin_memcpy(__addr, &__x, sizeof(_Tp));
+  }
+};
+
 // }}}
 // _SimdImplScalar {{{
 struct _SimdImplScalar {
