@@ -1235,12 +1235,12 @@ __vector_type_t<_Tp, _Np> __vector_load(const void* __p, _Fp)
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
   _V __r{};
   static_assert(_M <= sizeof(_V));
-  if constexpr (std::is_same_v<_Fp, element_aligned_tag>) {}
-  else if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
+  if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
     __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _Np>));
-  else
+  else if constexpr (!std::is_same_v<_Fp, element_aligned_tag>)
     __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
-  std::memcpy(&__r, __p, _M);
+
+  __builtin_memcpy(&__r, __p, _M);
   return reinterpret_cast<__vector_type_t<_Tp, _Np>>(__r);
 }
 
