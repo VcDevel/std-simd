@@ -42,12 +42,21 @@ template <typename _A,
 	  typename _Tp    = std::common_type_t<_A, _B>,
 	  typename _Trait = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-  __interleave128_lo(const _A& _a, const _B& _b)
+  __interleave128_lo(const _A& __av, const _B& __bv)
 {
-  const _Tp __a(_a);
-  const _Tp __b(_b);
-  if constexpr (sizeof(_Tp) == 16)
-    return __interleave_lo(__a, __b);
+  const _Tp __a(__av);
+  const _Tp __b(__bv);
+  if constexpr (sizeof(_Tp) == 16 && _Trait::_S_width == 2)
+    return _Tp{__a[0], __b[0]};
+  else if constexpr (sizeof(_Tp) == 16 && _Trait::_S_width == 4)
+    return _Tp{__a[0], __b[0], __a[1], __b[1]};
+  else if constexpr (sizeof(_Tp) == 16 && _Trait::_S_width == 8)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1], __a[2], __b[2],
+	       __a[3],  __b[3]};
+  else if constexpr (sizeof(_Tp) == 16 && _Trait::_S_width == 16)
+    return _Tp{__a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],
+	       __b[3],  __a[4],  __b[4],  __a[5],  __b[5],  __a[6],  __b[6],
+	       __a[7],  __b[7]};
   else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 4)
     return _Tp{__a[0], __b[0], __a[2], __b[2]};
   else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 8)
@@ -62,16 +71,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
 	       __a[7],  __b[7],  __a[16], __b[16], __a[17], __b[17], __a[18],
 	       __b[18], __a[19], __b[19], __a[20], __b[20], __a[21], __b[21],
 	       __a[22], __b[22], __a[23], __b[23]};
-  else if constexpr (sizeof(_Tp) == 32 && _Trait::_S_width == 64)
-    return _Tp{
-      __a[0],  __b[0],  __a[1],  __b[1],  __a[2],  __b[2],  __a[3],  __b[3],
-      __a[4],  __b[4],  __a[5],  __b[5],  __a[6],  __b[6],  __a[7],  __b[7],
-      __a[8],  __b[8],  __a[9],  __b[9],  __a[10], __b[10], __a[11], __b[11],
-      __a[12], __b[12], __a[13], __b[13], __a[14], __b[14], __a[15], __b[15],
-      __a[32], __b[32], __a[33], __b[33], __a[34], __b[34], __a[35], __b[35],
-      __a[36], __b[36], __a[37], __b[37], __a[38], __b[38], __a[39], __b[39],
-      __a[40], __b[40], __a[41], __b[41], __a[42], __b[42], __a[43], __b[43],
-      __a[44], __b[44], __a[45], __b[45], __a[46], __b[46], __a[47], __b[47]};
   else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 8)
     return _Tp{__a[0], __b[0], __a[2], __b[2], __a[4], __b[4], __a[6], __b[6]};
   else if constexpr (sizeof(_Tp) == 64 && _Trait::_S_width == 16)
