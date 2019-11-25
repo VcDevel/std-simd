@@ -92,7 +92,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr decltype(auto)
   __simd_tuple_pop_front(_Tp&& __x)
 {
   if constexpr (_Np == 0)
-    return std::forward<_Tp>(__x);
+    return static_cast<_Tp&&>(__x);
   else
     return __simd_tuple_pop_front<_Np - 1>(__x.second);
 }
@@ -300,17 +300,17 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 
   template <typename _Up>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x)
-  : _Base{forward<_Up>(__x)}
+  : _Base{static_cast<_Up&&>(__x)}
   {
   }
   template <typename _Up, typename _Up2>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x, _Up2&& __y)
-  : _Base{forward<_Up>(__x), forward<_Up2>(__y)}
+  : _Base{static_cast<_Up&&>(__x), static_cast<_Up2&&>(__y)}
   {
   }
   template <typename _Up>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple(_Up&& __x, _SimdTuple<_Tp>)
-  : _Base{forward<_Up>(__x)}
+  : _Base{static_cast<_Up&&>(__x)}
   {
   }
 
@@ -358,7 +358,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return {__first};
     else
       return {__first, _SecondType::__generate(
-			 std::forward<_Fp>(__gen),
+			 static_cast<_Fp&&>(__gen),
 			 _SizeConstant<_Offset + simd_size_v<_Tp, _Abi0>>())};
   }
 
@@ -373,7 +373,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return {
 	__first,
 	second.template __apply_wrapped<_Offset + simd_size_v<_Tp, _Abi0>>(
-	  std::forward<_Fp>(__fun), __more.second...)};
+	  static_cast<_Fp&&>(__fun), __more.second...)};
   }
 
   template <size_t _Size,
@@ -496,7 +496,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 		  __dst.template __assign_front<__offset<decltype(__dst)>>(
 		    __src);
 		}
-	    }(std::forward<_More>(__more), __args),
+	    }(static_cast<_More&&>(__more), __args),
 	    0)...};
 	  return __r;
 	}(__extract_argument(__more)...);
@@ -504,7 +504,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	  return { __first };
 	else
 	  return {__first,
-		  second.__apply_per_chunk(std::forward<_Fp>(__fun),
+		  second.__apply_per_chunk(static_cast<_Fp&&>(__fun),
 					   __skip_argument(__more)...)};
       }
     else
@@ -515,7 +515,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 	  return { __first };
 	else
 	  return {__first,
-		  second.__apply_per_chunk(std::forward<_Fp>(__fun),
+		  second.__apply_per_chunk(static_cast<_Fp&&>(__fun),
 					   __skip_argument(__more)...)};
       }
   }
@@ -530,7 +530,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return __first;
     else
       return __simd_tuple_concat<_R>(
-	__first, second.template __apply_r<_R>(std::forward<_Fp>(__fun),
+	__first, second.template __apply_r<_R>(static_cast<_Fp&&>(__fun),
 					       __more.second...));
   }
 
@@ -857,7 +857,7 @@ template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(const _SimdTuple<_Tp, _A0>& __t, _Fp&& __fun)
 {
-  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__t), __t.first);
+  static_cast<_Fp&&>(__fun)(__make_meta<_Offset>(__t), __t.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
@@ -870,7 +870,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 {
   __fun(__make_meta<_Offset>(__t), __t.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__t.second,
-						   std::forward<_Fp>(__fun));
+						   static_cast<_Fp&&>(__fun));
 }
 
 // __for_each(_SimdTuple &, Fun) {{{1
@@ -878,7 +878,7 @@ template <size_t _Offset = 0, typename _Tp, typename _A0, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
   __for_each(_SimdTuple<_Tp, _A0>& __t, _Fp&& __fun)
 {
-  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__t), __t.first);
+  static_cast<_Fp&&>(__fun)(__make_meta<_Offset>(__t), __t.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
@@ -891,7 +891,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 {
   __fun(__make_meta<_Offset>(__t), __t.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__t.second,
-						   std::forward<_Fp>(__fun));
+						   static_cast<_Fp&&>(__fun));
 }
 
 // __for_each(_SimdTuple &, const _SimdTuple &, Fun) {{{1
@@ -901,7 +901,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 	     const _SimdTuple<_Tp, _A0>& __b,
 	     _Fp&&                          __fun)
 {
-  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
+  static_cast<_Fp&&>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
@@ -916,7 +916,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 {
   __fun(__make_meta<_Offset>(__a), __a.first, __b.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__a.second, __b.second,
-						   std::forward<_Fp>(__fun));
+						   static_cast<_Fp&&>(__fun));
 }
 
 // __for_each(const _SimdTuple &, const _SimdTuple &, Fun) {{{1
@@ -926,7 +926,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 	     const _SimdTuple<_Tp, _A0>& __b,
 	     _Fp&&                          __fun)
 {
-  std::forward<_Fp>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
+  static_cast<_Fp&&>(__fun)(__make_meta<_Offset>(__a), __a.first, __b.first);
 }
 template <size_t _Offset = 0,
 	  typename _Tp,
@@ -941,7 +941,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 {
   __fun(__make_meta<_Offset>(__a), __a.first, __b.first);
   __for_each<_Offset + simd_size<_Tp, _A0>::value>(__a.second, __b.second,
-						   std::forward<_Fp>(__fun));
+						   static_cast<_Fp&&>(__fun));
 }
 
 // }}}1
@@ -1801,7 +1801,7 @@ public:
     template <typename _Tp, typename... _As, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdTuple<_Tp, _As...> &__v, int __i, _Up &&__x) noexcept
     {
-        __v.__set(__i, std::forward<_Up>(__x));
+        __v.__set(__i, static_cast<_Up&&>(__x));
     }
 
     // __masked_assign {{{2

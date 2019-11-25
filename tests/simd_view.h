@@ -93,7 +93,7 @@ public:
     template <class F> void for_each(F &&fun) {
         constexpr size_t N =
             std::tuple_size<std::decay_t<decltype(it->as_tuple())>>::value;
-        for_each_impl(std::forward<F>(fun), std::make_index_sequence<N>());
+        for_each_impl(static_cast<F&&>(fun), std::make_index_sequence<N>());
     }
 };
 

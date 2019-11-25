@@ -204,7 +204,7 @@ template <typename _Fp> class __defer_raii
 {
 public:
     // construct the object from the given callable
-    template <typename _FF> __defer_raii(_FF &&__f) : __cleanup_function(std::forward<_FF>(__f))
+    template <typename _FF> __defer_raii(_FF &&__f) : __cleanup_function(static_cast<_FF&&>(__f))
     {
     }
 
@@ -215,7 +215,7 @@ private:
     _Fp __cleanup_function;
 };
 
-template <typename _Fp> __defer_raii<_Fp> __defer(_Fp &&__f) { return {std::forward<_Fp>(__f)}; }
+template <typename _Fp> __defer_raii<_Fp> __defer(_Fp &&__f) { return {static_cast<_Fp&&>(__f)}; }
 
 _GLIBCXX_SIMD_END_NAMESPACE
 

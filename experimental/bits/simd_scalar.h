@@ -392,7 +392,7 @@ struct _SimdImplScalar {
     static void __set(_Tp& __v, [[maybe_unused]] int __i, _Up&& __x) noexcept
     {
       _GLIBCXX_DEBUG_ASSERT(__i == 0);
-      __v = std::forward<_Up>(__x);
+      __v = static_cast<_Up&&>(__x);
     }
 
     // __masked_assign {{{2

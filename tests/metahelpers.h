@@ -35,9 +35,9 @@ struct assignment {
     template <class A, class B>
     constexpr decltype(std::declval<A>() = std::declval<B>()) operator()(A &&a,
                                                                          B &&b) const
-        noexcept(noexcept(std::forward<A>(a) = std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) = static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) = std::forward<B>(b);
+        return static_cast<A&&>(a) = static_cast<B&&>(b);
     }
 };
 
@@ -45,9 +45,9 @@ struct bit_shift_left {
     template <class A, class B>
     constexpr decltype(std::declval<A>() << std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) << std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) << static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) << std::forward<B>(b);
+        return static_cast<A&&>(a) << static_cast<B&&>(b);
     }
 };
 
@@ -55,9 +55,9 @@ struct bit_shift_right {
     template <class A, class B>
     constexpr decltype(std::declval<A>() >> std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) >> std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) >> static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) >> std::forward<B>(b);
+        return static_cast<A&&>(a) >> static_cast<B&&>(b);
     }
 };
 
@@ -65,9 +65,9 @@ struct assign_modulus {
     template <class A, class B>
     constexpr decltype(std::declval<A>() %= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) %= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) %= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) %= std::forward<B>(b);
+        return static_cast<A&&>(a) %= static_cast<B&&>(b);
     }
 };
 
@@ -75,9 +75,9 @@ struct assign_bit_and {
     template <class A, class B>
     constexpr decltype(std::declval<A>() &= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) &= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) &= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) &= std::forward<B>(b);
+        return static_cast<A&&>(a) &= static_cast<B&&>(b);
     }
 };
 
@@ -85,9 +85,9 @@ struct assign_bit_or {
     template <class A, class B>
     constexpr decltype(std::declval<A>() |= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) |= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) |= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) |= std::forward<B>(b);
+        return static_cast<A&&>(a) |= static_cast<B&&>(b);
     }
 };
 
@@ -95,9 +95,9 @@ struct assign_bit_xor {
     template <class A, class B>
     constexpr decltype(std::declval<A>() ^= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) ^= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) ^= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) ^= std::forward<B>(b);
+        return static_cast<A&&>(a) ^= static_cast<B&&>(b);
     }
 };
 
@@ -105,9 +105,9 @@ struct assign_bit_shift_left {
     template <class A, class B>
     constexpr decltype(std::declval<A>() <<= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) <<= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) <<= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) <<= std::forward<B>(b);
+        return static_cast<A&&>(a) <<= static_cast<B&&>(b);
     }
 };
 
@@ -115,9 +115,9 @@ struct assign_bit_shift_right {
     template <class A, class B>
     constexpr decltype(std::declval<A>() >>= std::declval<B>()) operator()(A &&a,
                                                                           B &&b) const
-        noexcept(noexcept(std::forward<A>(a) >>= std::forward<B>(b)))
+        noexcept(noexcept(static_cast<A&&>(a) >>= static_cast<B&&>(b)))
     {
-        return std::forward<A>(a) >>= std::forward<B>(b);
+        return static_cast<A&&>(a) >>= static_cast<B&&>(b);
     }
 };
 

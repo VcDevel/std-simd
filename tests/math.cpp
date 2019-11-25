@@ -73,7 +73,7 @@ void test_tuples(const std::initializer_list<std::array<typename V::value_type, 
                  F &&... fun_pack)
 {
     test_tuples_impl<V, N>(std::make_index_sequence<N>(), data,
-                           std::forward<F>(fun_pack)...);
+                           static_cast<F&&>(fun_pack)...);
 }
 
 TEST_TYPES(V, abs, all_test_types)  //{{{1

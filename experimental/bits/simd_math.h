@@ -131,7 +131,7 @@ template <typename _Up, typename _Tp, typename _Abi> struct __extra_argument_typ
     __name(_Up&& __xx, const std::experimental::simd<_Tp, _Abi>& __yy)         \
   {                                                                            \
     return std::experimental::__name(                                          \
-      std::experimental::simd<_Tp, _Abi>(std::forward<_Up>(__xx)), __yy);      \
+      std::experimental::simd<_Tp, _Abi>(static_cast<_Up&&>(__xx)), __yy);     \
   }
 
 // }}}
@@ -166,9 +166,9 @@ template <typename _Up, typename _Tp, typename _Abi> struct __extra_argument_typ
     _Simd(std::declval<_V>())))                                                \
     __name(_Tp&& __xx, _Up&& __yy, _V&& __zz)                                  \
   {                                                                            \
-    return std::experimental::__name(_Simd(std::forward<_Tp>(__xx)),           \
-				     _Simd(std::forward<_Up>(__yy)),           \
-				     _Simd(std::forward<_V>(__zz)));           \
+    return std::experimental::__name(_Simd(static_cast<_Tp&&>(__xx)),          \
+				     _Simd(static_cast<_Up&&>(__yy)),          \
+				     _Simd(static_cast<_V&&>(__zz)));          \
   }
 
 // }}}
@@ -428,22 +428,22 @@ rebind_simd_t<int, simd<double, _Abi>> __extract_exponent_bits(const simd<double
 template <typename ImplFun, typename FallbackFun, typename... _Args>
 _GLIBCXX_SIMD_INTRINSIC auto __impl_or_fallback_dispatch(int, ImplFun&& __impl_fun,
                                                          FallbackFun&&, _Args&&... __args)
-    -> decltype(__impl_fun(std::forward<_Args>(__args)...))
+    -> decltype(__impl_fun(static_cast<_Args&&>(__args)...))
 {
-    return __impl_fun(std::forward<_Args>(__args)...);
+    return __impl_fun(static_cast<_Args&&>(__args)...);
 }
 
 template <typename ImplFun, typename FallbackFun, typename... _Args>
 inline auto __impl_or_fallback_dispatch(float, ImplFun&&, FallbackFun&& __fallback_fun,
                                         _Args&&... __args)
-    -> decltype(__fallback_fun(std::forward<_Args>(__args)...))
+    -> decltype(__fallback_fun(static_cast<_Args&&>(__args)...))
 {
-    return __fallback_fun(std::forward<_Args>(__args)...);
+    return __fallback_fun(static_cast<_Args&&>(__args)...);
 }
 
 template <typename... _Args> _GLIBCXX_SIMD_INTRINSIC auto __impl_or_fallback(_Args&&... __args)
 {
-    return __impl_or_fallback_dispatch(int(), std::forward<_Args>(__args)...);
+    return __impl_or_fallback_dispatch(int(), static_cast<_Args&&>(__args)...);
 }  //}}}
 
 // trigonometric functions {{{

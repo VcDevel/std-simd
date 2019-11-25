@@ -41,7 +41,7 @@ template <class... Ts, class F> void call_with_types(F &&f, vir::Typelist<Ts...>
 
 template <class List, class F> void call_with_typelist(F &&f)
 {
-    call_with_types(std::forward<F>(f), List());
+    call_with_types(static_cast<F&&>(f), List());
 }
 
 template <typename T, typename V, typename = void>

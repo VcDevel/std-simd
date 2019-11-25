@@ -477,7 +477,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _R
 template <size_t _Np, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void __execute_n_times(_Fp&& __f)
 {
-  __execute_on_index_sequence(std::forward<_Fp>(__f),
+  __execute_on_index_sequence(static_cast<_Fp&&>(__f),
 			      std::make_index_sequence<_Np>{});
 }
 
@@ -487,7 +487,7 @@ template <size_t _Np, typename _R, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr _R __generate_from_n_evaluations(_Fp&& __f)
 {
   return __execute_on_index_sequence_with_return<_R>(
-    std::forward<_Fp>(__f), std::make_index_sequence<_Np>{});
+    static_cast<_Fp&&>(__f), std::make_index_sequence<_Np>{});
 }
 
 // }}}
@@ -506,8 +506,8 @@ _GLIBCXX_SIMD_INTRINSIC constexpr auto
   __call_with_n_evaluations(_F0&& __f0, _FArgs&& __fargs)
 {
   return __call_with_n_evaluations(std::make_index_sequence<_Np>{},
-				   std::forward<_F0>(__f0),
-				   std::forward<_FArgs>(__fargs));
+				   static_cast<_F0&&>(__f0),
+				   static_cast<_FArgs&&>(__fargs));
 }
 
 // }}}
@@ -522,9 +522,9 @@ _GLIBCXX_SIMD_INTRINSIC auto
 template <size_t _Np, size_t _First = 0, typename _Tp, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC auto __call_with_subscripts(_Tp&& __x, _Fp&& __fun)
 {
-  return __call_with_subscripts<_First>(std::forward<_Tp>(__x),
+  return __call_with_subscripts<_First>(static_cast<_Tp&&>(__x),
 					std::make_index_sequence<_Np>(),
-					std::forward<_Fp>(__fun));
+					static_cast<_Fp&&>(__fun));
 }
 
 // }}}
@@ -1200,11 +1200,11 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _V __generate_vector(_G&& __gen)
 {
   if constexpr (__is_vector_type_v<_V>)
     return __generate_vector_impl<typename _VVT::value_type, _VVT::_S_width>(
-      std::forward<_G>(__gen), std::make_index_sequence<_VVT::_S_width>());
+      static_cast<_G&&>(__gen), std::make_index_sequence<_VVT::_S_width>());
   else
     return __generate_vector_impl<typename _VVT::value_type,
 				  _VVT::_S_partial_width>(
-      std::forward<_G>(__gen),
+      static_cast<_G&&>(__gen),
       std::make_index_sequence<_VVT::_S_partial_width>());
 }
 
@@ -1212,7 +1212,7 @@ template <typename _Tp, size_t _Np, typename _G>
 _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _Np>
   __generate_vector(_G&& __gen)
 {
-  return __generate_vector_impl<_Tp, _Np>(std::forward<_G>(__gen),
+  return __generate_vector_impl<_Tp, _Np>(static_cast<_G&&>(__gen),
 					 std::make_index_sequence<_Np>());
 }
 
@@ -2081,7 +2081,7 @@ struct _SimdWrapper<
     typename _Up,
     typename = decltype(_SimdWrapperBase<_Tp, _Width>(std::declval<_Up>()))>
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(_Up&& __x)
-  : _SimdWrapperBase<_Tp, _Width>(std::forward<_Up>(__x))
+  : _SimdWrapperBase<_Tp, _Width>(static_cast<_Up&&>(__x))
   {
   }
   // I want to use ctor inheritance, but it breaks always_inline. Having a
@@ -2716,7 +2716,7 @@ public:
     {
         std::experimental::__get_impl_t<_Tp>::__masked_assign(
             __data(_M_k), __data(_M_value),
-            __to_value_type_or_member_type<_Tp>(std::forward<_Up>(__x)));
+            __to_value_type_or_member_type<_Tp>(static_cast<_Up&&>(__x)));
     }
 
 #define _GLIBCXX_SIMD_OP_(__op, __name)                                        \
@@ -2725,7 +2725,7 @@ public:
   {                                                                            \
     std::experimental::__get_impl_t<_Tp>::template __masked_cassign(           \
       __data(_M_k), __data(_M_value),                                           \
-      __to_value_type_or_member_type<_Tp>(std::forward<_Up>(__x)),              \
+      __to_value_type_or_member_type<_Tp>(static_cast<_Up&&>(__x)),            \
       [](auto __impl, auto __lhs, auto __rhs) constexpr {                      \
 	return __impl.__name(__lhs, __rhs);                                    \
       });                                                                      \
@@ -2798,7 +2798,7 @@ public:
   {                                                                            \
     if (_M_k)                                                                  \
       {                                                                        \
-	_M_value __op std::forward<_Up>(__x);                                  \
+	_M_value __op static_cast<_Up&&>(__x);                                 \
       }                                                                        \
   }                                                                            \
   static_assert(true)
@@ -3423,7 +3423,7 @@ class _SmartReference
 
     template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC constexpr void __write(_Tp &&__x) const
     {
-        _Accessor::__set(_M_obj, _M_index, std::forward<_Tp>(__x));
+        _Accessor::__set(_M_obj, _M_index, static_cast<_Tp&&>(__x));
     }
 
 public:
@@ -3442,7 +3442,7 @@ public:
               typename = _ValuePreservingOrInt<__remove_cvref_t<_Tp>, value_type>>
     _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator=(_Tp &&__x) &&
     {
-        __write(std::forward<_Tp>(__x));
+        __write(static_cast<_Tp&&>(__x));
         return {_M_obj, _M_index};
     }
 
@@ -3961,7 +3961,7 @@ template <typename _V> class _SimdIntOperators<_V, true>
 
     template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC static _V __make_derived(_Tp &&__d)
     {
-        return {__private_init, std::forward<_Tp>(__d)};
+        return {__private_init, static_cast<_Tp&&>(__d)};
     }
 
 public:
@@ -4025,7 +4025,7 @@ public:
     // implicit broadcast constructor
     template <typename _Up, typename = _ValuePreservingOrInt<_Up, value_type>>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr simd(_Up &&__x)
-        : _M_data(__impl::__broadcast(static_cast<value_type>(std::forward<_Up>(__x))))
+        : _M_data(__impl::__broadcast(static_cast<value_type>(static_cast<_Up&&>(__x))))
     {
     }
 
@@ -4049,7 +4049,7 @@ public:
         _ValuePreservingOrInt<
             decltype(std::declval<_Fp>()(std::declval<_SizeConstant<0> &>())),
             value_type> * = nullptr)
-        : _M_data(__impl::__generator(std::forward<_Fp>(__gen), _S_type_tag))
+        : _M_data(__impl::__generator(static_cast<_Fp&&>(__gen), _S_type_tag))
     {
     }
 

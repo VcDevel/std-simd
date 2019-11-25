@@ -1940,7 +1940,7 @@ struct _SimdImplBuiltin
 	    __binary_op(
 	      _V(__private_init, __extract<0, 2>(__as_vector(__x))),
 	      _V(__private_init, __extract<1, 2>(__as_vector(__x)))),
-	    std::forward<_BinaryOperation>(__binary_op));
+	    static_cast<_BinaryOperation&&>(__binary_op));
 	}
     }
 
@@ -2385,7 +2385,7 @@ struct _SimdImplBuiltin
     template <typename _Tp, size_t _Np, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdWrapper<_Tp, _Np> &__v, int __i, _Up &&__x) noexcept
     {
-        __v.__set(__i, std::forward<_Up>(__x));
+        __v.__set(__i, static_cast<_Up&&>(__x));
     }
 
     // __masked_assign{{{2

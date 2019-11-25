@@ -93,7 +93,7 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 	const auto __halves = split<simd<_Tp, simd_abi::_Neon<8>>>(__x);
 	const auto __y      = __binary_op(__halves[0], __halves[1]);
 	return _SimdImplNeon<simd_abi::_Neon<8>>::__reduce(
-	  __y, forward<_BinaryOperation>(__binary_op));
+	  __y, static_cast<_BinaryOperation&&>(__binary_op));
       }
     else if constexpr (_Np == 8)
       {
@@ -123,7 +123,7 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 	return __x[0];
       }
     else
-      return _Base::__reduce(__x, forward<_BinaryOperation>(__binary_op));
+      return _Base::__reduce(__x, static_cast<_BinaryOperation&&>(__binary_op));
   }
 
   // }}}
