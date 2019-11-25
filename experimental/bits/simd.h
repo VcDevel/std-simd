@@ -2312,15 +2312,21 @@ using deduce_t = typename deduce<_Tp, _Np, _Abis...>::type;
 
 // }}}2
 // rebind_simd {{{2
-template <typename _Tp, typename _V>
+template <typename _Tp, typename _V, typename = void>
 struct rebind_simd;
 template <typename _Tp, typename _Up, typename _Abi>
-struct rebind_simd<_Tp, simd<_Up, _Abi>>
+struct rebind_simd<
+  _Tp,
+  simd<_Up, _Abi>,
+  void_t<simd_abi::deduce_t<_Tp, simd_size_v<_Up, _Abi>, _Abi>>>
 {
   using type = simd<_Tp, simd_abi::deduce_t<_Tp, simd_size_v<_Up, _Abi>, _Abi>>;
 };
 template <typename _Tp, typename _Up, typename _Abi>
-struct rebind_simd<_Tp, simd_mask<_Up, _Abi>>
+struct rebind_simd<
+  _Tp,
+  simd_mask<_Up, _Abi>,
+  void_t<simd_abi::deduce_t<_Tp, simd_size_v<_Up, _Abi>, _Abi>>>
 {
   using type =
     simd_mask<_Tp, simd_abi::deduce_t<_Tp, simd_size_v<_Up, _Abi>, _Abi>>;
@@ -2329,15 +2335,19 @@ template <typename _Tp, typename _V>
 using rebind_simd_t = typename rebind_simd<_Tp, _V>::type;
 
 // resize_simd {{{2
-template <int _Np, typename _V>
+template <int _Np, typename _V, typename = void>
 struct resize_simd;
 template <int _Np, typename _Tp, typename _Abi>
-struct resize_simd<_Np, simd<_Tp, _Abi>>
+struct resize_simd<_Np,
+		   simd<_Tp, _Abi>,
+		   void_t<simd_abi::deduce_t<_Tp, _Np, _Abi>>>
 {
   using type = simd<_Tp, simd_abi::deduce_t<_Tp, _Np, _Abi>>;
 };
 template <int _Np, typename _Tp, typename _Abi>
-struct resize_simd<_Np, simd_mask<_Tp, _Abi>>
+struct resize_simd<_Np,
+		   simd_mask<_Tp, _Abi>,
+		   void_t<simd_abi::deduce_t<_Tp, _Np, _Abi>>>
 {
   using type = simd_mask<_Tp, simd_abi::deduce_t<_Tp, _Np, _Abi>>;
 };

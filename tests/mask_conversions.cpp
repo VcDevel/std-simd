@@ -44,13 +44,25 @@ template <class List, class F> void call_with_typelist(F &&f)
     call_with_types(std::forward<F>(f), List());
 }
 
+template <typename T, typename V, typename = void>
+struct rebind_or_max_fixed
+{
+  using type = stdx::
+    rebind_simd_t<T, stdx::resize_simd_t<stdx::simd_abi::max_fixed_size<T>, V>>;
+};
+template <typename T, typename V>
+struct rebind_or_max_fixed<T, V, std::void_t<stdx::rebind_simd_t<T, V>>>
+{
+  using type = stdx::rebind_simd_t<T, V>;
+};
+
 TEST_TYPES(FromTo, conversions,  //{{{1
            outer_product<all_test_types, all_arithmetic_types>)
 {
     using FromM = typename FromTo::template at<0>;
     using To = typename FromTo::template at<1>;
     call_with_typelist<vir::make_unique_typelist<
-        stdx::rebind_simd_t<To, FromM>, stdx::native_simd_mask<To>,
+        typename rebind_or_max_fixed<To, FromM>::type, stdx::native_simd_mask<To>,
         stdx::simd_mask<To>, stdx::simd_mask<To, stdx::simd_abi::scalar>>>([](auto _b) {
         using ToM = decltype(_b);
         using ToV = typename ToM::simd_type;
