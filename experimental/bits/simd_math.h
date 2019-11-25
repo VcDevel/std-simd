@@ -408,14 +408,14 @@ rebind_simd_t<int, simd<double, _Abi>> __extract_exponent_bits(const simd<double
     constexpr auto _Np = simd_size_v<double, _Abi> * 2;
     constexpr auto _Max = simd_abi::max_fixed_size<int>;
     if constexpr (_Np > _Max) {
-        const auto tup = split<_Max / 2, (_Np - _Max) / 2>(__v & __exponent_mask);
+        const auto __tup = split<_Max / 2, (_Np - _Max) / 2>(__v & __exponent_mask);
         return concat(
             shuffle<strided<2, 1>>(
                 simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
-                    std::get<0>(tup))),
+                    std::get<0>(__tup))),
             shuffle<strided<2, 1>>(
                 simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Np - _Max>>>(
-                    std::get<1>(tup))));
+                    std::get<1>(__tup))));
     } else {
         return shuffle<strided<2, 1>>(
             simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Np>>>(__v &
