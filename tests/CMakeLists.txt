@@ -203,6 +203,9 @@ endif()#}}}
 # Unit tests#{{{
 ##################################################################
 include (CTest)
+add_custom_target(test_random ${CMAKE_CTEST_COMMAND} --schedule-random
+   USES_TERMINAL
+   )
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/virtest/vir/test.h")
    # first try to resolve the issue automatically
    message(STATUS "virtest missing: calling 'git submodule update --init'")

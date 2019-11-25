@@ -31,7 +31,7 @@ FIX_OUTPUT=sed -u $(BUILD_OUTPUT_TRANSFORMATION)|stdbuf -oL fold -s -w $(cols)
 
 test: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target all -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
-	$(CMAKE) --build $(build_dir) --target test -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
+	$(CMAKE) --build $(build_dir) --target test_random -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
 
 help: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) $(HELP_TARGET)
