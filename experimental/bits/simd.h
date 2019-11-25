@@ -1217,42 +1217,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _Np>
 }
 
 // }}}
-// __vector_load{{{
-template <typename _Tp, size_t _Np, size_t _M = _Np * sizeof(_Tp), typename _Fp>
-__vector_type_t<_Tp, _Np> __vector_load(const void* __p, _Fp)
-{
-  static_assert(_Np > 1);
-  static_assert(_M % sizeof(_Tp) == 0);
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR90424
-  using _Up = conditional_t<
-    is_integral_v<_Tp>,
-    conditional_t<_M % 4 == 0, conditional_t<_M % 8 == 0, long long, int>,
-		  conditional_t<_M % 2 == 0, short, signed char>>,
-    conditional_t<(_M < 8 || _Np % 2 == 1 || _Np == 2), _Tp, double>>;
-  using _V = __vector_type_t<_Up, _Np * sizeof(_Tp) / sizeof(_Up)>;
-#else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
-  using _V                                     = __vector_type_t<_Tp, _Np>;
-#endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
-  _V __r{};
-  static_assert(_M <= sizeof(_V));
-  if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
-    __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _Np>));
-  else if constexpr (!std::is_same_v<_Fp, element_aligned_tag>)
-    __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
-
-  __builtin_memcpy(&__r, __p, _M);
-  return reinterpret_cast<__vector_type_t<_Tp, _Np>>(__r);
-}
-
-// }}}
-// __vector_load16 {{{
-template <typename _Tp, size_t _M = 16, typename _Fp>
-__vector_type16_t<_Tp> __vector_load16(const void* __p, _Fp __f)
-{
-  return __vector_load<_Tp, 16 / sizeof(_Tp), _M>(__p, __f);
-}
-
-// }}}
 // __xor{{{
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp

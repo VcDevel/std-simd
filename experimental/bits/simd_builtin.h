@@ -1258,6 +1258,38 @@ struct _CommonImplBuiltin
     __converts_via_decomposition_v = sizeof(_From) != sizeof(_To);
 
   // }}}
+  // _S_load{{{
+  template <typename _Tp,
+	    size_t _Np,
+	    size_t _M = _Np * sizeof(_Tp),
+	    typename _Fp>
+  _GLIBCXX_SIMD_INTRINSIC static __vector_type_t<_Tp, _Np>
+    _S_load(const void* __p, _Fp)
+  {
+    static_assert(_Np > 1);
+    static_assert(_M % sizeof(_Tp) == 0);
+#ifdef _GLIBCXX_SIMD_WORKAROUND_PR90424
+    using _Up = conditional_t<
+      is_integral_v<_Tp>,
+      conditional_t<_M % 4 == 0, conditional_t<_M % 8 == 0, long long, int>,
+		    conditional_t<_M % 2 == 0, short, signed char>>,
+      conditional_t<(_M < 8 || _Np % 2 == 1 || _Np == 2), _Tp, double>>;
+    using _V = __vector_type_t<_Up, _Np * sizeof(_Tp) / sizeof(_Up)>;
+#else  // _GLIBCXX_SIMD_WORKAROUND_PR90424
+    using _V = __vector_type_t<_Tp, _Np>;
+#endif // _GLIBCXX_SIMD_WORKAROUND_PR90424
+    _V __r{};
+    static_assert(_M <= sizeof(_V));
+    if constexpr (std::is_same_v<_Fp, vector_aligned_tag>)
+      __p = __builtin_assume_aligned(__p, alignof(__vector_type_t<_Tp, _Np>));
+    else if constexpr (!std::is_same_v<_Fp, element_aligned_tag>)
+      __p = __builtin_assume_aligned(__p, _Fp::_S_alignment);
+
+    __builtin_memcpy(&__r, __p, _M);
+    return reinterpret_cast<__vector_type_t<_Tp, _Np>>(__r);
+  }
+
+  // }}}
   // __store {{{
   template <size_t _ReqBytes = 0,
 	    typename _Flags,
@@ -1425,10 +1457,11 @@ struct _SimdImplBuiltin
 	  return static_cast<_Tp>(__i < _Np ? __mem[__i] : 0);
 	});
       else if constexpr (std::is_same_v<_Up, _Tp>)
-	return __vector_load<_Tp, _S_full_size<_Tp>, _Np * sizeof(_Tp)>(__mem,
-								       _Fp());
+	return _CommonImpl::template _S_load<_Tp, _S_full_size<_Tp>,
+					     _Np * sizeof(_Tp)>(__mem, _Fp());
       else if constexpr (__bytes_to_load <= __max_load_size)
-	return __convert<_SimdMember<_Tp>>(__vector_load<_Up, _Np>(__mem, _Fp()));
+	return __convert<_SimdMember<_Tp>>(
+	  _CommonImpl::template _S_load<_Up, _Np>(__mem, _Fp()));
       else if constexpr(__bytes_to_load % __max_load_size == 0)
 	{
 	  constexpr size_t __n_loads = __bytes_to_load / __max_load_size;
@@ -1438,7 +1471,7 @@ struct _SimdImplBuiltin
 	      return __convert<_SimdMember<_Tp>>(__uncvted...);
 	    },
 	    [&](auto __i) {
-	      return __vector_load<_Up, __elements_per_load>(
+	      return _CommonImpl::template _S_load<_Up, __elements_per_load>(
 		__mem + __i * __elements_per_load, _Fp());
 	    });
 	}
@@ -1452,7 +1485,7 @@ struct _SimdImplBuiltin
 	      return __convert<_SimdMember<_Tp>>(__uncvted...);
 	    },
 	    [&](auto __i) {
-	      return __vector_load<_Up, __elements_per_load>(
+	      return _CommonImpl::template _S_load<_Up, __elements_per_load>(
 		__mem + __i * __elements_per_load, _Fp());
 	    });
 	}
@@ -2538,6 +2571,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   template <typename _Tp>
   using _MaskMember = typename _Abi::template __traits<_Tp>::_MaskMember;
   using _SuperImpl  = typename _Abi::_MaskImpl;
+  using _CommonImpl = typename _Abi::_CommonImpl;
   template <typename _Tp>
   static constexpr size_t size = simd_size_v<_Tp, _Abi>;
 
@@ -2560,7 +2594,8 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     using _I = __int_for_sizeof_t<_Tp>;
     if constexpr (sizeof(_Tp) == sizeof(bool))
       {
-	const auto __bools = __vector_load<_I, size<_Tp>>(__mem, _Flags());
+	const auto __bools =
+	  _CommonImpl::template _S_load<_I, size<_Tp>>(__mem, _Flags());
 	// bool is {0, 1}, everything else is UB
 	return __vector_bitcast<_Tp>(__bools > 0);
       }
