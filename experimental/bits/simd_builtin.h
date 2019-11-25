@@ -74,9 +74,9 @@ _Tp __vector_shuffle(_Tp __x, _Tp __y)
 // __make_wrapper{{{
 template <typename _Tp, typename... _Args>
 _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, sizeof...(_Args)>
-  __make_wrapper(_Args&&... __args)
+  __make_wrapper(const _Args&... __args)
 {
-  return __make_vector<_Tp>(std::forward<_Args>(__args)...);
+  return __make_vector<_Tp>(__args...);
 }
 
 // }}}

@@ -1161,7 +1161,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _R __to_intrin(_Tp __x)
 // __make_vector{{{
 template <typename _Tp, typename... _Args>
 _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, sizeof...(_Args)>
-  __make_vector(_Args&&... __args)
+  __make_vector(const _Args&... __args)
 {
   return __vector_type_t<_Tp, sizeof...(_Args)>{static_cast<_Tp>(__args)...};
 }
