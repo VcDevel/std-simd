@@ -215,10 +215,19 @@ using unusable_abis = Typelist<
 #endif
     Template<simd, int>, Template<simd_mask, int>>;
 
-using unusable_fixed_size =
-    expand_list<Typelist<Template<simd, stdx::simd_abi::fixed_size<stdx::simd_abi::max_fixed_size<int> + 1>>,
-                         Template<simd_mask, stdx::simd_abi::fixed_size<stdx::simd_abi::max_fixed_size<int> + 1>>>,
-                testtypes>;
+template <typename... T>
+using first = typename vir::Typelist<T...>::template at<0>;
+
+template <typename... T>
+using maxplus1_fixed_simd =
+  stdx::fixed_size_simd<first<T...>, stdx::simd_abi::max_fixed_size<first<T...>> + 1>;
+template <typename... T>
+using maxplus1_fixed_simd_mask =
+  stdx::fixed_size_simd_mask<first<T...>, stdx::simd_abi::max_fixed_size<first<T...>> + 1>;
+
+using unusable_fixed_size = expand_list<
+  Typelist<Template<maxplus1_fixed_simd>, Template<maxplus1_fixed_simd_mask>>,
+  testtypes>;
 
 using unusable_simd_types =
     concat<expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
