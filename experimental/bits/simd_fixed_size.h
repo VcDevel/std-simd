@@ -1335,8 +1335,8 @@ struct simd_abi::_Fixed
 	std::array<_Tp, _Np> __r;
 	// _SimdMember can be larger because of higher alignment
 	static_assert(sizeof(__r) <= sizeof(_SimdMember), "");
-	std::memcpy(__r.data(), &static_cast<const _SimdMember&>(*this),
-		    sizeof(__r));
+	__builtin_memcpy(__r.data(), &static_cast<const _SimdMember&>(*this),
+			 sizeof(__r));
 	return __r;
       }
     };

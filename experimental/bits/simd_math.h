@@ -1100,7 +1100,7 @@ template <typename _VV> __remove_cvref_t<_VV> __hypot(_VV __x, _VV __y, _VV __z)
 #endif
 	  _V            __hi_exp = __hi;
 	  const _ULLong __tmp    = 0x8000'0000'0000'0000ull;
-	  std::memcpy(&__hi_exp, &__tmp, 8);
+	  __builtin_memcpy(&__hi_exp, &__tmp, 8);
 	  const _V __scale = 1 / __hi_exp;
 	  __hi *= __scale;
 	  __l0 *= __scale;

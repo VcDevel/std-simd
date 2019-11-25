@@ -423,8 +423,8 @@ _GLIBCXX_SIMD_INTRINSIC _To __bit_cast(const _From __x)
 {
   static_assert(sizeof(_To) == sizeof(_From));
   _To __r;
-  std::memcpy(reinterpret_cast<char*>(&__r),
-	      reinterpret_cast<const char*>(&__x), sizeof(_To));
+  __builtin_memcpy(reinterpret_cast<char*>(&__r),
+		   reinterpret_cast<const char*>(&__x), sizeof(_To));
   return __r;
 }
 
@@ -2548,7 +2548,6 @@ _GLIBCXX_SIMD_INTRINSIC _To __simd_reinterpret_cast_impl(_SimdWrapper<_Tp, _Np> 
     {
       _To __r;
       __simd_reinterpret_cast_impl(__data(__r), __x);
-      //std::memcpy(&__data(__r), &__x, sizeof(_To));
       return __r;
     }
   else
@@ -2560,7 +2559,7 @@ _GLIBCXX_SIMD_INTRINSIC _To
 			__simd_reinterpret_cast_impl(const _SimdTuple<_Tp, _Abis...>& __x)
 {
   _To __r;
-  std::memcpy(&__data(__r), &__x, sizeof(_To));
+  __builtin_memcpy(&__data(__r), &__x, sizeof(_To));
   return __r;
 }
 

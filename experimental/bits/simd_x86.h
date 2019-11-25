@@ -3070,8 +3070,8 @@ struct _MaskImplX86Mixin
 	      ((_UInt(__x.to_ulong()) * 0x00204081U) & 0x01010101ULL) *
 	      0xff;
 	    __vector_type_t<_Up, _ToN> __r = {};
-	    std::memcpy(&__r, &__char_mask,
-			std::min(sizeof(__r), sizeof(__char_mask)));
+	    __builtin_memcpy(&__r, &__char_mask,
+			     std::min(sizeof(__r), sizeof(__char_mask)));
 	    return __r;
 	  }
 	else if constexpr (std::min(_ToN, _Np) <= 7)
@@ -3080,8 +3080,8 @@ struct _MaskImplX86Mixin
 	      ((__x.to_ulong() * 0x40810204081ULL) & 0x0101010101010101ULL) *
 	      0xff;
 	    __vector_type_t<_Up, _ToN> __r = {};
-	    std::memcpy(&__r, &__char_mask,
-			std::min(sizeof(__r), sizeof(__char_mask)));
+	    __builtin_memcpy(&__r, &__char_mask,
+			     std::min(sizeof(__r), sizeof(__char_mask)));
 	    return __r;
 	  }
       }
