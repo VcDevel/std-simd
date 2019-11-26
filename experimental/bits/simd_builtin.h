@@ -2792,9 +2792,8 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 	return -reduce(
 	  simd<_I, _Abi>(__private_init, __wrapper_bitcast<_I>(__data(__k))));
       else
-	return -reduce(
-	  __proposed::simd_reinterpret_cast<rebind_simd_t<_I, simd<_Tp, _Abi>>>(
-	    simd<_Tp, _Abi>(__private_init, __data(__k))));
+	return -reduce(__bit_cast<rebind_simd_t<_I, simd<_Tp, _Abi>>>(
+	  simd<_Tp, _Abi>(__private_init, __data(__k))));
     }
 
     // }}}

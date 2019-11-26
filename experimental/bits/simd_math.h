@@ -395,7 +395,7 @@ rebind_simd_t<int, simd<float, _Abi>> __extract_exponent_bits(const simd<float, 
     using namespace std::experimental::__proposed::float_bitwise_operators;
     constexpr simd<float, _Abi> __exponent_mask =
         std::numeric_limits<float>::infinity();  // 0x7f800000
-    return simd_reinterpret_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v & __exponent_mask);
+    return __bit_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v & __exponent_mask);
 }
 
 template <typename _Abi>
@@ -409,17 +409,17 @@ rebind_simd_t<int, simd<double, _Abi>> __extract_exponent_bits(const simd<double
     constexpr auto _Max = simd_abi::max_fixed_size<int>;
     if constexpr (_Np > _Max) {
         const auto __tup = split<_Max / 2, (_Np - _Max) / 2>(__v & __exponent_mask);
-        return concat(
-            shuffle<strided<2, 1>>(
-                simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
-                    std::get<0>(__tup))),
-            shuffle<strided<2, 1>>(
-                simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Np - _Max>>>(
-                    std::get<1>(__tup))));
+	return concat(
+	  shuffle<strided<2, 1>>(
+	    __bit_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
+	      std::get<0>(__tup))),
+	  shuffle<strided<2, 1>>(
+	    __bit_cast<simd<int, simd_abi::deduce_t<int, _Np - _Max>>>(
+	      std::get<1>(__tup))));
     } else {
-        return shuffle<strided<2, 1>>(
-            simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Np>>>(__v &
-                                                                         __exponent_mask));
+	return shuffle<strided<2, 1>>(
+	  __bit_cast<simd<int, simd_abi::deduce_t<int, _Np>>>(__v &
+							      __exponent_mask));
     }
 }
 
@@ -686,7 +686,6 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
         static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
         using _V = simd<_Tp, _Abi>;
         using _IV = rebind_simd_t<int, _V>;
-        using _IM = typename _IV::mask_type;
         using _Limits = std::numeric_limits<_Tp>;
         using namespace std::experimental::__proposed;
         using namespace std::experimental::__proposed::float_bitwise_operators;
@@ -709,8 +708,8 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
         }
 
 	// can't use isunordered(x*inf, x*0) because inf*0 raises invalid
-	const auto __as_int = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
-	const auto __inf = simd_reinterpret_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(_V(std::numeric_limits<_Tp>::infinity()));
+	const auto __as_int = __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
+	const auto __inf = __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(_V(std::numeric_limits<_Tp>::infinity()));
 	const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(__as_int == 0 || __as_int >= __inf);
 
         const _V __scaled_subnormal = __x * __subnorm_scale;
@@ -718,13 +717,17 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
         where(!isnormal(__x), __mant) = __mant_subnormal;
         where(__iszero_inf_nan, __mant) = __x;
         _IV __e = __extract_exponent_bits(__scaled_subnormal);
-        const _IM __value_isnormal = static_simd_cast<_IM>(isnormal(__x));
-        where(__value_isnormal, __e) = __exponent_bits;
-        const _IV __offset = (simd_reinterpret_cast<_IV>(__value_isnormal) & _IV(__exp_adjust)) |
-                          (simd_reinterpret_cast<_IV>((__exponent_bits == 0) &
-                                                     (static_simd_cast<_IM>(__x != 0))) &
-                           _IV(__exp_adjust + __exp_offset));
-        *__exp = simd_cast<__samesize<int, _V>>((__e >> __exp_shift) - __offset);
+	using _MaskType = typename std::conditional_t<
+	  sizeof(typename _V::mask_type) == sizeof(_IV), _V, _IV>::mask_type;
+	const _MaskType __value_isnormal     = isnormal(__x).__cvt();
+	where(__value_isnormal.__cvt(), __e) = __exponent_bits;
+	static_assert(sizeof(_IV) == sizeof(__value_isnormal));
+	const _IV __offset =
+	  (__bit_cast<_IV>(__value_isnormal) & _IV(__exp_adjust)) |
+	  (__bit_cast<_IV>(static_simd_cast<_MaskType>(__exponent_bits == 0) &
+			   static_simd_cast<_MaskType>(__x != 0)) &
+	   _IV(__exp_adjust + __exp_offset));
+	*__exp = simd_cast<__samesize<int, _V>>((__e >> __exp_shift) - __offset);
         return __mant;
     }
 }
@@ -808,7 +811,7 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 	  using _IV = rebind_simd_t<
 	    std::conditional_t<sizeof(_Tp) == sizeof(_LLong), _LLong, int>,
 	    _V>;
-	  return (simd_reinterpret_cast<_IV>(__v) >>
+	  return (__bit_cast<_IV>(__v) >>
 		  (std::numeric_limits<_Tp>::digits - 1)) -
 		 (std::numeric_limits<_Tp>::max_exponent - 1);
 	};
