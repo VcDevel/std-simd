@@ -4370,31 +4370,12 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	    return _kortestc_mask16_u8(
 	      __kk, _Mask == 0xffff ? __kk : __mmask16(~_Mask));
 	  }
-	else if constexpr (sizeof(__kk) == 4)
-	  {
-	    if constexpr (__have_avx512bw)
-	      {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85538
-		return __kk == _Mask;
-#else
-		return _kortestc_mask32_u8(
-		  __kk, _Mask == 0xffffffffU ? __kk : __mmask32(~_Mask));
-#endif
-	      }
-	  }
-	else if constexpr (sizeof(__kk) == 8)
-	  {
-	    if constexpr (__have_avx512bw)
-	      {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85538
-		return __kk == _Mask;
-#else
-		return _kortestc_mask64_u8(__kk, _Mask == 0xffffffffffffffffULL
-						   ? __kk
-						   : __mmask64(~_Mask));
-#endif
-	      }
-	  }
+	else if constexpr (sizeof(__kk) == 4 && __have_avx512bw)
+	  return _kortestc_mask32_u8(
+	    __kk, _Mask == 0xffffffffU ? __kk : __mmask32(~_Mask));
+	else if constexpr (sizeof(__kk) == 8 && __have_avx512bw)
+	  return _kortestc_mask64_u8(
+	    __kk, _Mask == 0xffffffffffffffffULL ? __kk : __mmask64(~_Mask));
 	else
 	  __assert_unreachable<_Tp>();
       }

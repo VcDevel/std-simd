@@ -261,9 +261,6 @@
 #define _GLIBCXX_SIMD_WORKAROUND_PR85480 1
 #endif
 
-// incorrect use of k0 register for _kortestc_mask64_u8 and _kortestc_mask32_u8:
-#define _GLIBCXX_SIMD_WORKAROUND_PR85538 1
-
 // Invalid instruction mov from xmm16-31
 #define _GLIBCXX_SIMD_WORKAROUND_PR89229 1
 
