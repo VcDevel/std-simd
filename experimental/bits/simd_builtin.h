@@ -80,6 +80,21 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, sizeof...(_Args)>
 }
 
 // }}}
+// __wrapper_bitcast{{{
+template <typename _Tp,
+	  size_t _ToN = 0,
+	  typename _Up,
+	  size_t _M,
+	  size_t _Np = _ToN != 0 ? _ToN : sizeof(_Up) * _M / sizeof(_Tp)>
+_GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, _Np>
+  __wrapper_bitcast(_SimdWrapper<_Up, _M> __x)
+{
+  static_assert(sizeof(__vector_type_t<_Tp, _Np>) ==
+		sizeof(__vector_type_t<_Up, _M>));
+  return reinterpret_cast<__vector_type_t<_Tp, _Np>>(__x._M_data);
+}
+
+// }}}
 // __shift_elements_right{{{
 // if (__shift % 2ⁿ == 0) => the low n Bytes are correct
 template <unsigned __shift, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
