@@ -4363,7 +4363,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	      return _kortestc_mask8_u8(__kk, _Mask == 0xff ? __kk
 							    : __mmask8(~_Mask));
 	    else
-	      return __kk == _Mask;
+	      return _kortestc_mask16_u8(__kk, __mmask16(~_Mask));
 	  }
 	else if constexpr (sizeof(__kk) == 2)
 	  {
