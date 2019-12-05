@@ -2298,49 +2298,20 @@ struct _SimdWrapper<
 };
 
 // _SimdWrapperBase{{{1
-template <typename _Tp,
-	  size_t _Width,
-	  bool =
-#ifdef __SUPPORT_SNAN__
-	    !std::numeric_limits<_Tp>::has_signaling_NaN ||
-	    sizeof(_Tp) * _Width == sizeof(__vector_type_t<_Tp, _Width>)
-#else
-	    true
-#endif
-	  >
+template <bool>
 struct _SimdWrapperBase;
 
-template <typename _Tp, size_t _Width>
-struct _SimdWrapperBase<_Tp, _Width, true> // no padding or no SNaNs
+template <>
+struct _SimdWrapperBase<true> // no padding or no SNaNs
 {
-  __vector_type_t<_Tp, _Width> _M_data;
-
-  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase() = default;
-
-  template <typename _V,
-	    typename = std::enable_if_t<
-	      std::disjunction_v<is_same<_V, __vector_type_t<_Tp, _Width>>,
-				 is_same<_V, __intrinsic_type_t<_Tp, _Width>>>>>
-  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase(_V __x)
-  : _M_data(reinterpret_cast<__vector_type_t<_Tp, _Width>>(__x))
-  {
-  }
 };
 
 #ifdef __SUPPORT_SNAN__
-template <typename _Tp, size_t _Width>
-struct _SimdWrapperBase<_Tp, _Width, false> // with padding that needs to never become SNaN
+template <>
+struct _SimdWrapperBase<false> // with padding that needs to never become SNaN
 {
-  __vector_type_t<_Tp, _Width> _M_data;
-
-  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase() : _M_data() {}
-
-  template <typename _V,
-	    typename = std::enable_if_t<
-	      std::disjunction_v<is_same<_V, __vector_type_t<_Tp, _Width>>,
-				 is_same<_V, __intrinsic_type_t<_Tp, _Width>>>>>
-  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase(_V __x)
-  : _M_data(reinterpret_cast<__vector_type_t<_Tp, _Width>>(__x))
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapperBase()
+  : _M_data()
   {
   }
 };
@@ -2353,7 +2324,14 @@ struct _SimdWrapper<
   _Tp,
   _Width,
   std::void_t<__vector_type_t<_Tp, _Width>, __intrinsic_type_t<_Tp, _Width>>>
-: _SimdWrapperBase<_Tp, _Width>
+: _SimdWrapperBase<
+#ifdef __SUPPORT_SNAN__
+    !std::numeric_limits<_Tp>::has_signaling_NaN ||
+    sizeof(_Tp) * _Width == sizeof(__vector_type_t<_Tp, _Width>)
+#else
+    true
+#endif
+    >
 {
   static_assert(__is_vectorizable_v<_Tp>);
   static_assert(_Width >= 2); // 1 doesn't make sense, use _Tp directly then
@@ -2361,6 +2339,8 @@ struct _SimdWrapper<
   using value_type                 = _Tp;
   static constexpr size_t _S_width = sizeof(_BuiltinType) / sizeof(value_type);
   static inline constexpr int __size = _Width;
+
+  _BuiltinType _M_data;
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, _S_width>
     __as_full_vector() const
@@ -2370,9 +2350,8 @@ struct _SimdWrapper<
 
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(
     std::initializer_list<_Tp> __init)
-  : _SimdWrapperBase<_Tp, _Width>(
-      __generate_from_n_evaluations<_Width, _BuiltinType>(
-	[&](auto __i) { return __init.begin()[__i.value]; }))
+  : _M_data(__generate_from_n_evaluations<_Width, _BuiltinType>(
+      [&](auto __i) { return __init.begin()[__i.value]; }))
   {
   }
 
@@ -2382,17 +2361,14 @@ struct _SimdWrapper<
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper &operator=(const _SimdWrapper &) = default;
   _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper &operator=(_SimdWrapper &&) = default;
 
-  template <
-    typename _Up,
-    typename = decltype(_SimdWrapperBase<_Tp, _Width>(std::declval<_Up>()))>
-  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(_Up&& __x)
-  : _SimdWrapperBase<_Tp, _Width>(static_cast<_Up&&>(__x))
+  template <typename _V,
+	    typename = std::enable_if_t<
+	      std::disjunction_v<is_same<_V, __vector_type_t<_Tp, _Width>>,
+				 is_same<_V, __intrinsic_type_t<_Tp, _Width>>>>>
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper(_V __x)
+  : _M_data(__vector_bitcast<_Tp, _Width>(__x)) // __vector_bitcast can convert e.g. __m128 to __vector(2) float
   {
   }
-  // I want to use ctor inheritance, but it breaks always_inline. Having a
-  // function that does a single movaps is stupid.
-  // using _SimdWrapperBase<_Tp, _Width>::_SimdWrapperBase;
-  using _SimdWrapperBase<_Tp, _Width>::_M_data;
 
   template <
     typename... _As,
