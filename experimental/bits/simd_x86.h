@@ -1823,6 +1823,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     {
       if constexpr (__is_avx512_abi<_Abi>())
 	{
+	  if (__builtin_is_constant_evaluated())
+	    return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
+	      __vector_bitcast<_Tp>(__x._M_data == __y._M_data)));
+
 	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
@@ -1882,6 +1886,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     {
       if constexpr (__is_avx512_abi<_Abi>())
 	{
+	  if (__builtin_is_constant_evaluated())
+	    return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
+	      __vector_bitcast<_Tp>(__x._M_data != __y._M_data)));
+
 	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
@@ -1941,6 +1949,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     {
       if constexpr (__is_avx512_abi<_Abi>())
 	{
+	  if (__builtin_is_constant_evaluated())
+	    return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
+	      __vector_bitcast<_Tp>(__x._M_data < __y._M_data)));
+
 	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);
@@ -2034,6 +2046,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     {
       if constexpr (__is_avx512_abi<_Abi>())
 	{
+	  if (__builtin_is_constant_evaluated())
+	    return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
+	      __vector_bitcast<_Tp>(__x._M_data <= __y._M_data)));
+
 	  constexpr auto __k1 = _Abi::template __implicit_mask<_Tp>();
 	  [[maybe_unused]] const auto __xi = __to_intrin(__x);
 	  [[maybe_unused]] const auto __yi = __to_intrin(__y);

@@ -3998,12 +3998,12 @@ public:
 
     // }}}
     // simd_mask compares [simd_mask.comparison] {{{
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend simd_mask
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend simd_mask
       operator==(const simd_mask& __x, const simd_mask& __y)
     {
       return !operator!=(__x, __y);
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend simd_mask
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend simd_mask
       operator!=(const simd_mask& __x, const simd_mask& __y)
     {
       return {__private_init,
@@ -4012,8 +4012,9 @@ public:
 
     // }}}
     // private_init ctor {{{
-    _GLIBCXX_SIMD_INTRINSIC simd_mask(_PrivateInit, typename _Traits::_MaskMember __init)
-        : _M_data(__init)
+    _GLIBCXX_SIMD_INTRINSIC constexpr simd_mask(
+      _PrivateInit, typename _Traits::_MaskMember __init)
+    : _M_data(__init)
     {
     }
 
@@ -4308,27 +4309,27 @@ public:
     }
 
     // compares [simd.comparison]
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator==(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator==(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__equal_to(__x._M_data, __y._M_data));
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator!=(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator!=(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__not_equal_to(__x._M_data, __y._M_data));
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator<(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator<(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__less(__x._M_data, __y._M_data));
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator<=(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator<=(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__less_equal(__x._M_data, __y._M_data));
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator>(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator>(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__less(__y._M_data, __x._M_data));
     }
-    _GLIBCXX_SIMD_ALWAYS_INLINE friend mask_type operator>=(const simd &__x, const simd &__y)
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend mask_type operator>=(const simd &__x, const simd &__y)
     {
         return simd::__make_mask(_Impl::__less_equal(__y._M_data, __x._M_data));
     }
@@ -4346,10 +4347,12 @@ public:
     }
 
 private:
-    _GLIBCXX_SIMD_INTRINSIC static mask_type __make_mask(typename mask_type::_MemberType __k)
-    {
-        return {__private_init, __k};
-    }
+  _GLIBCXX_SIMD_INTRINSIC constexpr static mask_type
+    __make_mask(typename mask_type::_MemberType __k)
+  {
+    return {__private_init, __k};
+  }
+
     friend const auto &__data<value_type, abi_type>(const simd &);
     friend auto &__data<value_type, abi_type>(simd &);
     alignas(_Traits::_S_simd_align) _MemberType _M_data;

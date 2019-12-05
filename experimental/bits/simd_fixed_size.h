@@ -1781,12 +1781,14 @@ public:
     // compares {{{2
 #define _GLIBCXX_SIMD_CMP_OPERATIONS(__cmp)                                    \
   template <typename _Tp, typename... _As>                                     \
-  _GLIBCXX_SIMD_INTRINSIC static _MaskMember __cmp(                            \
+  _GLIBCXX_SIMD_INTRINSIC constexpr static _MaskMember __cmp(                  \
     const _SimdTuple<_Tp, _As...>& __x, const _SimdTuple<_Tp, _As...>& __y)    \
   {                                                                            \
-    return __test([](auto __impl, auto __xx,                                   \
-		     auto __yy) { return __impl.__cmp(__xx, __yy); },          \
-		  __x, __y);                                                   \
+    return __test(                                                             \
+      [](auto __impl, auto __xx, auto __yy) constexpr {                        \
+	return __impl.__cmp(__xx, __yy);                                       \
+      },                                                                       \
+      __x, __y);                                                               \
   }
     _GLIBCXX_SIMD_CMP_OPERATIONS(__equal_to)
     _GLIBCXX_SIMD_CMP_OPERATIONS(__not_equal_to)

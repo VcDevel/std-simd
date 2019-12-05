@@ -382,10 +382,27 @@ struct _SimdImplScalar {
     template <typename _Tp> static inline void __decrement(_Tp &__x) { --__x; }
 
     // compares {{{2
-    template <typename _Tp> static bool __equal_to(_Tp __x, _Tp __y) { return __x == __y; }
-    template <typename _Tp> static bool __not_equal_to(_Tp __x, _Tp __y) { return __x != __y; }
-    template <typename _Tp> static bool __less(_Tp __x, _Tp __y) { return __x < __y; }
-    template <typename _Tp> static bool __less_equal(_Tp __x, _Tp __y) { return __x <= __y; }
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC constexpr static bool __equal_to(_Tp __x, _Tp __y)
+    {
+      return __x == __y;
+    }
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC constexpr static bool
+      __not_equal_to(_Tp __x, _Tp __y)
+    {
+      return __x != __y;
+    }
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC constexpr static bool __less(_Tp __x, _Tp __y)
+    {
+      return __x < __y;
+    }
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC constexpr static bool __less_equal(_Tp __x, _Tp __y)
+    {
+      return __x <= __y;
+    }
 
     // smart_reference access {{{2
     template <typename _Tp, typename _Up>
