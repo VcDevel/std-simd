@@ -447,13 +447,21 @@ struct _MaskImplScalar {
 
   // }}}
   // __to_bits {{{
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _UChar __to_bits(bool __x)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<1>
+    __to_bits(bool __x)
   {
     return __x;
   }
 
   // }}}
   // __convert {{{
+  template <typename _Tp, bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    __convert(_BitMask<1, _Sanitized> __x)
+  {
+    return __x[0];
+  }
+
   template <typename _Tp, typename _Up, typename _UAbi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr bool
     __convert(simd_mask<_Up, _UAbi> __x)
@@ -462,12 +470,13 @@ struct _MaskImplScalar {
   }
 
   // }}}
-    // __from_bitset {{{2
-    template <typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC static bool __from_bitset(std::bitset<1> __bs, _TypeTag<_Tp>) noexcept
-    {
-        return __bs[0];
-    }
+  // __from_bitmask {{{2
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static bool
+    __from_bitmask(_SanitizedBitMask<1> __bits, _TypeTag<_Tp>) noexcept
+  {
+    return __bits[0];
+  }
 
     // __masked_load {{{2
     template <typename _Fp>

@@ -219,9 +219,7 @@ struct _MaskImplNeonMixin {
   using _Base = _MaskImplBuiltinMixin;
 
   template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr conditional_t<(_Np > 8),
-							 _UShort,
-							 _UChar>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _BitMask<_Np>
     __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
     using _I = __int_for_sizeof_t<_Tp>;

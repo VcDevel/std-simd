@@ -169,17 +169,17 @@ struct __tuple_element_meta : public _Abi::_SimdImpl {
   static constexpr size_t    size() { return simd_size<_Tp, _Abi>::value; }
   static constexpr _MaskImpl _S_mask_impl = {};
 
-  template <size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static _MaskMember __make_mask(std::bitset<_Np> __bits)
+  template <size_t _Np, bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static _MaskMember
+    __make_mask(_BitMask<_Np, _Sanitized> __bits)
   {
-    constexpr _Tp* __type_tag = nullptr;
-    return _MaskImpl::__from_bitset(
-      std::bitset<size()>((__bits >> _Offset).to_ullong()), __type_tag);
+    return _MaskImpl::template __convert<_Tp>(
+      __bits.template _M_extract<_Offset, size()>()._M_sanitized());
   }
 
   _GLIBCXX_SIMD_INTRINSIC static _ULLong __mask_to_shifted_ullong(_MaskMember __k)
   {
-    return _ULLong(_MaskImpl::__to_bits(__k)) << _Offset;
+    return _MaskImpl::__to_bits(__k).to_ullong() << _Offset;
   }
 };
 
@@ -535,17 +535,15 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   }
 
   template <typename _Fp, typename... _More>
-  _GLIBCXX_SIMD_INTRINSIC friend std::bitset<size()>
+  _GLIBCXX_SIMD_INTRINSIC constexpr friend _SanitizedBitMask<size()>
     __test(_Fp&& __fun, const _SimdTuple& __x, const _More&... __more)
   {
-    const bitset<size()> __first = _Abi0::_MaskImpl::__to_bits(
+    const _SanitizedBitMask<_S_first_size> __first = _Abi0::_MaskImpl::__to_bits(
       __fun(__tuple_element_meta<_Tp, _Abi0, 0>(), __x.first, __more.first...));
     if constexpr (_S_tuple_size == 1)
       return __first;
     else
-      return __first.to_ullong() |
-	     (__test(__fun, __x.second, __more.second...).to_ullong()
-	      << simd_size_v<_Tp, _Abi0>);
+      return __test(__fun, __x.second, __more.second...)._M_prepend(__first);
   }
 
   template <typename _Up, _Up _I>
@@ -1284,8 +1282,13 @@ struct simd_abi::_Fixed
 
   // }}}
   // __masked {{{
-  _GLIBCXX_SIMD_INTRINSIC static constexpr std::bitset<_Np>
-    __masked(std::bitset<_Np> __x)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
+    __masked(_BitMask<_Np> __x)
+  {
+    return __x._M_sanitized();
+  }
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
+    __masked(_SanitizedBitMask<_Np> __x)
   {
     return __x;
   }
@@ -1312,7 +1315,7 @@ struct simd_abi::_Fixed
 
     // simd and simd_mask member types {{{
     using _SimdMember = __fixed_size_storage_t<_Tp, _Np>;
-    using _MaskMember = std::bitset<_Np>;
+    using _MaskMember = _SanitizedBitMask<_Np>;
     static constexpr size_t _S_simd_align =
       __next_power_of_2(_Np * sizeof(_Tp));
     static constexpr size_t _S_mask_align = alignof(_MaskMember);
@@ -1401,7 +1404,7 @@ struct _CommonImplFixedSize
 // specializations in the used _SimdTuple Abis to get used
 template <int _Np> struct _SimdImplFixedSize {
     // member types {{{2
-    using _MaskMember = std::bitset<_Np>;
+    using _MaskMember = _SanitizedBitMask<_Np>;
     template <typename _Tp> using _SimdMember = __fixed_size_storage_t<_Tp, _Np>;
     template <typename _Tp>
     static constexpr std::size_t _S_tuple_size = _SimdMember<_Tp>::_S_tuple_size;
@@ -1887,7 +1890,7 @@ template <int _Np> struct _MaskImplFixedSize {
   using _Abi = simd_abi::fixed_size<_Np>;
   template <typename _Tp>
   using _FirstAbi   = typename __fixed_size_storage_t<_Tp, _Np>::_FirstAbi;
-  using _MaskMember = std::bitset<_Np>;
+  using _MaskMember = _SanitizedBitMask<_Np>;
   template <typename _Tp>
   using _TypeTag = _Tp*;
 
@@ -1912,13 +1915,14 @@ template <int _Np> struct _MaskImplFixedSize {
 
   // }}}
   // __to_bits {{{
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-    __to_bits(std::bitset<_Np> __x)
+  template <bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
+    __to_bits(_BitMask<_Np, _Sanitized> __x)
   {
-    if constexpr (_Np <= sizeof(long) * CHAR_BIT)
-      return __x.to_ulong();
+    if constexpr (_Sanitized)
+      return __x;
     else
-      return __x.to_ullong();
+      return __x._M_sanitized();
   }
 
   // }}}
@@ -1927,17 +1931,18 @@ template <int _Np> struct _MaskImplFixedSize {
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
     __convert(simd_mask<_Up, _UAbi> __x)
   {
-    return _UAbi::_MaskImpl::__to_bits(__data(__x));
+    return _UAbi::_MaskImpl::__to_bits(__data(__x))
+      .template _M_extract<0, _Np>();
   }
 
   // }}}
-    // __from_bitset {{{2
-    template <typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC static _MaskMember __from_bitset(const _MaskMember &__bs,
-                                                     _TypeTag<_Tp>) noexcept
-    {
-        return __bs;
-    }
+  // __from_bitmask {{{2
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC static _MaskMember
+    __from_bitmask(_MaskMember __bits, _TypeTag<_Tp>) noexcept
+  {
+    return __bits;
+  }
 
     // __load {{{2
     template <typename _Fp> static inline _MaskMember __load(const bool *__mem, _Fp __f) noexcept
@@ -1960,18 +1965,19 @@ template <int _Np> struct _MaskImplFixedSize {
                                                _Fp) noexcept
     {
       _BitOps::__bit_iteration(__mask.to_ullong(),
-			       [&](auto __i) { __merge[__i] = __mem[__i]; });
+			       [&](auto __i) { __merge.set(__i, __mem[__i]); });
       return __merge;
     }
 
     // __store {{{2
     template <typename _Fp>
-    static inline void __store(_MaskMember __bs, bool *__mem, _Fp) noexcept
+    static inline void
+      __store(const _MaskMember __bitmask, bool* __mem, _Fp) noexcept
     {
       if constexpr (_Np == 1)
-	__mem[0] = __bs[0];
+	__mem[0] = __bitmask[0];
       else
-	_FirstAbi<_UChar>::_CommonImpl::__store_bool_array(__bs, __mem, _Fp());
+	_FirstAbi<_UChar>::_CommonImpl::__store_bool_array(__bitmask, __mem, _Fp());
     }
 
     // __masked_store {{{2

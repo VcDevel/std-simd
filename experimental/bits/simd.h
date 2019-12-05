@@ -239,7 +239,6 @@ template <size_t _X> using _SizeConstant = integral_constant<size_t, _X>;
 template <typename _Tp, typename = std::void_t<>>
 struct __is_bitmask : false_type
 {
-  constexpr __is_bitmask(const _Tp&) noexcept {}
 };
 template <typename _Tp>
 inline constexpr bool __is_bitmask_v = __is_bitmask<_Tp>::value;
@@ -251,7 +250,6 @@ struct __is_bitmask<
   std::void_t<decltype(std::declval<unsigned&>() = std::declval<_Tp>() & 1u)>>
 : true_type
 {
-  constexpr __is_bitmask(const _Tp&) noexcept {}
 };
 
 // }}}
@@ -912,6 +910,320 @@ template <typename _Tp> using __intrinsic_type16_t  = typename __intrinsic_type<
 template <typename _Tp> using __intrinsic_type32_t  = typename __intrinsic_type<_Tp, 32>::type;
 template <typename _Tp> using __intrinsic_type64_t  = typename __intrinsic_type<_Tp, 64>::type;
 template <typename _Tp> using __intrinsic_type128_t = typename __intrinsic_type<_Tp, 128>::type;
+
+// }}}
+// _BitMask {{{
+template <size_t _Np, bool _Sanitized = false>
+  struct _BitMask;
+
+template <size_t _Np, bool _Sanitized>
+struct __is_bitmask<_BitMask<_Np, _Sanitized>, void> : true_type
+{
+};
+
+template <size_t _Np>
+  using _SanitizedBitMask = _BitMask<_Np, true>;
+
+template <size_t _Np, bool _Sanitized>
+  struct _BitMask
+{
+  static_assert(_Np > 0);
+  static constexpr size_t _NBytes    = __div_roundup(_Np, CHAR_BIT);
+  using _Tp                          = conditional_t<_Np == 1,
+                            bool,
+                            make_unsigned_t<__int_with_sizeof_t<std::min(
+                              sizeof(_ULLong), __next_power_of_2(_NBytes))>>>;
+  static constexpr int _S_array_size = __div_roundup(_NBytes, sizeof(_Tp));
+  _Tp                  _M_bits[_S_array_size];
+  static constexpr int _S_unused_bits =
+    _Np == 1 ? 0 : _S_array_size * sizeof(_Tp) * CHAR_BIT - _Np;
+
+  constexpr _BitMask() noexcept = default;
+  constexpr _BitMask(unsigned long long __x) noexcept
+  : _M_bits{static_cast<_Tp>(__x)}
+  {
+  }
+  _BitMask(std::bitset<_Np> __x) noexcept
+  : _BitMask(__x.to_ullong())
+  {
+  }
+
+  constexpr _BitMask(const _BitMask&) noexcept = default;
+
+  template <bool _RhsSanitized,
+	    typename = enable_if_t<_RhsSanitized == false && _Sanitized == true>>
+  constexpr _BitMask(const _BitMask<_Np, _RhsSanitized>& __rhs) noexcept
+  : _BitMask(__rhs._M_sanitized())
+  {
+  }
+
+  constexpr operator _SimdWrapper<bool, _Np>() const noexcept
+  {
+    static_assert(_S_array_size == 1);
+    return _M_bits[0];
+  }
+
+  // precondition: is sanitized
+  constexpr _Tp _M_to_bits() const noexcept
+  {
+    static_assert(_S_array_size == 1);
+    return _M_bits[0];
+  }
+  // precondition: is sanitized
+  constexpr unsigned long long to_ullong() const noexcept
+  {
+    static_assert(_S_array_size == 1);
+    return _M_bits[0];
+  }
+  // precondition: is sanitized
+  constexpr unsigned long to_ulong() const noexcept
+  {
+    static_assert(_S_array_size == 1);
+    return _M_bits[0];
+  }
+  constexpr std::bitset<_Np> _M_to_bitset() const noexcept
+  {
+    static_assert(_S_array_size == 1);
+    return _M_bits[0];
+  }
+
+  constexpr decltype(auto) _M_sanitized() const noexcept
+  {
+    if constexpr (_Sanitized)
+      return *this;
+    else if constexpr (_Np == 1)
+      return _SanitizedBitMask<_Np>(_M_bits[0]);
+    else
+      {
+	_SanitizedBitMask<_Np> __r = {};
+	for (int __i = 0; __i < _S_array_size; ++__i)
+	  __r._M_bits[__i] = _M_bits[__i];
+	if constexpr (_S_unused_bits > 0)
+	  __r._M_bits[_S_array_size - 1] &= _Tp(_Tp(~_Tp()) >> _S_unused_bits);
+	return __r;
+      }
+  }
+
+  template <size_t _Mp, bool _LSanitized>
+  constexpr _BitMask<_Np + _Mp, _Sanitized>
+    _M_prepend(_BitMask<_Mp, _LSanitized> __lsb) const noexcept
+  {
+    constexpr size_t _RN = _Np + _Mp;
+    using _Rp            = _BitMask<_RN, _Sanitized>;
+    if constexpr (_Rp::_S_array_size == 1)
+      {
+	_Rp __r{{_M_bits[0]}};
+	__r._M_bits[0] <<= _Mp;
+	__r._M_bits[0] |= __lsb._M_sanitized()._M_bits[0];
+	return __r;
+      }
+    else
+      __assert_unreachable<_Rp>();
+  }
+
+  // Return a new _BitMask with size _NewSize while dropping _DropLsb least
+  // significant bits. If the operation implicitly produces a sanitized bitmask,
+  // the result type will have _Sanitized set.
+  template <size_t _DropLsb, size_t _NewSize = _Np - _DropLsb>
+  constexpr auto _M_extract() const noexcept
+  {
+    static_assert(_Np > _DropLsb);
+    static_assert(_DropLsb + _NewSize <= sizeof(_ULLong) * CHAR_BIT,
+		  "not implemented for bitmasks larger than one ullong");
+    if constexpr (_NewSize == 1) // must sanitize because the return _Tp is bool
+      return _SanitizedBitMask<1>{
+	{static_cast<bool>(_M_bits[0] & (_Tp(1) << _DropLsb))}};
+    else
+      return _BitMask<_NewSize,
+		      ((_NewSize + _DropLsb == sizeof(_Tp) * CHAR_BIT &&
+			_NewSize + _DropLsb <= _Np) ||
+		       ((_Sanitized || _Np == sizeof(_Tp) * CHAR_BIT) &&
+			_NewSize + _DropLsb >= _Np))>(_M_bits[0] >> _DropLsb);
+  }
+
+  // True if all bits are set. Implicitly sanitizes if _Sanitized == false.
+  constexpr bool all() const noexcept
+  {
+    if constexpr (_Np == 1)
+      return _M_bits[0];
+    else if constexpr (!_Sanitized)
+      return _M_sanitized().all();
+    else
+      {
+	constexpr _Tp __allbits = ~_Tp();
+	for (int __i = 0; __i < _S_array_size - 1; ++__i)
+	  if (_M_bits[__i] != __allbits)
+	    return false;
+	return _M_bits[_S_array_size - 1] == (__allbits >> _S_unused_bits);
+      }
+  }
+
+  // True if at least one bit is set. Implicitly sanitizes if _Sanitized ==
+  // false.
+  constexpr bool any() const noexcept
+  {
+    if constexpr (_Np == 1)
+      return _M_bits[0];
+    else if constexpr (!_Sanitized)
+      return _M_sanitized().any();
+    else
+      {
+	for (int __i = 0; __i < _S_array_size - 1; ++__i)
+	  if (_M_bits[__i] != 0)
+	    return true;
+	return _M_bits[_S_array_size - 1] != 0;
+      }
+  }
+
+  // True if no bit is set. Implicitly sanitizes if _Sanitized == false.
+  constexpr bool none() const noexcept
+  {
+    if constexpr (_Np == 1)
+      return !_M_bits[0];
+    else if constexpr (!_Sanitized)
+      return _M_sanitized().none();
+    else
+      {
+	for (int __i = 0; __i < _S_array_size - 1; ++__i)
+	  if (_M_bits[__i] != 0)
+	    return false;
+	return _M_bits[_S_array_size - 1] == 0;
+      }
+  }
+
+  // Returns the number of set bits. Implicitly sanitizes if _Sanitized ==
+  // false.
+  constexpr int count() const noexcept
+  {
+    if constexpr (_Np == 1)
+      return _M_bits[0];
+    else if constexpr (!_Sanitized)
+      return _M_sanitized().none();
+    else
+      {
+	int __result = __builtin_popcountll(_M_bits[0]);
+	for (int __i = 1; __i < _S_array_size; ++__i)
+	  __result += __builtin_popcountll(_M_bits[__i]);
+	return __result;
+      }
+  }
+
+  // Returns the bit at offset __i as bool.
+  constexpr bool operator[](size_t __i) const noexcept
+  {
+    if constexpr (_Np == 1)
+      return _M_bits[0];
+    else if constexpr (_S_array_size == 1)
+      return (_M_bits[0] >> __i) & 1;
+    else
+      {
+	const size_t __j = __i / (sizeof(_Tp) * CHAR_BIT);
+	const size_t __shift = __i % (sizeof(_Tp) * CHAR_BIT);
+	return (_M_bits[__j] >> __shift) & 1;
+      }
+  }
+  template <size_t __i>
+  constexpr bool operator[](_SizeConstant<__i>) const noexcept
+  {
+    static_assert(__i < _Np);
+    constexpr size_t __j     = __i / (sizeof(_Tp) * CHAR_BIT);
+    constexpr size_t __shift = __i % (sizeof(_Tp) * CHAR_BIT);
+    return static_cast<bool>(_M_bits[__j] & (_Tp(1) << __shift));
+  }
+
+  // Set the bit at offset __i to __x.
+  constexpr void set(size_t __i, bool __x) noexcept
+  {
+    if constexpr (_Np == 1)
+      _M_bits[0] = __x;
+    else if constexpr (_S_array_size == 1)
+      {
+	_M_bits[0] &= ~_Tp(_Tp(1) << __i);
+	_M_bits[0] |= _Tp(_Tp(__x) << __i);
+      }
+    else
+      {
+	const size_t __j = __i / (sizeof(_Tp) * CHAR_BIT);
+	const size_t __shift = __i % (sizeof(_Tp) * CHAR_BIT);
+	_M_bits[__j] &= ~_Tp(_Tp(1) << __shift);
+	_M_bits[__j] |= _Tp(_Tp(__x) << __shift);
+      }
+  }
+  template <size_t __i>
+  constexpr void set(_SizeConstant<__i>, bool __x) noexcept
+  {
+    static_assert(__i < _Np);
+    if constexpr (_Np == 1)
+      _M_bits[0] = __x;
+    else
+      {
+	constexpr size_t __j     = __i / (sizeof(_Tp) * CHAR_BIT);
+	constexpr size_t __shift = __i % (sizeof(_Tp) * CHAR_BIT);
+	constexpr _Tp    __mask  = ~_Tp(_Tp(1) << __shift);
+	_M_bits[__j] &= __mask;
+	_M_bits[__j] |= _Tp(_Tp(__x) << __shift);
+      }
+  }
+
+  // Inverts all bits. Sanitized input leads to sanitized output.
+  constexpr _BitMask operator~() const noexcept
+  {
+    if constexpr (_Np == 1)
+      return !_M_bits[0];
+    else
+      {
+	_BitMask __result{};
+	for (int __i = 0; __i < _S_array_size - 1; ++__i)
+	  __result._M_bits[__i] = ~_M_bits[__i];
+	if constexpr (_Sanitized)
+	  __result._M_bits[_S_array_size - 1] =
+	    _M_bits[_S_array_size - 1] ^ _Tp(_Tp(~_Tp()) >> _S_unused_bits);
+	else
+	  __result._M_bits[_S_array_size - 1] = ~_M_bits[_S_array_size - 1];
+	return __result;
+      }
+  }
+
+  constexpr _BitMask& operator^=(const _BitMask& __b) & noexcept
+  {
+    __execute_n_times<_S_array_size>(
+      [&](auto __i) { _M_bits[__i] ^= __b._M_bits[__i]; });
+    return *this;
+  }
+  constexpr _BitMask& operator|=(const _BitMask& __b) & noexcept
+  {
+    __execute_n_times<_S_array_size>(
+      [&](auto __i) { _M_bits[__i] |= __b._M_bits[__i]; });
+    return *this;
+  }
+  constexpr _BitMask& operator&=(const _BitMask& __b) & noexcept
+  {
+    __execute_n_times<_S_array_size>(
+      [&](auto __i) { _M_bits[__i] &= __b._M_bits[__i]; });
+    return *this;
+  }
+  friend constexpr _BitMask
+    operator^(const _BitMask& __a, const _BitMask& __b) noexcept
+  {
+    _BitMask __r = __a;
+    __r ^= __b;
+    return __r;
+  }
+  friend constexpr _BitMask
+    operator|(const _BitMask& __a, const _BitMask& __b) noexcept
+  {
+    _BitMask __r = __a;
+    __r |= __b;
+    return __r;
+  }
+  friend constexpr _BitMask
+    operator&(const _BitMask& __a, const _BitMask& __b) noexcept
+  {
+    _BitMask __r = __a;
+    __r &= __b;
+    return __r;
+  }
+};
 
 // }}}
 
@@ -1802,7 +2114,8 @@ _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST auto
     return __blend(
       simd_abi::deduce<typename _VectorTraits<_V>::value_type,
 		       _VectorTraits<_V>::_S_width>::type::_MaskImpl::
-	__to_bits(typename _VectorTraits<_K>::_Wrapper(mask)),
+	__to_bits(typename _VectorTraits<_K>::_Wrapper(mask))
+	  ._M_to_bits(),
       at0, at1);
 #endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else
@@ -1851,6 +2164,7 @@ struct __bool_storage_member_type
   using type =
     typename __bool_storage_member_type<__next_power_of_2(_Size)>::type;
 };
+template <> struct __bool_storage_member_type< 1> { using type = bool ; };
 template <> struct __bool_storage_member_type< 2> { using type = __mmask8 ; };
 template <> struct __bool_storage_member_type< 4> { using type = __mmask8 ; };
 template <> struct __bool_storage_member_type< 8> { using type = __mmask8 ; };
@@ -3598,7 +3912,7 @@ public:
         return {__bitset_init, bs};
     }
     _GLIBCXX_SIMD_ALWAYS_INLINE std::bitset<size()> __to_bitset() const {
-      return _Impl::__to_bits(_M_data);
+      return _Impl::__to_bits(_M_data)._M_to_bitset();
     }
 
     // }}}
@@ -3610,12 +3924,13 @@ public:
 
     // }}}
     // implicit type conversion constructor {{{
-    template <typename _Up, typename = enable_if_t<
-                            conjunction<is_same<abi_type, simd_abi::fixed_size<size()>>,
-                                        is_same<_Up, _Up>>::value>>
-    _GLIBCXX_SIMD_ALWAYS_INLINE simd_mask(
-        const simd_mask<_Up, simd_abi::fixed_size<size()>> &__x)
-        : simd_mask{__bitset_init, __data(__x)}
+    template <typename _Up,
+	      typename = enable_if_t<
+		conjunction<is_same<abi_type, simd_abi::fixed_size<size()>>,
+			    is_same<_Up, _Up>>::value>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE
+      simd_mask(const simd_mask<_Up, simd_abi::fixed_size<size()>>& __x)
+    : _M_data(_Impl::__from_bitmask(__data(__x), _S_type_tag))
     {
     }
     // }}}
@@ -3738,7 +4053,8 @@ public:
     // }}}
     // bitset_init ctor {{{
     _GLIBCXX_SIMD_INTRINSIC simd_mask(_BitsetInit, std::bitset<size()> __init)
-        : _M_data(_Impl::__from_bitset(__init, _S_type_tag))
+    : _M_data(
+	_Impl::__from_bitmask(_SanitizedBitMask<size()>(__init), _S_type_tag))
     {
     }
 

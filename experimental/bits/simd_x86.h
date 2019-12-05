@@ -435,19 +435,19 @@ struct _CommonImplX86 : _CommonImplBuiltin
   }
 
   // }}}
-  // __store_bool_array(bitset) {{{
-  template <size_t _Np, typename _Flags>
+  // __store_bool_array(_BitMask) {{{
+  template <size_t _Np, typename _Flags, bool _Sanitized>
   _GLIBCXX_SIMD_INTRINSIC static constexpr void
-    __store_bool_array(std::bitset<_Np> __x, bool* __mem, _Flags)
+    __store_bool_array(const _BitMask<_Np, _Sanitized> __x, bool* __mem, _Flags)
   {
     if constexpr (__have_avx512bw_vl) // don't care for BW w/o VL
       __store<_Np>(1 & __vector_bitcast<_UChar, _Np>([=]() constexpr {
 		     if constexpr (_Np <= 16)
-		       return _mm_movm_epi8(__x.to_ulong());
+		       return _mm_movm_epi8(__x._M_to_bits());
 		     else if constexpr (_Np <= 32)
-		       return _mm256_movm_epi8(__x.to_ulong());
+		       return _mm256_movm_epi8(__x._M_to_bits());
 		     else if constexpr (_Np <= 64)
-		       return _mm512_movm_epi8(__x.to_ullong());
+		       return _mm512_movm_epi8(__x._M_to_bits());
 		     else
 		       __assert_unreachable<_SizeConstant<_Np>>();
 		   }()),
@@ -455,7 +455,7 @@ struct _CommonImplX86 : _CommonImplBuiltin
     else if constexpr (__have_bmi2)
       {
 	if constexpr (_Np <= 4)
-	  __store<_Np>(_pdep_u32(__x.to_ulong(), 0x01010101U), __mem, _Flags());
+	  __store<_Np>(_pdep_u32(__x._M_to_bits(), 0x01010101U), __mem, _Flags());
 	else
 	  __execute_n_times<__div_roundup(_Np, sizeof(size_t))>([&](auto __i) {
 	    constexpr size_t __offset = __i * sizeof(size_t);
@@ -466,10 +466,11 @@ struct _CommonImplX86 : _CommonImplBuiltin
 	      {
 		const auto __bools =
 #ifdef __x86_64__
-		  _pdep_u64((__x >> __offset).to_ullong(),
+		  _pdep_u64(__x.template _M_extract<__offset>().to_ullong(),
 			    0x0101010101010101ULL);
 #else  // __x86_64__
-		  _pdep_u32((__x >> __offset).to_ulong(), 0x01010101U);
+		  _pdep_u32(__x.template _M_extract<__offset>()._M_to_bits(),
+			    0x01010101U);
 #endif // __x86_64__
 		__store<__todo>(__bools, __mem + __offset, _Flags());
 	      }
@@ -480,7 +481,7 @@ struct _CommonImplX86 : _CommonImplBuiltin
 	[&](auto __i) {
 	  constexpr int __offset = __i * 16;
 	  constexpr int __todo   = std::min(16, int(_Np) - __offset);
-	  const int     __bits   = (__x >> __offset).to_ulong();
+	  const int __bits = __x.template _M_extract<__offset>()._M_to_bits();
 	  __vector_type16_t<_UChar> __bools;
 	  if constexpr (__have_avx512f)
 	    {
@@ -552,7 +553,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512bw_vl) &&
 		      sizeof(_Tp) == 1)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_epi8(__intrin, __kk, __mem));
@@ -568,7 +569,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512bw_vl) &&
 			   sizeof(_Tp) == 2)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_epi16(__intrin, __kk, __mem));
@@ -584,7 +585,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512vl) &&
 			   sizeof(_Tp) == 4 && std::is_integral_v<_Up>)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_epi32(__intrin, __kk, __mem));
@@ -600,7 +601,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512vl) &&
 			   sizeof(_Tp) == 4 && std::is_floating_point_v<_Up>)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_ps(__intrin, __kk, __mem));
@@ -647,7 +648,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512vl) &&
 			   sizeof(_Tp) == 8 && std::is_integral_v<_Up>)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_epi64(__intrin, __kk, __mem));
@@ -663,7 +664,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512vl) &&
 			   sizeof(_Tp) == 8 && std::is_floating_point_v<_Up>)
 	  {
-	    const auto __kk = _MaskImpl::__to_bits(__k);
+	    const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	    if constexpr (sizeof(__intrin) == 16)
 	      __merge = __vector_bitcast<_Tp, _Np>(
 		_mm_mask_loadu_pd(__intrin, __kk, __mem));
@@ -993,7 +994,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 		  (sizeof(__v) == 64 || __have_avx512vl))
       { // truncating store
 	const auto __vi = __to_intrin(__v);
-	const auto __kk = _MaskImpl::__to_bits(__k);
+	const auto __kk = _MaskImpl::__to_bits(__k)._M_to_bits();
 	if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4 && sizeof(__vi) == 64)
 	  _mm512_mask_cvtepi64_storeu_epi32(__mem, __kk, __vi);
 	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4 &&
@@ -2976,17 +2977,17 @@ struct _MaskImplX86Mixin
   }
 
   // }}}
-  // __to_maskvector(bitset) {{{
+  // __to_maskvector(_SanitizedBitMask) {{{
   template <typename _Up,
 	    size_t _UpN = 0,
 	    size_t _Np,
 	    size_t _ToN = _UpN == 0 ? _Np : _UpN>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
-    __to_maskvector(std::bitset<_Np> __x)
+    __to_maskvector(_SanitizedBitMask<_Np> __x)
   {
-    using _UV               = __vector_type_t<_Up, _ToN>;
-    using _UI               = __intrinsic_type_t<_Up, _ToN>;
-    const auto     __k      = __x.to_ullong();
+    using _UV      = __vector_type_t<_Up, _ToN>;
+    using _UI      = __intrinsic_type_t<_Up, _ToN>;
+    const auto __k = __x._M_to_bits();
     if constexpr (sizeof(_Up) == 1)
       {
 	if constexpr (sizeof(_UI) == 16)
@@ -3066,6 +3067,8 @@ struct _MaskImplX86Mixin
 	    _mm512_movm_epi8(__k));
 	if constexpr (std::min(_ToN, _Np) <= 4)
 	  {
+	    if constexpr (_Np > 7) // avoid overflow
+	      __x &= _SanitizedBitMask<_Np>(0x0f);
 	    const _UInt __char_mask =
 	      ((_UInt(__x.to_ulong()) * 0x00204081U) & 0x01010101ULL) *
 	      0xff;
@@ -3076,6 +3079,8 @@ struct _MaskImplX86Mixin
 	  }
 	else if constexpr (std::min(_ToN, _Np) <= 7)
 	  {
+	    if constexpr (_Np > 7) // avoid overflow
+	      __x &= _SanitizedBitMask<_Np>(0x7f);
 	    const _ULLong __char_mask =
 	      ((__x.to_ulong() * 0x40810204081ULL) & 0x0101010101010101ULL) *
 	      0xff;
@@ -3252,12 +3257,12 @@ struct _MaskImplX86Mixin
     using _UI = __intrinsic_type_t<_Up, _ToN>;
     if constexpr (sizeof(_Up) == sizeof(_Tp) && sizeof(_TW) == sizeof(_UW))
       if constexpr(_ToN <= _Np)
-        return __wrapper_bitcast<_Up>(__x);
+	return __wrapper_bitcast<_Up, _ToN>(__x);
       else
 	return simd_abi::deduce_t<_Up, _ToN>::__masked(
 	  __wrapper_bitcast<_Up, _ToN>(__x));
     else if constexpr (is_same_v<_Tp, bool>) // bits -> vector
-      return __to_maskvector<_Up, _ToN>(std::bitset<_Np>(__x._M_data));
+      return __to_maskvector<_Up, _ToN>(_BitMask<_Np>(__x._M_data)._M_sanitized());
     else
       { // vector -> vector {{{
 	using _To = __vector_type_t<_Up, _ToN>;
@@ -3573,123 +3578,132 @@ struct _MaskImplX86Mixin
   // }}}
   // __to_bits {{{
   template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
     __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
     if constexpr (is_same_v<_Tp, bool>)
-      return __x._M_data;
+      return _BitMask<_Np>(__x._M_data)._M_sanitized();
+    else if (__builtin_is_constant_evaluated())
+      {
+	using _I           = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+	const auto __bools = __vector_bitcast<_I>(__x) ? _I(1) : _I(0);
+	_ULLong    __k     = 0;
+	for (size_t i = 0; i < _Np; ++i)
+	  __k |= (_ULLong(__bools[i]) << i);
+	return __k;
+      }
     else
       {
 	const auto       __xi   = __to_intrin(__x);
 	if constexpr (is_floating_point_v<_Tp>)
 	  if constexpr (sizeof(_Tp) == 4) // float
 	    if constexpr (sizeof(__xi) == 16)
-	      return _UChar(_mm_movemask_ps(__xi));
+	      return _BitMask<_Np>(_mm_movemask_ps(__xi));
 	    else if constexpr (sizeof(__xi) == 32)
-	      return _UChar(_mm256_movemask_ps(__xi));
+	      return _BitMask<_Np>(_mm256_movemask_ps(__xi));
 	    else if constexpr (__have_avx512dq)
-	      return _mm512_movepi32_mask(reinterpret_cast<__m512i>(__xi));
+	      return _BitMask<_Np>(_mm512_movepi32_mask(reinterpret_cast<__m512i>(__xi)));
 	    else
-	      return _mm512_cmp_ps_mask(__xi, __xi, _CMP_UNORD_Q);
+	      return _BitMask<_Np>(_mm512_cmp_ps_mask(__xi, __xi, _CMP_UNORD_Q));
 	  else // implies double
 	    if constexpr (sizeof(__xi) == 16)
-	      return _UChar(_mm_movemask_pd(__xi));
+	      return _BitMask<_Np>(_mm_movemask_pd(__xi));
 	    else if constexpr (sizeof(__xi) == 32)
-	      return _UChar(_mm256_movemask_pd(__xi));
+	      return _BitMask<_Np>(_mm256_movemask_pd(__xi));
 	    else if constexpr (__have_avx512dq)
-	      return _mm512_movepi64_mask(reinterpret_cast<__m512i>(__xi));
+	      return _BitMask<_Np>(_mm512_movepi64_mask(reinterpret_cast<__m512i>(__xi)));
 	    else
-	      return _mm512_cmp_pd_mask(__xi, __xi, _CMP_UNORD_Q);
+	      return _BitMask<_Np>(_mm512_cmp_pd_mask(__xi, __xi, _CMP_UNORD_Q));
 
 	else if constexpr (sizeof(_Tp) == 1)
 	  if constexpr (sizeof(__xi) == 16)
 	    if constexpr (__have_avx512bw_vl)
-	      return _mm_movepi8_mask(__xi);
+	      return _BitMask<_Np>(_mm_movepi8_mask(__xi));
 	    else // implies SSE2
-	      return _UShort(_mm_movemask_epi8(__xi));
+	      return _BitMask<_Np>(_mm_movemask_epi8(__xi));
 	  else if constexpr (sizeof(__xi) == 32)
 	    if constexpr (__have_avx512bw_vl)
-	      return _mm256_movepi8_mask(__xi);
+	      return _BitMask<_Np>(_mm256_movepi8_mask(__xi));
 	    else // implies AVX2
-	      return _UInt(_mm256_movemask_epi8(__xi));
+	      return _BitMask<_Np>(_mm256_movemask_epi8(__xi));
 	  else // implies AVX512BW
-	    return _mm512_movepi8_mask(__xi);
+	    return _BitMask<_Np>(_mm512_movepi8_mask(__xi));
 
 	else if constexpr (sizeof(_Tp) == 2)
 	  if constexpr (sizeof(__xi) == 16)
 	    if constexpr (__have_avx512bw_vl)
-	      return _mm_movepi16_mask(__xi);
+	      return _BitMask<_Np>(_mm_movepi16_mask(__xi));
 	    else if constexpr (__have_avx512bw)
-	      return __mmask8(_mm512_movepi16_mask(__zero_extend(__xi)));
+	      return _BitMask<_Np>(_mm512_movepi16_mask(__zero_extend(__xi)));
 	    else // implies SSE2
-	      return _UChar(_mm_movemask_epi8(_mm_packs_epi16(__xi, __m128i())));
+	      return _BitMask<_Np>(_mm_movemask_epi8(_mm_packs_epi16(__xi, __m128i())));
 	  else if constexpr (sizeof(__xi) == 32)
 	    if constexpr (__have_avx512bw_vl)
-	      return _mm256_movepi16_mask(__xi);
+	      return _BitMask<_Np>(_mm256_movepi16_mask(__xi));
 	    else if constexpr (__have_avx512bw)
-	      return __mmask16(_mm512_movepi16_mask(__zero_extend(__xi)));
+	      return _BitMask<_Np>(_mm512_movepi16_mask(__zero_extend(__xi)));
 	    else // implies SSE2
-	      return _UShort(_mm_movemask_epi8(_mm_packs_epi16(__lo128(__xi), __hi128(__xi))));
+	      return _BitMask<_Np>(_mm_movemask_epi8(_mm_packs_epi16(__lo128(__xi), __hi128(__xi))));
 	  else // implies AVX512BW
-	    return _mm512_movepi16_mask(__xi);
+	    return _BitMask<_Np>(_mm512_movepi16_mask(__xi));
 
 	else if constexpr (sizeof(_Tp) == 4)
 	  if constexpr (sizeof(__xi) == 16)
 	    if constexpr (__have_avx512dq_vl)
-	      return _mm_movepi32_mask(__xi);
+	      return _BitMask<_Np>(_mm_movepi32_mask(__xi));
 	    else if constexpr (__have_avx512vl)
-	      return _mm_cmplt_epi32_mask(__xi, __m128i());
+	      return _BitMask<_Np>(_mm_cmplt_epi32_mask(__xi, __m128i()));
 	    else if constexpr (__have_avx512dq)
-	      return __mmask8(_mm512_movepi32_mask(__zero_extend(__xi)));
+	      return _BitMask<_Np>(_mm512_movepi32_mask(__zero_extend(__xi)));
 	    else if constexpr (__have_avx512f)
-	      return __mmask8(_mm512_cmplt_epi32_mask(__zero_extend(__xi), __m512i()));
+	      return _BitMask<_Np>(_mm512_cmplt_epi32_mask(__zero_extend(__xi), __m512i()));
 	    else // implies SSE
-	      return _mm_movemask_ps(reinterpret_cast<__m128>(__xi));
+	      return _BitMask<_Np>(_mm_movemask_ps(reinterpret_cast<__m128>(__xi)));
 	  else if constexpr (sizeof(__xi) == 32)
 	    if constexpr (__have_avx512dq_vl)
-	      return _mm256_movepi32_mask(__xi);
+	      return _BitMask<_Np>(_mm256_movepi32_mask(__xi));
 	    else if constexpr (__have_avx512dq)
-	      return __mmask8(_mm512_movepi32_mask( __zero_extend(__xi)));
+	      return _BitMask<_Np>(_mm512_movepi32_mask( __zero_extend(__xi)));
 	    else if constexpr (__have_avx512vl)
-	      return _mm256_cmplt_epi32_mask(__xi, __m256i());
+	      return _BitMask<_Np>(_mm256_cmplt_epi32_mask(__xi, __m256i()));
 	    else if constexpr (__have_avx512f)
-	      return __mmask8(_mm512_cmplt_epi32_mask(__zero_extend(__xi), __m512i()));
+	      return _BitMask<_Np>(_mm512_cmplt_epi32_mask(__zero_extend(__xi), __m512i()));
 	    else // implies AVX
-	      return _mm256_movemask_ps(reinterpret_cast<__m256>(__xi));
+	      return _BitMask<_Np>(_mm256_movemask_ps(reinterpret_cast<__m256>(__xi)));
 	  else // implies AVX512??
 	    if constexpr (__have_avx512dq)
-	      return _mm512_movepi32_mask(__xi);
+	      return _BitMask<_Np>(_mm512_movepi32_mask(__xi));
 	    else // implies AVX512F
-	      return _mm512_cmplt_epi32_mask(__xi, __m512i());
+	      return _BitMask<_Np>(_mm512_cmplt_epi32_mask(__xi, __m512i()));
 
 	else if constexpr (sizeof(_Tp) == 8)
 	  if constexpr (sizeof(__xi) == 16)
 	    if constexpr (__have_avx512dq_vl)
-	      return _mm_movepi64_mask(__xi);
+	      return _BitMask<_Np>(_mm_movepi64_mask(__xi));
 	    else if constexpr (__have_avx512dq)
-	      return _mm512_movepi64_mask(__zero_extend(__xi));
+	      return _BitMask<_Np>(_mm512_movepi64_mask(__zero_extend(__xi)));
 	    else if constexpr (__have_avx512vl)
-	      return _mm_cmplt_epi64_mask(__xi, __m128i());
+	      return _BitMask<_Np>(_mm_cmplt_epi64_mask(__xi, __m128i()));
 	    else if constexpr (__have_avx512f)
-	      return _mm512_cmplt_epi64_mask(__zero_extend(__xi), __m512i());
+	      return _BitMask<_Np>(_mm512_cmplt_epi64_mask(__zero_extend(__xi), __m512i()));
 	    else // implies SSE2
-	      return _UChar(_mm_movemask_pd(reinterpret_cast<__m128d>(__xi)));
+	      return _BitMask<_Np>(_mm_movemask_pd(reinterpret_cast<__m128d>(__xi)));
 	  else if constexpr (sizeof(__xi) == 32)
 	    if constexpr (__have_avx512dq_vl)
-	      return _mm256_movepi64_mask(__xi);
+	      return _BitMask<_Np>(_mm256_movepi64_mask(__xi));
 	    else if constexpr (__have_avx512dq)
-	      return _mm512_movepi64_mask(__zero_extend(__xi));
+	      return _BitMask<_Np>(_mm512_movepi64_mask(__zero_extend(__xi)));
 	    else if constexpr (__have_avx512vl)
-	      return _mm256_cmplt_epi64_mask(__xi, __m256i());
+	      return _BitMask<_Np>(_mm256_cmplt_epi64_mask(__xi, __m256i()));
 	    else if constexpr (__have_avx512f)
-	      return _mm512_cmplt_epi64_mask(__zero_extend(__xi), __m512i());
+	      return _BitMask<_Np>(_mm512_cmplt_epi64_mask(__zero_extend(__xi), __m512i()));
 	    else // implies AVX
-	      return _mm256_movemask_pd(reinterpret_cast<__m256d>(__xi));
+	      return _BitMask<_Np>(_mm256_movemask_pd(reinterpret_cast<__m256d>(__xi)));
 	  else // implies AVX512??
 	    if constexpr (__have_avx512dq)
-	      return _mm512_movepi64_mask(__xi);
+	      return _BitMask<_Np>(_mm512_movepi64_mask(__xi));
 	    else // implies AVX512F
-	      return _mm512_cmplt_epi64_mask(__xi, __m512i());
+	      return _BitMask<_Np>(_mm512_cmplt_epi64_mask(__xi, __m512i()));
 
 	else
 	  __assert_unreachable<_Tp>();
@@ -3746,8 +3760,8 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	  if constexpr (__is_avx512_abi<_Abi>())
 	    return __bits;
 	  else
-	    return __to_maskvector<_Tp, size<_Tp>>(
-	      std::bitset<size<_Tp>>(__bits));
+	    return __to_maskvector<_Tp>(
+	      _BitMask<size<_Tp>>(__bits)._M_sanitized());
 	};
 
 	if constexpr (size<_Tp> <= 16 && __have_avx512vl)
@@ -3882,13 +3896,20 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 
   // }}}
   // __convert {{{
+  template <typename _Tp, size_t _Np, bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    __convert(_BitMask<_Np, _Sanitized> __x)
+  {
+    if constexpr (__is_avx512_abi<_Abi>())
+      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__x._M_to_bits());
+    else
+      return __to_maskvector<_Tp, size<_Tp>>(__x._M_sanitized());
+  }
+
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<bool, _Np> __x)
   {
-    if constexpr (__is_avx512_abi<_Abi>())
-      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__x);
-    else
-      return __to_maskvector<_Tp, size<_Tp>>(__x);
+    return __convert<_Tp>(_BitMask<_Np>(__x._M_data));
   }
 
   template <typename _Tp, typename _Up, size_t _Np>
@@ -3919,22 +3940,22 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 //X 	  if constexpr (simd_size_v<_Tp, _Abi> < __x.size())
 //X 	    return _Abi::__masked(_R(__data(__x).to_ullong()));
 //X 	  else
-	    return _R(__data(__x).to_ullong());
+	    return _R(__data(__x)._M_to_bits());
 	else // vector -> bits
-	  return _R(_UAbi::_MaskImpl::__to_bits(__data(__x)));
+	  return _R(_UAbi::_MaskImpl::__to_bits(__data(__x))._M_to_bits());
       }
     else
       return __to_maskvector<_Tp, size<_Tp>>(__data(__x));
   }
 
   // }}}
-  // __from_bitset{{{
+  // __from_bitmask{{{
   template <size_t _Np, typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
-    __from_bitset(std::bitset<_Np> __bits, _TypeTag<_Tp>)
+    __from_bitmask(_SanitizedBitMask<_Np> __bits, _TypeTag<_Tp>)
   {
     if constexpr (__is_avx512_abi<_Abi>())
-      return __bits.to_ullong();
+      return __bits._M_to_bits();
     else
       return __to_maskvector<_Tp, size<_Tp>>(__bits);
   }
@@ -3981,56 +4002,56 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       }
     else if constexpr (__have_avx512bw_vl && _Np == 32 && sizeof(_Tp) == 1)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge =
 	  _mm256_mask_sub_epi8(__to_intrin(__merge), __k, __m256i(),
 			       _mm256_mask_loadu_epi8(__m256i(), __k, __mem));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 16 && sizeof(_Tp) == 1)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge =
 	  _mm_mask_sub_epi8(__vector_bitcast<_LLong>(__merge), __k, __m128i(),
 			    _mm_mask_loadu_epi8(__m128i(), __k, __mem));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 16 && sizeof(_Tp) == 2)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = _mm256_mask_sub_epi16(
           __vector_bitcast<_LLong>(__merge), __k, __m256i(),
           _mm256_cvtepi8_epi16(_mm_mask_loadu_epi8(__m128i(), __k, __mem)));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 8 && sizeof(_Tp) == 2)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = _mm_mask_sub_epi16(
           __vector_bitcast<_LLong>(__merge), __k, __m128i(),
           _mm_cvtepi8_epi16(_mm_mask_loadu_epi8(__m128i(), __k, __mem)));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 8 && sizeof(_Tp) == 4)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = __vector_bitcast<_Tp>(_mm256_mask_sub_epi32(
           __vector_bitcast<_LLong>(__merge), __k, __m256i(),
           _mm256_cvtepi8_epi32(_mm_mask_loadu_epi8(__m128i(), __k, __mem))));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 4 && sizeof(_Tp) == 4)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = __vector_bitcast<_Tp>(_mm_mask_sub_epi32(
           __vector_bitcast<_LLong>(__merge), __k, __m128i(),
           _mm_cvtepi8_epi32(_mm_mask_loadu_epi8(__m128i(), __k, __mem))));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 4 && sizeof(_Tp) == 8)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = __vector_bitcast<_Tp>(_mm256_mask_sub_epi64(
           __vector_bitcast<_LLong>(__merge), __k, __m256i(),
           _mm256_cvtepi8_epi64(_mm_mask_loadu_epi8(__m128i(), __k, __mem))));
       }
     else if constexpr (__have_avx512bw_vl && _Np == 2 && sizeof(_Tp) == 8)
       {
-	const auto __k = __to_bits(__mask);
+	const auto __k = __to_bits(__mask)._M_to_bits();
 	__merge        = __vector_bitcast<_Tp>(_mm_mask_sub_epi64(
           __vector_bitcast<_LLong>(__merge), __k, __m128i(),
           _mm_cvtepi8_epi64(_mm_mask_loadu_epi8(__m128i(), __k, __mem))));

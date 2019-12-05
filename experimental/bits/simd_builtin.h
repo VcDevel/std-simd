@@ -1357,21 +1357,21 @@ struct _CommonImplBuiltin
   }
 
   // }}}
-  // __store_bool_array(bitset) {{{
-  template <size_t _Np, typename _Flags>
+  // __store_bool_array(_BitMask) {{{
+  template <size_t _Np, typename _Flags, bool _Sanitized>
   _GLIBCXX_SIMD_INTRINSIC static constexpr void
-    __store_bool_array(std::bitset<_Np> __x, bool* __mem, _Flags)
+    __store_bool_array(_BitMask<_Np, _Sanitized> __x, bool* __mem, _Flags)
   {
     if constexpr (_Np == 1)
       __mem[0] = __x[0];
     else if constexpr (_Np == 2)
       {
-	short __bool2 = (__x.to_ulong() * 0x81) & 0x0101;
+	short __bool2 = (__x._M_to_bits() * 0x81) & 0x0101;
 	__store<_Np>(__bool2, __mem, _Flags());
       }
     else if constexpr (_Np == 3)
       {
-	int __bool3 = (__x.to_ulong() * 0x4081) & 0x010101;
+	int __bool3 = (__x._M_to_bits() * 0x4081) & 0x010101;
 	__store<_Np>(__bool3, __mem, _Flags());
       }
     else
@@ -1382,13 +1382,13 @@ struct _CommonImplBuiltin
 	  if constexpr (__remaining > 4 && __remaining <= 7)
 	    {
 	      const _ULLong __bool7 =
-		((__x >> __offset).to_ulong() * 0x40810204081ULL) &
+		(__x.template _M_extract<__offset>()._M_to_bits() * 0x40810204081ULL) &
 		0x0101010101010101ULL;
 	      __store<__remaining>(__bool7, __mem + __offset, _Flags());
 	    }
 	  else if constexpr (__remaining >= 4)
 	    {
-	      int __bits = (__x >> __offset).to_ulong();
+	      int __bits = __x.template _M_extract<__offset>()._M_to_bits();
 	      if constexpr (__remaining > 7)
 		__bits &= 0xf;
 	      const int __bool4 = (__bits * 0x204081) & 0x01010101;
@@ -1608,34 +1608,30 @@ struct _SimdImplBuiltin
 			 !_CommonImpl::template __converts_via_decomposition_v<
 			   _Tp, _Up, __max_store_size>)
 	{ // conversion via decomposition is better handled via the bit_iteration fallback below
-	  using _UV = __vector_type_t<_Up, std::min(_TV_size, __max_store_size /
-							       sizeof(_Up))>;
-	  constexpr size_t _UV_size = _VectorTraits<_UV>::_S_width;
-	  using _UW                 = _SimdWrapper<_Up, _UV_size>;
-	  using _UAbi               = simd_abi::deduce_t<_Up, _UV_size>;
-	  if constexpr (_UV_size >= _TV_size)
+	  constexpr size_t _UW_size =
+	    std::min(_TV_size, __max_store_size / sizeof(_Up));
+	  static_assert(_UW_size <= _TV_size);
+	  using _UW   = _SimdWrapper<_Up, _UW_size>;
+	  using _UV   = __vector_type_t<_Up, _UW_size>;
+	  using _UAbi = simd_abi::deduce_t<_Up, _UW_size>;
+	  if constexpr (_UW_size == _TV_size) // one convert+store
 	    {
-	      _UW __converted(__convert<_UV>(__v));
-	      // if _UV has more elements than the input (_TV_size),
-	      // vector_aligned is incorrect:
-	      constexpr std::conditional_t<
-		(_UV_size > _TV_size), overaligned_tag<sizeof(_Up) * _TV_size>,
-		_Fp>
-		__flag;
+	      const _UW __converted = __convert<_UW>(__v);
 	      _SuperImpl::__masked_store_nocvt(
-		__converted, __mem, __flag,
+		__converted, __mem, _Fp(),
 		_UAbi::_MaskImpl::template __convert<_Up>(__k));
 	    }
 	  else
 	    {
-	      constexpr size_t _NFullStores = _TV_size / _UV_size;
-	      constexpr size_t _NAllStores  = __div_roundup(_TV_size, _UV_size);
-	      constexpr size_t _NParts      = _S_full_size<_Tp> / _UV_size;
+	      static_assert(_UW_size * sizeof(_Up) == __max_store_size);
+	      constexpr size_t _NFullStores = _TV_size / _UW_size;
+	      constexpr size_t _NAllStores  = __div_roundup(_TV_size, _UW_size);
+	      constexpr size_t _NParts      = _S_full_size<_Tp> / _UW_size;
 	      const std::array<_UV, _NAllStores> __converted =
 		__convert_all<_UV, _NAllStores>(__v);
 	      __execute_n_times<_NFullStores>([&](auto __i) {
 		_SuperImpl::__masked_store_nocvt(
-		  _UW(__converted[__i]), __mem + __i * _UV_size, _Fp(),
+		  _UW(__converted[__i]), __mem + __i * _UW_size, _Fp(),
 		  _UAbi::_MaskImpl::template __convert<_Up>(
 		    __extract_part<__i, _NParts>(__k.__as_full_vector())));
 	      });
@@ -1643,7 +1639,7 @@ struct _SimdImplBuiltin
 			    _NFullStores) // one partial at the end
 		_SuperImpl::__masked_store_nocvt(
 		  _UW(__converted[_NFullStores]),
-		  __mem + _NFullStores * _UV_size, _Fp(),
+		  __mem + _NFullStores * _UW_size, _Fp(),
 		  _UAbi::_MaskImpl::template __convert<_Up>(
 		    __extract_part<_NFullStores, _NParts>(
 		      __k.__as_full_vector())));
@@ -2417,7 +2413,7 @@ struct _SimdImplBuiltin
                                            __id<_Tp> __rhs)
     {
         if (__builtin_constant_p(__rhs) && __rhs == 0 && std::is_same<_K, _Tp>::value) {
-            if constexpr (!__is_bitmask(__k)) {
+            if constexpr (!is_same_v<bool, _K>) {
                 // the __andnot optimization only makes sense if __k._M_data is a vector register
                 __lhs._M_data = __andnot(__k._M_data, __lhs._M_data);
                 return;
@@ -2555,18 +2551,16 @@ struct _MaskImplBuiltinMixin {
   // }}}
   // __to_bits {{{
   template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
     __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
     static_assert(!is_same_v<_Tp, bool>);
     static_assert(_Np <= CHAR_BIT * sizeof(_ULLong));
     using _Up = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
     const auto __bools = __vector_bitcast<_Up>(__x) >> (sizeof(_Up) * CHAR_BIT - 1);
-    using _R = make_unsigned_t<
-      __int_with_sizeof_t<__next_power_of_2(__div_roundup(_Np, CHAR_BIT))>>;
-    _R __r = 0;
+    _ULLong __r = 0;
     __execute_n_times<_Np>(
-      [&](auto __i) { __r += _R(__bools[__i.value]) << __i; });
+      [&](auto __i) { __r |= _ULLong(__bools[__i.value]) << __i; });
     return __r;
   }
 
@@ -2668,10 +2662,10 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 	});
     }
 
-    // __from_bitset{{{2
+    // __from_bitmask{{{2
     template <size_t _Np, typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
-      __from_bitset(std::bitset<_Np> __bits, _TypeTag<_Tp>)
+      __from_bitmask(_SanitizedBitMask<_Np> __bits, _TypeTag<_Tp>)
     {
       return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__bits);
     }
@@ -2817,7 +2811,8 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     _GLIBCXX_SIMD_INTRINSIC static int
       __find_first_set(simd_mask<_Tp, _Abi> __k)
     {
-      return _BitOps::__firstbit(_SuperImpl::__to_bits(__data(__k)));
+      return _BitOps::__firstbit(
+	_SuperImpl::__to_bits(__data(__k))._M_to_bits());
     }
 
     // }}}
@@ -2825,7 +2820,8 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     template <typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi> __k)
     {
-      return _BitOps::__lastbit(_SuperImpl::__to_bits(__data(__k)));
+      return _BitOps::__lastbit(
+	_SuperImpl::__to_bits(__data(__k))._M_to_bits());
     }
 
     // }}}
