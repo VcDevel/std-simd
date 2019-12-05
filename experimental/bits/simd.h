@@ -652,7 +652,7 @@ struct __is_aligned<element_aligned_tag, _Alignment> : public false_type
 };
 template <size_t _GivenAlignment, size_t _Alignment>
 struct __is_aligned<overaligned_tag<_GivenAlignment>, _Alignment>
-: public std::integral_constant<bool, (_GivenAlignment >= _Alignment)>
+: public std::integral_constant<bool, (_GivenAlignment % _Alignment == 0)>
 {
 };
 template <typename _Flag, size_t _Alignment>
