@@ -2164,6 +2164,47 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     }
 
     // }}}
+    // __ldexp {{{
+    template <typename _Tp, size_t _Np>
+    _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _Np>
+      __ldexp(_SimdWrapper<_Tp, _Np>           __x,
+	      __fixed_size_storage_t<int, _Np> __exp)
+    {
+      if constexpr (__is_avx512_abi<_Abi>())
+	{
+	  const auto __xi = __to_intrin(__x);
+	  constexpr _SimdConverter<int, simd_abi::fixed_size<_Np>, _Tp, _Abi>
+			 __cvt;
+	  const auto     __expi = __to_intrin(__cvt(__exp));
+	  constexpr auto __k1   = _Abi::template __implicit_mask<_Tp>();
+	  if constexpr (sizeof(__xi) == 16)
+	    {
+	      if constexpr (sizeof(_Tp) == 8)
+		return _mm_maskz_scalef_pd(__k1, __xi, __expi);
+	      else
+		return _mm_maskz_scalef_ps(__k1, __xi, __expi);
+	    }
+	  else if constexpr (sizeof(__xi) == 32)
+	    {
+	      if constexpr (sizeof(_Tp) == 8)
+		return _mm256_maskz_scalef_pd(__k1, __xi, __expi);
+	      else
+		return _mm256_maskz_scalef_ps(__k1, __xi, __expi);
+	    }
+	  else
+	    {
+	      static_assert(sizeof(__xi) == 64);
+	      if constexpr (sizeof(_Tp) == 8)
+		return _mm512_maskz_scalef_pd(__k1, __xi, __expi);
+	      else
+		return _mm512_maskz_scalef_ps(__k1, __xi, __expi);
+	    }
+	}
+      else
+	return _Base::__ldexp(__x, __exp);
+    }
+
+    // }}}
     // __trunc {{{
     template <typename _Tp, size_t _Np>
     _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _Np> __trunc(_SimdWrapper<_Tp, _Np> __x)
