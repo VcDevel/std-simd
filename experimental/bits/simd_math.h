@@ -401,7 +401,7 @@ rebind_simd_t<int, simd<float, _Abi>> __extract_exponent_bits(const simd<float, 
 template <typename _Abi>
 rebind_simd_t<int, simd<double, _Abi>> __extract_exponent_bits(const simd<double, _Abi> &__v)
 {
-    using namespace std::experimental::__proposed;
+    using namespace std::experimental::_P0918;
     using namespace std::experimental::__proposed::float_bitwise_operators;
     const simd<double, _Abi> __exponent_mask =
         std::numeric_limits<double>::infinity();  // 0x7ff0000000000000

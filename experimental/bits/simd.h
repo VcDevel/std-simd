@@ -2674,6 +2674,8 @@ _GLIBCXX_SIMD_INTRINSIC _R static_simd_cast(const simd<_Up, _A> &__x)
     }
 }
 
+namespace __proposed
+{
 template <typename _Tp, typename _Up, typename _A,
           typename _R = typename __static_simd_cast_return_type<_Tp, _Up, _A>::type>
 _GLIBCXX_SIMD_INTRINSIC typename _R::mask_type static_simd_cast(const simd_mask<_Up, _A> &__x)
@@ -2682,6 +2684,7 @@ _GLIBCXX_SIMD_INTRINSIC typename _R::mask_type static_simd_cast(const simd_mask<
   return {__private_init, _RM::abi_type::_MaskImpl::template __convert<
 			    typename _RM::simd_type::value_type>(__x)};
 }
+} // namespace __proposed
 
 // simd_cast {{{2
 template <typename _Tp, typename _Up, typename _A, typename _To = __value_type_or_identity_t<_Tp>>
@@ -2691,13 +2694,18 @@ _GLIBCXX_SIMD_INTRINSIC auto simd_cast(const simd<_ValuePreserving<_Up, _To>, _A
     return static_simd_cast<_Tp>(__x);
 }
 
+namespace __proposed
+{
 template <typename _Tp, typename _Up, typename _A, typename _To = __value_type_or_identity_t<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC auto simd_cast(const simd_mask<_ValuePreserving<_Up, _To>, _A> &__x)
     ->decltype(static_simd_cast<_Tp>(__x))
 {
     return static_simd_cast<_Tp>(__x);
 }
+} // namespace __proposed
 
+// }}}2
+// resizing_simd_cast {{{
 namespace __proposed
 {
 template <typename _Tp, typename _Up, typename _A>
@@ -2709,6 +2717,7 @@ _GLIBCXX_SIMD_INTRINSIC _Tp resizing_simd_cast(const simd_mask<_Up, _A>& __x)
 }
 }  // namespace __proposed
 
+// }}}
 // to_fixed_size {{{2
 template <typename _Tp, int _Np>
 _GLIBCXX_SIMD_INTRINSIC fixed_size_simd<_Tp, _Np> to_fixed_size(const fixed_size_simd<_Tp, _Np> &__x)
@@ -3198,7 +3207,7 @@ _GLIBCXX_SIMD_INTRINSIC constexpr simd<_Tp, _A> clamp(const simd<_Tp, _A> &__v, 
 
 // }}}
 
-namespace __proposed
+namespace _P0918
 {
 // shuffle {{{1
 template <int _Stride, int _Offset = 0> struct strided {
@@ -3229,7 +3238,12 @@ _GLIBCXX_SIMD_INTRINSIC _R shuffle(const simd<_Tp, _A> &__x)
 }
 
 // }}}1
-}  // namespace __proposed
+} // namespace _P0918
+
+namespace __proposed
+{
+using namespace _P0918;
+} // namespace __proposed
 
 template <size_t... _Sizes, typename _Tp, typename _A,
           typename = enable_if_t<((_Sizes + ...) == simd<_Tp, _A>::size())>>
@@ -4049,6 +4063,7 @@ public:
 	typename = enable_if_t<simd_size_v<_Up, _A2> == simd_size_v<_Tp, _Abi>>>
       operator simd_mask<_Up, _A2>() &&
       {
+	using namespace std::experimental::__proposed;
 	return static_simd_cast<simd_mask<_Up, _A2>>(_M_data);
       }
 
