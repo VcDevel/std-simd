@@ -2708,10 +2708,48 @@ _GLIBCXX_SIMD_INTRINSIC auto simd_cast(const simd_mask<_ValuePreserving<_Up, _To
 // resizing_simd_cast {{{
 namespace __proposed
 {
+/* Proposed spec:
+
+template <class T, class U, class Abi>
+T resizing_simd_cast(const simd<U, Abi>& x)
+
+p1  Constraints:
+    - is_simd_v<T> is true and
+    - T::value_type is the same type as U
+
+p2  Returns:
+    A simd object with the i^th element initialized to x[i] for all i in the
+    range of [0, min(T::size(), simd_size_v<U, Abi>)). If T::size() is larger
+    than simd_size_v<U, Abi>, the remaining elements are value-initialized.
+
+template <class T, class U, class Abi>
+T resizing_simd_cast(const simd_mask<U, Abi>& x)
+
+p1  Constraints: is_simd_mask_v<T> is true
+
+p2  Returns:
+    A simd_mask object with the i^th element initialized to x[i] for all i in the
+    range of [0, min(T::size(), simd_size_v<U, Abi>)). If T::size() is larger
+    than simd_size_v<U, Abi>, the remaining elements are initialized to false.
+
+ */
+
 template <typename _Tp, typename _Up, typename _A>
-_GLIBCXX_SIMD_INTRINSIC _Tp resizing_simd_cast(const simd_mask<_Up, _A>& __x)
+_GLIBCXX_SIMD_INTRINSIC enable_if_t<
+  conjunction_v<is_simd<_Tp>, is_same<typename _Tp::value_type, _Up>>,
+  _Tp>
+  resizing_simd_cast(const simd<_Up, _A>& __x)
 {
-  static_assert(is_simd_mask_v<_Tp>);
+  _Tp __r{};
+  __builtin_memcpy(&__data(__r), &__data(__x),
+		   sizeof(_Up) * std::min(_Tp::size(), simd_size_v<_Up, _A>));
+  return __r;
+}
+
+template <typename _Tp, typename _Up, typename _A>
+_GLIBCXX_SIMD_INTRINSIC enable_if_t<is_simd_mask_v<_Tp>, _Tp>
+			resizing_simd_cast(const simd_mask<_Up, _A>& __x)
+{
   return {__private_init, _Tp::abi_type::_MaskImpl::template __convert<
 			    typename _Tp::simd_type::value_type>(__x)};
 }

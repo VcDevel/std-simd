@@ -529,6 +529,7 @@ vc_add_test(math ROUNDINGMODES)
 vc_add_test(specialmath ROUNDINGMODES)
 vc_add_test(where NO_TESTTYPES)
 vc_add_test(bitset_conversions NO_TESTTYPES)
+vc_add_test(proposed)
 
 # ABI tests#{{{
 find_program(OBJDUMP objdump)
