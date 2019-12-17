@@ -1521,33 +1521,21 @@ _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _Np>
 
 // }}}
 // __xor{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-  __xor(_Tp __a, typename _TVT::type __b) noexcept
+  __xor(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
 {
-#if _GLIBCXX_SIMD_X86INTRIN
-  if (!__builtin_is_constant_evaluated())
-    {
-      if constexpr (_TVT::template __is<float, 4> && __have_sse)
-	return _mm_xor_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 2> && __have_sse2)
-	return _mm_xor_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 8> && __have_avx)
-	return _mm256_xor_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 4> && __have_avx)
-	return _mm256_xor_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 16> && __have_avx512dq)
-	return _mm512_xor_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 8> && __have_avx512dq)
-	return _mm512_xor_pd(__a, __b);
-    }
-#endif // _GLIBCXX_SIMD_X86INTRIN
+  static_assert(sizeof...(_Dummy) == 0);
   using _Up = typename _TVT::value_type;
-  if constexpr (std::is_integral_v<_Up>)
-    return __a ^ __b;
-  else
-    return __vector_bitcast<_Up>(__vector_bitcast<__int_for_sizeof_t<_Up>>(__a) ^
-				__vector_bitcast<__int_for_sizeof_t<_Up>>(__b));
+  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
+  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a) ^
+			       __vector_bitcast<_Ip>(__b));
+}
+
+template <typename _Tp, typename = decltype(_Tp() ^ _Tp())>
+_GLIBCXX_SIMD_INTRINSIC constexpr _Tp __xor(_Tp __a, _Tp __b) noexcept
+{
+  return __a ^ __b;
 }
 
 // }}}
@@ -1556,29 +1544,11 @@ template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
   __or(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
 {
-#if _GLIBCXX_SIMD_X86INTRIN
-  if (!__builtin_is_constant_evaluated())
-    {
-      if constexpr (_TVT::template __is<float, 4> && __have_sse)
-	return _mm_or_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 2> && __have_sse2)
-	return _mm_or_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 8> && __have_avx)
-	return _mm256_or_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 4> && __have_avx)
-	return _mm256_or_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 16> && __have_avx512dq)
-	return _mm512_or_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 8> && __have_avx512dq)
-	return _mm512_or_pd(__a, __b);
-    }
-#endif // _GLIBCXX_SIMD_X86INTRIN
+  static_assert(sizeof...(_Dummy) == 0);
   using _Up = typename _TVT::value_type;
-  if constexpr (std::is_integral_v<_Up>)
-    return __a | __b;
-  else
-    return __vector_bitcast<_Up>(__vector_bitcast<__int_for_sizeof_t<_Up>>(__a) |
-				__vector_bitcast<__int_for_sizeof_t<_Up>>(__b));
+  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
+  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a) |
+			       __vector_bitcast<_Ip>(__b));
 }
 
 template <typename _Tp, typename = decltype(_Tp() | _Tp())>
@@ -1594,29 +1564,10 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
   __and(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
 {
   static_assert(sizeof...(_Dummy) == 0);
-#if _GLIBCXX_SIMD_X86INTRIN
-  if (!__builtin_is_constant_evaluated())
-    {
-      if constexpr (_TVT::template __is<float, 4> && __have_sse)
-	return _mm_and_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 2> && __have_sse2)
-	return _mm_and_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 8> && __have_avx)
-	return _mm256_and_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 4> && __have_avx)
-	return _mm256_and_pd(__a, __b);
-      else if constexpr (_TVT::template __is<float, 16> && __have_avx512dq)
-	return _mm512_and_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 8> && __have_avx512dq)
-	return _mm512_and_pd(__a, __b);
-    }
-#endif // _GLIBCXX_SIMD_X86INTRIN
   using _Up = typename _TVT::value_type;
-  if constexpr (std::is_integral_v<_Up>)
-    return __a & __b;
-  else
-    return __vector_bitcast<_Up>(__vector_bitcast<__int_for_sizeof_t<_Up>>(__a) &
-				__vector_bitcast<__int_for_sizeof_t<_Up>>(__b));
+  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
+  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a) &
+			       __vector_bitcast<_Ip>(__b));
 }
 
 template <typename _Tp, typename = decltype(_Tp() & _Tp())>
@@ -1627,42 +1578,87 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _Tp __and(_Tp __a, _Tp __b) noexcept
 
 // }}}
 // __andnot{{{
+#if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
+static constexpr struct
+{
+  _GLIBCXX_SIMD_INTRINSIC __v4sf operator()(__v4sf __a, __v4sf __b) const
+    noexcept
+  {
+    return __builtin_ia32_andnps(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v2df operator()(__v2df __a, __v2df __b) const
+    noexcept
+  {
+    return __builtin_ia32_andnpd(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v2di operator()(__v2di __a, __v2di __b) const
+    noexcept
+  {
+    return __builtin_ia32_pandn128(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v8sf operator()(__v8sf __a, __v8sf __b) const
+    noexcept
+  {
+    return __builtin_ia32_andnps256(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v4df operator()(__v4df __a, __v4df __b) const
+    noexcept
+  {
+    return __builtin_ia32_andnpd256(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v4di operator()(__v4di __a, __v4di __b) const
+    noexcept
+  {
+    return __builtin_ia32_andnotsi256(__a, __b);
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v16sf operator()(__v16sf __a, __v16sf __b) const
+    noexcept
+  {
+    if constexpr (__have_avx512dq)
+      return _mm512_andnot_ps(__a, __b);
+    else
+      return reinterpret_cast<__v16sf>(_mm512_andnot_si512(
+	reinterpret_cast<__v8di>(__a), reinterpret_cast<__v8di>(__b)));
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v8df operator()(__v8df __a, __v8df __b) const
+    noexcept
+  {
+    if constexpr (__have_avx512dq)
+      return _mm512_andnot_pd(__a, __b);
+    else
+      return reinterpret_cast<__v8df>(_mm512_andnot_si512(
+	reinterpret_cast<__v8di>(__a), reinterpret_cast<__v8di>(__b)));
+  }
+  _GLIBCXX_SIMD_INTRINSIC __v8di operator()(__v8di __a, __v8di __b) const
+    noexcept
+  {
+    return _mm512_andnot_si512(__a, __b);
+  }
+} _S_x86_andnot;
+#endif // _GLIBCXX_SIMD_X86INTRIN && !__clang__
+
 template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
   __andnot(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
 {
   static_assert(sizeof...(_Dummy) == 0);
-#if _GLIBCXX_SIMD_X86INTRIN
-  if (!__builtin_is_constant_evaluated())
+#if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
+  if constexpr (sizeof(_Tp) >= 16)
     {
-      if constexpr (_TVT::template __is<float, 4> && __have_sse)
-	return _mm_andnot_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 2> && __have_sse2)
-	return _mm_andnot_pd(__a, __b);
-      else if constexpr (sizeof(__a) == 16 && __have_sse2)
-	return reinterpret_cast<_Tp>(
-	  _mm_andnot_si128(__to_intrin(__a), __to_intrin(__b)));
-      else if constexpr (_TVT::template __is<float, 8> && __have_avx)
-	return _mm256_andnot_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 4> && __have_avx)
-	return _mm256_andnot_pd(__a, __b);
-      else if constexpr (sizeof(__a) == 32 && __have_avx2)
-	return reinterpret_cast<_Tp>(
-	  _mm256_andnot_si256(__to_intrin(__a), __to_intrin(__b)));
-      else if constexpr (_TVT::template __is<float, 16> && __have_avx512dq)
-	return _mm512_andnot_ps(__a, __b);
-      else if constexpr (_TVT::template __is<double, 8> && __have_avx512dq)
-	return _mm512_andnot_pd(__a, __b);
-      else if constexpr (sizeof(__a) == 64 && __have_avx512f)
-	return reinterpret_cast<_Tp>(_mm512_andnot_si512(
-	  __vector_bitcast<_LLong>(__a), __vector_bitcast<_LLong>(__b)));
+      if (!__builtin_is_constant_evaluated())
+	{
+	  const auto __r = _S_x86_andnot(__to_intrin(__a), __to_intrin(__b));
+	  if constexpr (is_convertible_v<decltype(__r), _Tp>)
+	    return __r;
+	  else
+	    return reinterpret_cast<_Tp>(__r);
+	}
     }
 #endif // _GLIBCXX_SIMD_X86INTRIN
-  if constexpr (std::is_floating_point_v<typename _TVT::value_type>)
-    return reinterpret_cast<typename _TVT::type>(
-      ~__vector_bitcast<unsigned>(__a) & __vector_bitcast<unsigned>(__b));
-  else
-    return ~__a & __b;
+  using _Up = typename _TVT::value_type;
+  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
+  return __vector_bitcast<_Up>(~__vector_bitcast<_Ip>(__a) &
+			       __vector_bitcast<_Ip>(__b));
 }
 
 template <typename _Tp, typename = decltype(~_Tp() & _Tp())>
