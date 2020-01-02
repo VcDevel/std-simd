@@ -219,9 +219,12 @@ struct _MaskImplNeonMixin {
   using _Base = _MaskImplBuiltinMixin;
 
   template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _BitMask<_Np>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
     __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
+    if (__builtin_is_constant_evaluated())
+      return _Base::__to_bits(__x);
+
     using _I = __int_for_sizeof_t<_Tp>;
     if constexpr (sizeof(__x) == 16)
       {
@@ -233,9 +236,13 @@ struct _MaskImplNeonMixin {
 #endif
 	if constexpr (sizeof(_Tp) == 1)
 	  {
-	    __asint &=
-	      __make_vector<_I>(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1,
-				0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
+	    constexpr auto __bitsel =
+	      __generate_from_n_evaluations<16, __vector_type_t<_I, 16>>(
+		[&](auto __i) {
+		  return static_cast<_I>(
+		    __i < _Np ? (__i < 8 ? 1 << __i : 1 << (__i - 8)) : 0);
+		});
+	    __asint &= __bitsel;
 #ifdef __aarch64__
 	    return __vector_bitcast<_UShort>(vpaddq_s8(
 	      vpaddq_s8(vpaddq_s8(__asint, __zero), __zero), __zero))[0];
@@ -247,8 +254,12 @@ struct _MaskImplNeonMixin {
 	  }
 	else if constexpr (sizeof(_Tp) == 2)
 	  {
-	    __asint &=
-	      __make_vector<_I>(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
+	    constexpr auto __bitsel =
+	      __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
+		[&](auto __i) {
+		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
+		});
+	    __asint &= __bitsel;
 #ifdef __aarch64__
 	    return vpaddq_s16(vpaddq_s16(vpaddq_s16(__asint, __zero), __zero),
 			      __zero)[0];
@@ -260,7 +271,12 @@ struct _MaskImplNeonMixin {
 	  }
 	else if constexpr (sizeof(_Tp) == 4)
 	  {
-	    __asint &= __make_vector<_I>(0x1, 0x2, 0x4, 0x8);
+	    constexpr auto __bitsel =
+	      __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
+		[&](auto __i) {
+		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
+		});
+	    __asint &= __bitsel;
 #ifdef __aarch64__
 	    return vpaddq_s32(vpaddq_s32(__asint, __zero), __zero)[0];
 #else
@@ -281,14 +297,23 @@ struct _MaskImplNeonMixin {
 	[[maybe_unused]] constexpr auto __zero  = decltype(__asint)();
 	if constexpr (sizeof(_Tp) == 1)
 	  {
-	    __asint &=
-	      __make_vector<_I>(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
+	    constexpr auto __bitsel =
+	      __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
+		[&](auto __i) {
+		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
+		});
+	    __asint &= __bitsel;
 	    return vpadd_s8(vpadd_s8(vpadd_s8(__asint, __zero), __zero),
 			    __zero)[0];
 	  }
 	else if constexpr (sizeof(_Tp) == 2)
 	  {
-	    __asint &= __make_vector<_I>(0x1, 0x2, 0x4, 0x8);
+	    constexpr auto __bitsel =
+	      __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
+		[&](auto __i) {
+		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
+		});
+	    __asint &= __bitsel;
 	    return vpadd_s16(vpadd_s16(__asint, __zero), __zero)[0];
 	  }
 	else if constexpr (sizeof(_Tp) == 4)
