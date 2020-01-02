@@ -2225,8 +2225,17 @@ struct _SimdImplBuiltin
 #if __FINITE_MATH_ONLY__
       [](auto&&){}(__x);
       return {}; // false
+#elif !defined __SUPPORT_SNAN__
+      return __vector_bitcast<_Tp>(~(__x._M_data == __x._M_data));
+#elif defined __STDC_IEC_559__
+      using _Up = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+      constexpr auto __max = __vector_bitcast<_Up>(
+	__vector_broadcast<_Np>(numeric_limits<_Tp>::infinity()));
+      auto __bits = __vector_bitcast<_Up>(__x);
+      __bits &= __vector_bitcast<_Up>(_S_absmask<__vector_type_t<_Tp, _Np>>);
+      return __vector_bitcast<_Tp>(__bits > __max);
 #else
-      return _SuperImpl::__isunordered(__x, __x);
+#error "Not implemented: how to support SNaN but non-IEC559 floating-point?"
 #endif
     }
 
@@ -2252,10 +2261,7 @@ struct _SimdImplBuiltin
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __isunordered(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
     {
-      return __data(
-	simd_mask<_Tp, _Abi>(__private_init, _SuperImpl::__isless(__x, __y)) ==
-	simd_mask<_Tp, _Abi>(__private_init,
-			     _SuperImpl::__isgreaterequal(__x, __y)));
+      return __or(__isnan(__x), __isnan(__y));
     }
 
     // __signbit {{{3
