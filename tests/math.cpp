@@ -592,8 +592,8 @@ TEST_TYPES(V, test2Arg, real_test_types)  //{{{1
 	    }
 	  else
 	    {
-	      ((COMPARE(fn(inputs...), expect1) << "\ninputs = ")
-	       << ... << inputs);
+	      COMPARE(fn(inputs...), expect1)
+		.on_failure('\n', name, '(', inputs..., ')');
 	    }
 	};
       };
