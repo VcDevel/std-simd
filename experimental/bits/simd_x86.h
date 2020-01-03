@@ -2696,7 +2696,12 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 
     // }}}
     // __isnan {{{
-    using _Base::__isnan;
+    template <typename _Tp, size_t _Np>
+    _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
+      __isnan(_SimdWrapper<_Tp, _Np> __x)
+    {
+      return __isunordered(__x, __x);
+    }
 
     // }}}
     // __isunordered {{{
@@ -2704,6 +2709,10 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
       __isunordered(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
     {
+#if __FINITE_MATH_ONLY__
+      [](auto&&){}(__x);
+      return {}; // false
+#else
       const auto __xi = __to_intrin(__x);
       const auto __yi = __to_intrin(__y);
       if constexpr (__is_avx512_abi<_Abi>())
@@ -2732,6 +2741,7 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	return __auto_bitcast(_mm_cmpunord_pd(__xi, __yi));
       else
 	__assert_unreachable<_Tp>();
+#endif
     }
 
     // }}}
