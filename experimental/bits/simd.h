@@ -1673,7 +1673,8 @@ template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp __not(_Tp __a) noexcept
 {
   if constexpr (std::is_floating_point_v<typename _TVT::value_type>)
-    return reinterpret_cast<_Tp>(~__vector_bitcast<unsigned>(__a));
+    return reinterpret_cast<typename _TVT::type>(
+      ~__vector_bitcast<unsigned>(__a));
   else
     return ~__a;
 }

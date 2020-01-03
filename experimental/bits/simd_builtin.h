@@ -2062,45 +2062,60 @@ struct _SimdImplBuiltin
   _GLIBCXX_SIMD_MATH_FALLBACK(fmin)
   _GLIBCXX_SIMD_MATH_FALLBACK(fma)
 
-  template <typename _Tp>
-  static constexpr auto __isgreater(_Tp __x, _Tp __y)
+  template <typename _Tp, size_t _Np>
+  static constexpr auto
+    __isgreater(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y) noexcept
   {
-    return __data(simd_mask<typename _Tp::value_type, _Abi>(
-      __private_init, [=](auto __i) constexpr {
-	return std::isgreater(__x[__i], __y[__i]);
-      }));
+    using _Ip       = __int_for_sizeof_t<_Tp>;
+    const auto __xn = __vector_bitcast<_Ip>(__x);
+    const auto __yn = __vector_bitcast<_Ip>(__y);
+    const auto __xp = __xn < 0 ? -(__xn & numeric_limits<_Ip>::max()) : __xn;
+    const auto __yp = __yn < 0 ? -(__yn & numeric_limits<_Ip>::max()) : __yn;
+    return __and(__not(_SuperImpl::__isunordered(__x, __y)),
+		 __vector_bitcast<_Tp>(__xp > __yp));
   }
-  template <typename _Tp>
-  static constexpr auto __isgreaterequal(_Tp __x, _Tp __y)
+  template <typename _Tp, size_t _Np>
+  static constexpr auto __isgreaterequal(_SimdWrapper<_Tp, _Np> __x,
+					 _SimdWrapper<_Tp, _Np> __y) noexcept
   {
-    return __data(simd_mask<typename _Tp::value_type, _Abi>(
-      __private_init, [=](auto __i) constexpr {
-	return std::isgreaterequal(__x[__i], __y[__i]);
-      }));
+    using _Ip       = __int_for_sizeof_t<_Tp>;
+    const auto __xn = __vector_bitcast<_Ip>(__x);
+    const auto __yn = __vector_bitcast<_Ip>(__y);
+    const auto __xp = __xn < 0 ? -(__xn & numeric_limits<_Ip>::max()) : __xn;
+    const auto __yp = __yn < 0 ? -(__yn & numeric_limits<_Ip>::max()) : __yn;
+    return __and(__not(_SuperImpl::__isunordered(__x, __y)),
+		 __vector_bitcast<_Tp>(__xp >= __yp));
   }
-  template <typename _Tp>
-  static constexpr auto __isless(_Tp __x, _Tp __y)
+  template <typename _Tp, size_t _Np>
+  static constexpr auto
+    __isless(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y) noexcept
   {
-    return __data(simd_mask<typename _Tp::value_type, _Abi>(
-      __private_init, [=](auto __i) constexpr {
-	return std::isless(__x[__i], __y[__i]);
-      }));
+    using _Ip       = __int_for_sizeof_t<_Tp>;
+    const auto __xn = __vector_bitcast<_Ip>(__x);
+    const auto __yn = __vector_bitcast<_Ip>(__y);
+    const auto __xp = __xn < 0 ? -(__xn & numeric_limits<_Ip>::max()) : __xn;
+    const auto __yp = __yn < 0 ? -(__yn & numeric_limits<_Ip>::max()) : __yn;
+    return __and(__not(_SuperImpl::__isunordered(__x, __y)),
+		 __vector_bitcast<_Tp>(__xp < __yp));
   }
-  template <typename _Tp>
-  static constexpr auto __islessequal(_Tp __x, _Tp __y)
+  template <typename _Tp, size_t _Np>
+  static constexpr auto __islessequal(_SimdWrapper<_Tp, _Np> __x,
+				      _SimdWrapper<_Tp, _Np> __y) noexcept
   {
-    return __data(simd_mask<typename _Tp::value_type, _Abi>(
-      __private_init, [=](auto __i) constexpr {
-	return std::islessequal(__x[__i], __y[__i]);
-      }));
+    using _Ip       = __int_for_sizeof_t<_Tp>;
+    const auto __xn = __vector_bitcast<_Ip>(__x);
+    const auto __yn = __vector_bitcast<_Ip>(__y);
+    const auto __xp = __xn < 0 ? -(__xn & numeric_limits<_Ip>::max()) : __xn;
+    const auto __yp = __yn < 0 ? -(__yn & numeric_limits<_Ip>::max()) : __yn;
+    return __and(__not(_SuperImpl::__isunordered(__x, __y)),
+		 __vector_bitcast<_Tp>(__xp <= __yp));
   }
-  template <typename _Tp>
-  static constexpr auto __islessgreater(_Tp __x, _Tp __y)
+  template <typename _Tp, size_t _Np>
+  static constexpr auto __islessgreater(_SimdWrapper<_Tp, _Np> __x,
+					_SimdWrapper<_Tp, _Np> __y) noexcept
   {
-    return __data(simd_mask<typename _Tp::value_type, _Abi>(
-      __private_init, [=](auto __i) constexpr {
-	return std::islessgreater(__x[__i], __y[__i]);
-      }));
+    return __and(__not(_SuperImpl::__isunordered(__x, __y)),
+		 _SuperImpl::__not_equal_to(__x, __y));
   }
 
 #undef _GLIBCXX_SIMD_MATH_FALLBACK
