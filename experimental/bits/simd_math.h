@@ -673,13 +673,18 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
         constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
         constexpr size_t _NI = _Np < 4 ? 4 : _Np;
         const auto __v = __data(__x);
-        const auto __isnonzero = _Abi::_SimdImpl::__isnonzerovalue_mask(__v._M_data);
-	const _SimdWrapper<int, _Np> __e = __vector_bitcast<int, _Np>(__blend(
-	  __isnonzero, __vector_type_t<int, _NI>(),
-	  1 + __convert<_SimdWrapper<int, _NI>>(__getexp(__v))._M_data));
+	const auto __isnonzero =
+	  _Abi::_SimdImpl::__isnonzerovalue_mask(__v._M_data);
+	const _SimdWrapper<int, _NI> __exp_plus1 =
+	  1 + __convert<_SimdWrapper<int, _NI>>(__getexp(__v))._M_data;
+	const _SimdWrapper<int, _Np> __e = __wrapper_bitcast<int, _Np>(
+	  _Abi::_CommonImpl::_S_blend(_SimdWrapper<bool, _NI>(__isnonzero),
+				      _SimdWrapper<int, _NI>(), __exp_plus1));
 	simd_abi::deduce_t<int, _Np>::_CommonImpl::__store(
 	  __e, __exp, overaligned<alignof(_IV)>);
-	return {__private_init, __blend(__isnonzero, __v, __getmant_avx512(__v))};
+	return {__private_init, _Abi::_CommonImpl::_S_blend(
+				  _SimdWrapper<bool, _Np>(__isnonzero), __v,
+				  __getmant_avx512(__v))};
 #endif // _GLIBCXX_SIMD_X86INTRIN
     } else {
         // fallback implementation

@@ -1150,13 +1150,11 @@ _GLIBCXX_SIMD_INTRINSIC _Tp
   else if constexpr (sizeof(_Simd0) == sizeof(_Simd1) && _A1::_S_is_partial &&
 		std::is_same_v<_BinaryOperation, std::multiplies<>>)
     return reduce(
-      __binary_op(
-	__left,
-	_Simd0(
-	  __private_init,
-	  __blend(_A1::template __implicit_mask<_Tp>(),
-		  __vector_broadcast<_A1::template _S_full_size<_Tp>>(_Tp(1)),
-		  __tup.second.first._M_data))),
+      __binary_op(__left, _Simd0(__private_init,
+				 __vector_bitcast<_Tp, _Simd0::size()>(
+				   _A1::_CommonImpl::_S_blend(
+				     _A1::template __implicit_mask<_Tp>(),
+				     __data(_Simd1(1)), __tup.second.first)))),
       __binary_op);
   else if constexpr (_Simd0::size() == 2 * _Simd1::size() && !_A1::_S_is_partial)
     {

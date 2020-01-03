@@ -89,9 +89,8 @@ template <typename _Tp,
 _GLIBCXX_SIMD_INTRINSIC constexpr _SimdWrapper<_Tp, _Np>
   __wrapper_bitcast(_SimdWrapper<_Up, _M> __x)
 {
-  static_assert(sizeof(__vector_type_t<_Tp, _Np>) ==
-		sizeof(__vector_type_t<_Up, _M>));
-  return reinterpret_cast<__vector_type_t<_Tp, _Np>>(__x._M_data);
+  static_assert(_Np > 1);
+  return __intrin_bitcast<__vector_type_t<_Tp, _Np>>(__x._M_data);
 }
 
 // }}}
@@ -1096,7 +1095,7 @@ struct simd_abi::_VecBuiltin
   //}}}
   // implicit masks {{{
   template <typename _Tp>
-  static constexpr auto __implicit_mask()
+  static constexpr _SimdWrapper<_Tp, size<_Tp>> __implicit_mask()
   {
     constexpr auto __size = _S_full_size<_Tp>;
     using _ImplicitMask   = __vector_type_t<__int_for_sizeof_t<_Tp>, __size>;
@@ -1112,7 +1111,7 @@ struct simd_abi::_VecBuiltin
   {
     using _Up = typename _TVT::value_type;
     if constexpr (_S_is_partial)
-      return __and(__as_vector(__x), __implicit_mask<_Up>());
+      return __and(__as_vector(__x), __implicit_mask<_Up>()._M_data);
     else
       return __x;
   }
@@ -1126,11 +1125,11 @@ struct simd_abi::_VecBuiltin
       {
 	using _Up = typename _TVT::value_type;
 	if constexpr (std::is_integral_v<_Up>)
-	  return __or(__x, ~__implicit_mask<_Up>());
+	  return __or(__x, ~__implicit_mask<_Up>()._M_data);
 	else
 	  {
 	    constexpr auto __one =
-	      __andnot(__implicit_mask<_Up>(),
+	      __andnot(__implicit_mask<_Up>()._M_data,
 		       __vector_broadcast<_S_full_size<_Up>>(_Up(1)));
 	    return __or(__x, __one);
 	  }
@@ -1175,7 +1174,7 @@ struct simd_abi::_VecBltnBtmsk
   // implicit mask {{{
 private:
   template <typename _Tp>
-  using _ImplicitMask = __bool_storage_member_type_t<_S_full_size<_Tp>>;
+  using _ImplicitMask = _SimdWrapper<bool, size<_Tp>>;
 
 public:
   template <size_t _Np>
@@ -1216,7 +1215,10 @@ public:
     if constexpr (_S_is_partial)
       {
 	using _Tp = typename _VectorTraits<_TV>::value_type;
-	return __blend(__implicit_mask<_Tp>(), _TV(), __x);
+	constexpr size_t _Np = size<_Tp>;
+	return __make_dependent_t<_TV, _CommonImpl>::_S_blend(
+	  __implicit_mask<_Tp>(), _SimdWrapper<_Tp, _Np>(),
+	  _SimdWrapper<_Tp, _Np>(__x));
       }
     else
       return __x;
@@ -1229,9 +1231,12 @@ public:
       return __x;
     else
       {
-	using _Up = typename _TVT::value_type;
-	return __blend(__implicit_mask<_Up>(),
-		       __vector_broadcast<_S_full_size<_Up>>(_Up(1)), __x);
+	using _Tp = typename _TVT::value_type;
+	constexpr size_t _Np = size<_Tp>;
+	return __make_dependent_t<_TV, _CommonImpl>::_S_blend(
+	  __implicit_mask<_Tp>(),
+	  _SimdWrapper<_Tp, _Np>(__vector_broadcast<_S_full_size<_Tp>>(_Tp(1))),
+	  _SimdWrapper<_Tp, _Np>(__x))._M_data;
       }
   }
 
@@ -1396,6 +1401,18 @@ struct _CommonImplBuiltin
 	    }
 	});
       }
+  }
+
+  // }}}
+  // _S_blend{{{
+  template <typename _Tp, size_t _Np>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    _S_blend(_SimdWrapper<_Tp, _Np> __k,
+	     _SimdWrapper<_Tp, _Np> __at0,
+	     _SimdWrapper<_Tp, _Np> __at1)
+  {
+    return __vector_bitcast<__int_for_sizeof_t<_Tp>>(__k) ? __at1._M_data
+							  : __at0._M_data;
   }
 
   // }}}
@@ -1879,12 +1896,16 @@ struct _SimdImplBuiltin
 	  else if constexpr (std::is_same_v<__remove_cvref_t<_BinaryOperation>,
 					    std::multiplies<>>)
 	    {
-	      using _A = simd_abi::deduce_t<_Tp, __full_size>;
+	      using _A  = simd_abi::deduce_t<_Tp, __full_size>;
+	      using _TW = _SimdWrapper<_Tp, __full_size>;
+	      constexpr auto __implicit_mask_full =
+		_Abi::template __implicit_mask<_Tp>().__as_full_vector();
+	      constexpr _TW __one    = __vector_broadcast<__full_size>(_Tp(1));
+	      const _TW     __x_full = __data(__x).__as_full_vector();
+	      const _TW     __x_padded_with_ones = _A::_CommonImpl::_S_blend(
+                __implicit_mask_full, __one, __x_full);
 	      return _A::_SimdImpl::__reduce(
-		simd<_Tp, _A>(__private_init,
-			      __blend(_Abi::template __implicit_mask<_Tp>(),
-				      __vector_broadcast<__full_size>(_Tp(1)),
-				      __as_vector(__x))),
+		simd<_Tp, _A>(__private_init, __x_padded_with_ones),
 		__binary_op);
 	    }
 	  else if constexpr (_Np & 1)
@@ -2426,25 +2447,26 @@ struct _SimdImplBuiltin
                                                       _SimdWrapper<_Tp, _Np> &__lhs,
                                                       __id<_SimdWrapper<_Tp, _Np>> __rhs)
     {
-        __lhs = __blend(__k._M_data, __lhs._M_data, __rhs._M_data);
+        __lhs = _CommonImpl::_S_blend(__k, __lhs, __rhs);
     }
 
     template <typename _Tp, typename _K, size_t _Np>
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_K, _Np> __k, _SimdWrapper<_Tp, _Np> &__lhs,
                                            __id<_Tp> __rhs)
     {
-        if (__builtin_constant_p(__rhs) && __rhs == 0 && std::is_same<_K, _Tp>::value) {
-            if constexpr (!is_same_v<bool, _K>) {
-                // the __andnot optimization only makes sense if __k._M_data is a vector register
-                __lhs._M_data = __andnot(__k._M_data, __lhs._M_data);
-                return;
-            } else {
-                // for AVX512/__mmask, a _mm512_maskz_mov is best
-                __lhs._M_data = __auto_bitcast(__blend(__k, __lhs, __vector_type_t<_Tp, _Np>()));
-                return;
-            }
-        }
-        __lhs._M_data = __blend(__k._M_data, __lhs._M_data, __vector_broadcast<_Np>(__rhs));
+      if (__builtin_constant_p(__rhs) && __rhs == 0 && std::is_same_v<_K, _Tp>)
+	{
+	  if constexpr (!is_same_v<bool, _K>)
+	    // the __andnot optimization only makes sense if __k._M_data is a
+	    // vector register
+	    __lhs._M_data = __andnot(__k._M_data, __lhs._M_data);
+	  else
+	    // for AVX512/__mmask, a _mm512_maskz_mov is best
+	    __lhs = _CommonImpl::_S_blend(__k, __lhs, _SimdWrapper<_Tp, _Np>());
+	}
+      else
+	__lhs = _CommonImpl::_S_blend(
+	  __k, __lhs, _SimdWrapper<_Tp, _Np>(__vector_broadcast<_Np>(__rhs)));
     }
 
     // __masked_cassign {{{2
@@ -2455,8 +2477,8 @@ struct _SimdImplBuiltin
 		       const __id<_SimdWrapper<_Tp, _Np>> __rhs,
 		       _Op                               __op)
     {
-      __lhs._M_data =
-	__blend(__k._M_data, __lhs._M_data, __op(_SuperImpl{}, __lhs, __rhs));
+      __lhs =
+	_CommonImpl::_S_blend(__k, __lhs, __op(_SuperImpl{}, __lhs, __rhs));
     }
 
     template <typename _Op, typename _Tp, typename _K, size_t _Np>
@@ -2466,10 +2488,10 @@ struct _SimdImplBuiltin
 		       const __id<_Tp>            __rhs,
 		       _Op                        __op)
     {
-      __lhs._M_data =
-	__blend(__k._M_data, __lhs._M_data,
-		__op(_SuperImpl{}, __lhs,
-		     _SimdWrapper<_Tp, _Np>(__vector_broadcast<_Np>(__rhs))));
+      __lhs = _CommonImpl::_S_blend(
+	__k, __lhs,
+	__op(_SuperImpl{}, __lhs,
+	     _SimdWrapper<_Tp, _Np>(__vector_broadcast<_Np>(__rhs))));
     }
 
     // __masked_unary {{{2
@@ -2479,7 +2501,7 @@ struct _SimdImplBuiltin
     {
         auto __vv = __make_simd(__v);
         _Op<decltype(__vv)> __op;
-        return __blend(__k, __v, __data(__op(__vv)));
+	return _CommonImpl::_S_blend(__k, __v, __data(__op(__vv)));
     }
 
     //}}}2
@@ -2793,7 +2815,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(_SimdWrapper<_Tp, _Np> __k, _SimdWrapper<_Tp, _Np> &__lhs,
                                            __id<_SimdWrapper<_Tp, _Np>> __rhs)
     {
-        __lhs = __blend(__k._M_data, __lhs._M_data, __rhs._M_data);
+      __lhs = _CommonImpl::_S_blend(__k, __lhs, __rhs);
     }
 
     template <typename _Tp, size_t _Np>
@@ -2807,7 +2829,7 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
             }
             return;
         }
-        __lhs = __blend(__k, __lhs, __data(simd_mask<_Tp, _Abi>(__rhs)));
+        __lhs = _CommonImpl::_S_blend(__k, __lhs, __data(simd_mask<_Tp, _Abi>(__rhs)));
     }
 
     //}}}2

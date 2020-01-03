@@ -338,6 +338,13 @@ inline constexpr int
   __abi_bytes_v = __abi_bytes_impl(static_cast<_Abi*>(nullptr));
 
 // }}}
+// __is_builtin_bitmask_abi {{{
+template <typename _Abi> constexpr bool __is_builtin_bitmask_abi()
+{
+  return std::is_same_v<simd_abi::_VecBltnBtmsk<__abi_bytes_v<_Abi>>, _Abi>;
+}
+
+// }}}
 // __is_sse_abi {{{
 template <typename _Abi> constexpr bool __is_sse_abi()
 {
@@ -388,6 +395,11 @@ constexpr bool __is_combined_abi()
 {
   return __is_combined_abi(static_cast<_Abi*>(nullptr));
 }
+
+// }}}
+// __make_dependent_t {{{
+template <typename, typename _Up>
+using __make_dependent_t = _Up;
 
 // }}}
 // ^^^ ---- type traits ---- ^^^
@@ -1970,180 +1982,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _AutoCast<
   __auto_bitcast(const _SimdWrapper<_Tp, _Np>& __x)
 {
   return {__x._M_data};
-}
-
-// }}}
-// __blend{{{
-template <typename _K, typename _V0, typename _V1>
-_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONST auto
-			__blend(_K mask, _V0 at0, _V1 at1)
-{
-  using _V = _V0;
-  if constexpr (!std::is_same_v<_V0, _V1>)
-    {
-      static_assert(sizeof(_V0) == sizeof(_V1));
-      if constexpr (__is_vector_type_v<_V0> && !__is_vector_type_v<_V1>)
-	return __blend(mask, at0, reinterpret_cast<_V0>(at1._M_data));
-      else if constexpr (!__is_vector_type_v<_V0> && __is_vector_type_v<_V1>)
-	return __blend(mask, reinterpret_cast<_V1>(at0._M_data), at1);
-      else
-	__assert_unreachable<_K>();
-    }
-  else if constexpr (__is_bitmask_v<_V> && __is_bitmask_v<_K>)
-    {
-      static_assert(sizeof(_K) == sizeof(_V0) && sizeof(_V0) == sizeof(_V1));
-      return (mask & at1) | (~mask & at0);
-    }
-  else if constexpr (!__is_vector_type_v<_V>)
-    return __blend(mask, at0._M_data, at1._M_data);
-#if _GLIBCXX_SIMD_X86INTRIN              // {{{
-  else if constexpr (__is_bitmask_v<_K>) // blend via bitmask (AVX512)
-    {
-      using _Tp = typename _VectorTraits<_V>::value_type;
-      if constexpr (sizeof(_V) <= 16 && __have_avx512bw_vl && sizeof(_Tp) <= 2)
-	{
-	  if constexpr (sizeof(_Tp) == 1)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_epi8(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (sizeof(_Tp) == 2)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_epi16(__to_intrin(at0), mask, __to_intrin(at1)));
-	}
-      else if constexpr (sizeof(_V) <= 16 && __have_avx512vl && sizeof(_Tp) > 2)
-	{
-	  if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_epi32(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_epi64(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_ps(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(
-	      _mm_mask_mov_pd(__to_intrin(at0), mask, __to_intrin(at1)));
-	}
-      else if constexpr (sizeof(_V) <= 16 && __have_avx512f && sizeof(_Tp) > 2)
-	{
-	  if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(__lo128(_mm512_mask_mov_epi32(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(__lo128(_mm512_mask_mov_epi64(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(__lo128(_mm512_mask_mov_ps(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(__lo128(_mm512_mask_mov_pd(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	}
-      else if constexpr (sizeof(_V) == 32 && __have_avx512bw_vl &&
-			 sizeof(_Tp) <= 2)
-	{
-	  if constexpr (sizeof(_Tp) == 1)
-	    return __intrin_bitcast<_V>(
-	      _mm256_mask_mov_epi8(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (sizeof(_Tp) == 2)
-	    return __intrin_bitcast<_V>(
-	      _mm256_mask_mov_epi16(__to_intrin(at0), mask, __to_intrin(at1)));
-	}
-      else if constexpr (sizeof(_V) == 32 && __have_avx512vl && sizeof(_Tp) > 2)
-	{
-	  if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(
-	      _mm256_mask_mov_epi32(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(
-	      _mm256_mask_mov_epi64(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(_mm256_mask_mov_ps(at0, mask, at1));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(_mm256_mask_mov_pd(at0, mask, at1));
-	}
-      else if constexpr (sizeof(_V) == 32 && __have_avx512f && sizeof(_Tp) > 2)
-	{
-	  if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(__lo256(_mm512_mask_mov_epi32(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(__lo256(_mm512_mask_mov_epi64(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(__lo256(_mm512_mask_mov_ps(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(__lo256(_mm512_mask_mov_pd(
-	      __auto_bitcast(at0), mask, __auto_bitcast(at1))));
-	}
-      else if constexpr (sizeof(_V) == 64 && __have_avx512bw &&
-			 sizeof(_Tp) <= 2)
-	{
-	  if constexpr (sizeof(_Tp) == 1)
-	    return __intrin_bitcast<_V>(
-	      _mm512_mask_mov_epi8(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (sizeof(_Tp) == 2)
-	    return __intrin_bitcast<_V>(
-	      _mm512_mask_mov_epi16(__to_intrin(at0), mask, __to_intrin(at1)));
-	}
-      else if constexpr (sizeof(_V) == 64 && __have_avx512f && sizeof(_Tp) > 2)
-	{
-	  if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(
-	      _mm512_mask_mov_epi32(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_integral_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(
-	      _mm512_mask_mov_epi64(__to_intrin(at0), mask, __to_intrin(at1)));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(_mm512_mask_mov_ps(at0, mask, at1));
-	  else if constexpr (std::is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(_mm512_mask_mov_pd(at0, mask, at1));
-	}
-      else
-	__assert_unreachable<_K>();
-    }
-  else if constexpr (((__have_avx512f && sizeof(_V) == 64) ||
-		      __have_avx512vl) &&
-		     (sizeof(typename _VectorTraits<_V>::value_type) >= 4 ||
-		      __have_avx512bw))
-    // convert mask to bitmask
-    return __blend(
-      simd_abi::deduce<typename _VectorTraits<_V>::value_type,
-		       _VectorTraits<_V>::_S_width>::type::_MaskImpl::
-	__to_bits(typename _VectorTraits<_K>::_Wrapper(mask))
-	  ._M_to_bits(),
-      at0, at1);
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-  else
-    {
-      const _V __k = __auto_bitcast(mask);
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-      using _Tp    = typename _VectorTraits<_V>::value_type;
-      if constexpr (sizeof(_V) == 16 && __have_sse4_1)
-	{
-	  if constexpr (std::is_integral_v<_Tp>)
-	    return __intrin_bitcast<_V>(_mm_blendv_epi8(
-	      __to_intrin(at0), __to_intrin(at1), __to_intrin(__k)));
-	  else if constexpr (sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(_mm_blendv_ps(at0, at1, __k));
-	  else if constexpr (sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(_mm_blendv_pd(at0, at1, __k));
-	}
-      else if constexpr (sizeof(_V) == 32)
-	{
-	  if constexpr (std::is_integral_v<_Tp>)
-	    return __intrin_bitcast<_V>(_mm256_blendv_epi8(
-	      __to_intrin(at0), __to_intrin(at1), __to_intrin(__k)));
-	  else if constexpr (sizeof(_Tp) == 4)
-	    return __intrin_bitcast<_V>(_mm256_blendv_ps(at0, at1, __k));
-	  else if constexpr (sizeof(_Tp) == 8)
-	    return __intrin_bitcast<_V>(_mm256_blendv_pd(at0, at1, __k));
-	}
-      else
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
-	return __or(__andnot(__k, at0), __and(__k, at1));
-    }
 }
 
 // }}}
