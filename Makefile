@@ -36,6 +36,11 @@ test: $(build_dir)/CMakeCache.txt
 help: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) $(HELP_TARGET)
 
+ccmake:
+	@test -n "$(build_dir)"
+	@mkdir -p "$(build_dir)"
+	ccmake $(GENERATOR) $(CMAKE_ARGS) -Htests -B"$(build_dir)"
+
 %:: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target $* -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
 
