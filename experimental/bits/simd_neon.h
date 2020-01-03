@@ -335,7 +335,9 @@ template <typename _Abi>
 struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
 {
   using _MaskImplNeonMixin::__to_bits;
+  using _MaskImplBuiltinMixin::__to_maskvector;
   using _Base = _MaskImplBuiltin<_Abi>;
+  using _Base::__convert;
 
   // __all_of {{{
   template <typename _Tp>

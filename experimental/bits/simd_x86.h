@@ -3776,6 +3776,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 {
   using _MaskImplX86Mixin::__to_maskvector;
   using _MaskImplX86Mixin::__to_bits;
+  using _MaskImplBuiltin<_Abi>::__convert;
 
   // member types {{{
   template <typename _Tp>
@@ -3949,60 +3950,6 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       }
     else
       return _Base::template __load<_Tp, _Flags>(__bool_mem);
-  }
-
-  // }}}
-  // __convert {{{
-  template <typename _Tp, size_t _Np, bool _Sanitized>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-    __convert(_BitMask<_Np, _Sanitized> __x)
-  {
-    if constexpr (__is_avx512_abi<_Abi>())
-      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__x._M_to_bits());
-    else
-      return __to_maskvector<_Tp, size<_Tp>>(__x._M_sanitized());
-  }
-
-  template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<bool, _Np> __x)
-  {
-    return __convert<_Tp>(_BitMask<_Np>(__x._M_data));
-  }
-
-  template <typename _Tp, typename _Up, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<_Up, _Np> __x)
-  {
-    if constexpr (__is_avx512_abi<_Abi>())
-      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__to_bits(__x));
-    else
-      return __to_maskvector<_Tp, size<_Tp>>(__x);
-  }
-
-  template <typename _Tp, typename _Up, typename _UAbi>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(simd_mask<_Up, _UAbi> __x)
-  {
-    if constexpr (__is_avx512_abi<_Abi>())
-      {
-	using _R = _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>;
-	if constexpr (__is_avx512_abi<_UAbi>()) // bits -> bits
-//X 	  if constexpr (simd_size_v<_Tp, _Abi> < __x.size())
-//X 	    return _R(_Abi::__masked(__data(__x))._M_data);
-//X 	  else if constexpr ((simd_size_v<_Tp, _Abi>) > __x.size())
-//X 	    return _R(_UAbi::__masked(__data(__x))._M_data);
-//X 	  else
-	    return _R(__data(__x));
-	else if constexpr (__is_scalar_abi<_UAbi>()) // bool -> bits
-	  return _R(__data(__x));
-	else if constexpr (__is_fixed_size_abi_v<_UAbi>) // bitset -> bits
-//X 	  if constexpr (simd_size_v<_Tp, _Abi> < __x.size())
-//X 	    return _Abi::__masked(_R(__data(__x).to_ullong()));
-//X 	  else
-	    return _R(__data(__x)._M_to_bits());
-	else // vector -> bits
-	  return _R(_UAbi::_MaskImpl::__to_bits(__data(__x))._M_to_bits());
-      }
-    else
-      return __to_maskvector<_Tp, size<_Tp>>(__data(__x));
   }
 
   // }}}

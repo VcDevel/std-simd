@@ -2503,15 +2503,16 @@ struct _MaskImplBuiltinMixin {
   template <typename _Up,
 	    size_t _UpN = 0,
 	    size_t _Np,
+	    bool   _Sanitized,
 	    size_t _ToN = _UpN == 0 ? _Np : _UpN>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Up, _ToN>
-    __to_maskvector(std::bitset<_Np> __x)
+    __to_maskvector(_BitMask<_Np, _Sanitized> __x)
   {
     using _I = __int_for_sizeof_t<_Up>;
     return __vector_bitcast<_Up>(
       __generate_vector<__vector_type_t<_I, _ToN>>([&](auto __i) constexpr {
 	if constexpr (__i < _Np)
-	  return ((__x >> __i).to_ulong() & 1) == 0 ? _I() : ~_I();
+	  return __x[__i] ? ~_I() : _I();
 	else
 	  return _I();
       }));
@@ -2636,16 +2637,55 @@ struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 
   // }}}
   // __convert {{{
+  template <typename _Tp, size_t _Np, bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    __convert(_BitMask<_Np, _Sanitized> __x)
+  {
+    if constexpr (__is_builtin_bitmask_abi<_Abi>())
+      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__x._M_to_bits());
+    else
+      return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(
+	__x._M_sanitized());
+  }
+
+  template <typename _Tp, size_t _Np>
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<bool, _Np> __x)
+  {
+    if constexpr (__is_builtin_bitmask_abi<_Abi>())
+      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(__x._M_data);
+    else
+      return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(
+	_BitMask<_Np>(__x._M_data)._M_sanitized());
+  }
+
   template <typename _Tp, typename _Up, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(_SimdWrapper<_Up, _Np> __x)
   {
-    return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__x);
+    if constexpr (__is_builtin_bitmask_abi<_Abi>())
+      return _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>(
+	_SuperImpl::__to_bits(__x));
+    else
+      return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__x);
   }
 
   template <typename _Tp, typename _Up, typename _UAbi>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __convert(simd_mask<_Up, _UAbi> __x)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+    __convert(simd_mask<_Up, _UAbi> __x)
   {
-    return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__data(__x));
+    if constexpr (__is_builtin_bitmask_abi<_Abi>())
+      {
+	using _R = _SimdWrapper<bool, simd_size_v<_Tp, _Abi>>;
+	if constexpr (__is_builtin_bitmask_abi<_UAbi>()) // bits -> bits
+	  return _R(__data(__x));
+	else if constexpr (__is_scalar_abi<_UAbi>()) // bool -> bits
+	  return _R(__data(__x));
+	else if constexpr (__is_fixed_size_abi_v<_UAbi>) // bitset -> bits
+	  return _R(__data(__x)._M_to_bits());
+	else // vector -> bits
+	  return _R(_UAbi::_MaskImpl::__to_bits(__data(__x))._M_to_bits());
+      }
+    else
+      return _SuperImpl::template __to_maskvector<_Tp, size<_Tp>>(__data(__x));
   }
 
   // }}}
