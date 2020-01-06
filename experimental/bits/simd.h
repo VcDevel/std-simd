@@ -2258,12 +2258,6 @@ auto __determine_native_abi()
 {
   if constexpr (sizeof(_Tp) > 8)
     return static_cast<scalar*>(nullptr);
-  else if constexpr (__have_avx512bw_vl)
-#if _GLIBCXX_SIMD_X86INTRIN // {{{
-    return static_cast<_Avx512<32>*>(nullptr);
-#else  // _GLIBCXX_SIMD_X86INTRIN
-    return static_cast<_VecBuiltin<32>*>(nullptr);
-#endif // _GLIBCXX_SIMD_X86INTRIN }}}
   else if constexpr (__have_avx512bw || (__have_avx512f && sizeof(_Tp) >= 4))
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
     return static_cast<_Avx512<64>*>(nullptr);
