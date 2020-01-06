@@ -199,58 +199,71 @@ XTEST_TYPES(From, specific_conversions, all_test_types)
 
 TEST_TYPES(V_To, casts, outer_product<all_test_types, arithmetic_types>)
 {
-    using V = typename V_To::template at<0>;
-    using To = typename V_To::template at<1>;
-    using From = typename V::value_type;
-    constexpr auto N = V::size();
-    using W = std::experimental::fixed_size_simd<To, N>;
+  using V          = typename V_To::template at<0>;
+  using To         = typename V_To::template at<1>;
+  using From       = typename V::value_type;
+  constexpr auto N = V::size();
+  if constexpr (N <= stdx::simd_abi::max_fixed_size<To>)
+    {
+      using W = std::experimental::fixed_size_simd<To, N>;
 
-    if constexpr (std::is_integral_v<From>) {
-        using A = typename V::abi_type;
-        using TU = std::make_unsigned_t<From>;
-        using TS = std::make_signed_t<From>;
-        COMPARE(typeid(static_simd_cast<TU>(V())), typeid(std::experimental::simd<TU, A>));
-        COMPARE(typeid(static_simd_cast<TS>(V())), typeid(std::experimental::simd<TS, A>));
-    }
+      if constexpr (std::is_integral_v<From>)
+	{
+	  using A  = typename V::abi_type;
+	  using TU = std::make_unsigned_t<From>;
+	  using TS = std::make_signed_t<From>;
+	  COMPARE(typeid(static_simd_cast<TU>(V())),
+		  typeid(std::experimental::simd<TU, A>));
+	  COMPARE(typeid(static_simd_cast<TS>(V())),
+		  typeid(std::experimental::simd<TS, A>));
+	}
 
-    using is_simd_cast_allowed =
-        decltype(vir::test::sfinae_is_callable_t<const V &>(foo<To>()));
+      using is_simd_cast_allowed =
+	decltype(vir::test::sfinae_is_callable_t<const V&>(foo<To>()));
 
-    COMPARE(is_simd_cast_allowed::value,
-            std::numeric_limits<From>::digits <= std::numeric_limits<To>::digits &&
-                std::numeric_limits<From>::max() <= std::numeric_limits<To>::max() &&
-                !(std::is_signed<From>::value && std::is_unsigned<To>::value));
+      COMPARE(
+	is_simd_cast_allowed::value,
+	std::numeric_limits<From>::digits <= std::numeric_limits<To>::digits &&
+	  std::numeric_limits<From>::max() <= std::numeric_limits<To>::max() &&
+	  !(std::is_signed<From>::value && std::is_unsigned<To>::value));
 
-    if constexpr (is_simd_cast_allowed::value) {
-        for (gen_seq_t<V, To> gen_seq; gen_seq; ++gen_seq) {
-            const V seq(gen_seq);
-            COMPARE(simd_cast<V>(seq), seq);
-            COMPARE(simd_cast<W>(seq), W(gen_cast<To, N>(seq)));
-            auto test = simd_cast<To>(seq);
-            // decltype(test) is not W if
-            // a) V::abi_type is not fixed_size and
-            // b.1) V::value_type and To are integral and of equal rank or
-            // b.2) V::value_type and To are equal
-            COMPARE(test, decltype(test)(gen_cast<To, N>(seq)));
-            if (std::is_same<To, From>::value) {
-                COMPARE(typeid(decltype(test)), typeid(V));
-            }
-        }
-    }
+      if constexpr (is_simd_cast_allowed::value)
+	{
+	  for (gen_seq_t<V, To> gen_seq; gen_seq; ++gen_seq)
+	    {
+	      const V seq(gen_seq);
+	      COMPARE(simd_cast<V>(seq), seq);
+	      COMPARE(simd_cast<W>(seq), W(gen_cast<To, N>(seq)));
+	      auto test = simd_cast<To>(seq);
+	      // decltype(test) is not W if
+	      // a) V::abi_type is not fixed_size and
+	      // b.1) V::value_type and To are integral and of equal rank or
+	      // b.2) V::value_type and To are equal
+	      COMPARE(test, decltype(test)(gen_cast<To, N>(seq)));
+	      if (std::is_same<To, From>::value)
+		{
+		  COMPARE(typeid(decltype(test)), typeid(V));
+		}
+	    }
+	}
 
-    for (gen_seq_t<V, To> gen_seq; gen_seq; ++gen_seq) {
-        const V seq(gen_seq);
-        COMPARE(static_simd_cast<V>(seq), seq);
-        COMPARE(static_simd_cast<W>(seq), W(gen_cast<To, N>(seq))) << '\n' << seq;
-        auto test = static_simd_cast<To>(seq);
-        // decltype(test) is not W if
-        // a) V::abi_type is not fixed_size and
-        // b.1) V::value_type and To are integral and of equal rank or
-        // b.2) V::value_type and To are equal
-        COMPARE(test, decltype(test)(gen_cast<To, N>(seq)));
-        if (std::is_same<To, From>::value) {
-            COMPARE(typeid(decltype(test)), typeid(V));
-        }
+      for (gen_seq_t<V, To> gen_seq; gen_seq; ++gen_seq)
+	{
+	  const V seq(gen_seq);
+	  COMPARE(static_simd_cast<V>(seq), seq);
+	  COMPARE(static_simd_cast<W>(seq), W(gen_cast<To, N>(seq))) << '\n'
+								     << seq;
+	  auto test = static_simd_cast<To>(seq);
+	  // decltype(test) is not W if
+	  // a) V::abi_type is not fixed_size and
+	  // b.1) V::value_type and To are integral and of equal rank or
+	  // b.2) V::value_type and To are equal
+	  COMPARE(test, decltype(test)(gen_cast<To, N>(seq)));
+	  if (std::is_same<To, From>::value)
+	    {
+	      COMPARE(typeid(decltype(test)), typeid(V));
+	    }
+	}
     }
 }
 

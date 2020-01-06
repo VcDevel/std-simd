@@ -1,6 +1,6 @@
 /*{{{
-Copyright © 2017-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
-                 Matthias Kretz <m.kretz@gsi.de>
+Copyright © 2010-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+                      Matthias Kretz <m.kretz@gsi.de>
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -27,36 +27,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 }}}*/
 
 //#define UNITTEST_ONLY_XTEST 1
-#include <vir/test.h>
-#include <experimental/simd>
-#include "metahelpers.h"
-#include "make_vec.h"
+#include "unittest.h"
 
 template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 #include "testtypes.h"
 
-TEST_TYPES(V, conversions, all_test_types)
+using std::experimental::__proposed::resizing_simd_cast;
+
+TEST_TYPES(V, resizing_simd_cast, all_test_types)
 {
-    using M = typename V::mask_type;
-    constexpr size_t N = V::size();
-    using B = std::bitset<N>;
-    M k(true);
-    B allone(0xffffffffffffffffLLU);
-    COMPARE(k.__to_bitset(), allone);
-
-    k = make_mask<M>({true, false, false});
-    COMPARE(k.__to_bitset(), B(0x9249249249249249LLU)) << k;
-    k = make_mask<M>({false, true, false});
-    COMPARE(k.__to_bitset(), B(0x2492492492492492LLU)) << k;
-    k = make_mask<M>({false, false, true});
-    COMPARE(k.__to_bitset(), B(0x4924924924924924LLU)) << k;
-
-    k = make_mask<M>({true, false, false, false});
-    COMPARE(k.__to_bitset(), B(0x1111111111111111LLU)) << k;
-    k = make_mask<M>({false, true, false, false});
-    COMPARE(k.__to_bitset(), B(0x2222222222222222LLU)) << k;
-    k = make_mask<M>({false, false, true, false});
-    COMPARE(k.__to_bitset(), B(0x4444444444444444LLU)) << k;
-    k = make_mask<M>({false, false, false, true});
-    COMPARE(k.__to_bitset(), B(0x8888888888888888LLU)) << k;
+  using T = typename V::value_type;
+  using M = typename V::mask_type;
+  stdx::__execute_n_times<stdx::simd_abi::max_fixed_size<T>>([](auto ii) {
+    constexpr V   seq([](int i) { return i; });
+    constexpr M   kseq = V([](int i) { return i & 1; }) == 1;
+    constexpr int N    = ii + 1;
+    using V0           = stdx::__deduced_simd<T, N>;
+    using V1           = stdx::fixed_size_simd<T, N>;
+    using M0           = typename V0::mask_type;
+    using M1           = typename V1::mask_type;
+    const auto v0 = resizing_simd_cast<V0>(seq);
+    const auto v1 = resizing_simd_cast<V1>(seq);
+    const auto m0 = resizing_simd_cast<M0>(kseq);
+    const auto m1 = resizing_simd_cast<M1>(kseq);
+    COMPARE(typeid(v0), typeid(V0));
+    COMPARE(typeid(v1), typeid(V1));
+    COMPARE(typeid(m0), typeid(M0));
+    COMPARE(typeid(m1), typeid(M1));
+    COMPARE(v0, V0([](int i) { return i < int(V::size()) ? i : 0; }));
+    COMPARE(v1, V1([](int i) { return i < int(V::size()) ? i : 0; }));
+    COMPARE(m0, V0([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
+    COMPARE(m1, V1([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
+  });
 }

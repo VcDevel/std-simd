@@ -202,10 +202,11 @@ TEST_TYPES(M, implicit_conversions, all_test_types)
     implicit_conversions_test<M, fixed_size_simd_mask<schar, M::size()>>();
 }
 
-TEST_TYPES(M, load_store, concat<all_test_types, many_fixed_size_types>)  //{{{1
+TEST_TYPES(M, load_store, all_test_types)  //{{{1
 {
     // loads {{{2
     constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<M>;
+#pragma GCC diagnostic ignored "-Wattributes"
     alignas(alignment) bool mem[3 * M::size()];
     std::memset(mem, 0, sizeof(mem));
     for (std::size_t i = 1; i < sizeof(mem) / sizeof(*mem); i += 2) {
@@ -273,7 +274,8 @@ TEST_TYPES(M, load_store, concat<all_test_types, many_fixed_size_types>)  //{{{1
         COMPARE(mem[i], false);
     }
     for (; i < 2 * M::size(); ++i) {
-        COMPARE(mem[i], true) << "i: " << i << ", x: " << x;
+	COMPARE(mem[i], true)
+	  .on_failure("i: ", i, ", x: ", x, ", mem: ", vir::test::asBytes(mem));
     }
     for (; i < 3 * M::size(); ++i) {
         COMPARE(mem[i], false);

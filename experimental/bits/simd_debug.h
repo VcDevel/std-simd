@@ -39,6 +39,13 @@
 #endif  // _GLIBCXX_SIMD_ENABLE_DEBUG
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
+
+template <typename... T>
+[[__gnu__::__noinline__]] void __tag()
+{
+  asm("");
+}
+
 enum class __area : unsigned {
     __disabled = 0,
     __enabled = 1,
@@ -136,7 +143,7 @@ public:
         std::cout << __buffer.str() << std::flush;
     }
 
-  template <class... _Ts>
+  template <typename... _Ts>
   __debug_stream& operator()(const _Ts&... __args)
   {
     __color = __color > 37 ? 30 : __color + 1;
@@ -146,14 +153,14 @@ public:
   }
 
 private:
-  template <class _Tp, class = decltype(__buffer << std::declval<const _Tp&>())>
+  template <typename _Tp, typename = decltype(__buffer << std::declval<const _Tp&>())>
   void __print(const _Tp& __x, int)
   {
     __buffer << ' ' << __x;
   }
 
-  template <class _Tp,
-	    class = decltype(__buffer << std::declval<const _Tp&>()[0])>
+  template <typename _Tp,
+	    typename = decltype(__buffer << std::declval<const _Tp&>()[0])>
   void __print(const _Tp& __x, float)
   {
     using _U = __remove_cvref_t<decltype(__x[0])>;
@@ -166,7 +173,7 @@ private:
   }
 
   static char hexChar(char __x) { return __x + (__x > 9 ? 87 : 48); }
-  template <class _Tp>
+  template <typename _Tp>
   void __print(const _Tp& __x, ...)
   {
     __buffer.put(' ');
@@ -190,14 +197,14 @@ template <> class __debug_stream<__area::__disabled>
 {
 public:
     __debug_stream(const char *, const char *, int, void *) {}
-    template <class... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
+    template <typename... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
 };
 
-template <class _F> class __defer_raii
+template <typename _Fp> class __defer_raii
 {
 public:
     // construct the object from the given callable
-    template <class _FF> __defer_raii(_FF &&__f) : __cleanup_function(std::forward<_FF>(__f))
+    template <typename _FF> __defer_raii(_FF &&__f) : __cleanup_function(static_cast<_FF&&>(__f))
     {
     }
 
@@ -205,10 +212,10 @@ public:
     ~__defer_raii() { __cleanup_function(); }
 
 private:
-    _F __cleanup_function;
+    _Fp __cleanup_function;
 };
 
-template <typename _F> __defer_raii<_F> __defer(_F &&__f) { return {std::forward<_F>(__f)}; }
+template <typename _Fp> __defer_raii<_Fp> __defer(_Fp &&__f) { return {static_cast<_Fp&&>(__f)}; }
 
 _GLIBCXX_SIMD_END_NAMESPACE
 

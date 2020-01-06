@@ -55,146 +55,87 @@ template <class A> using bool_mask = simd_mask<bool, A>;
 namespace assertions
 {
 using std::experimental::simd_abi::scalar;
+using std::experimental::simd_abi::_Sse;
+using std::experimental::simd_abi::_Avx;
+using std::experimental::simd_abi::_Avx512;
+using std::experimental::simd_abi::_Neon;
 using std::experimental::simd_abi::__sse;
 using std::experimental::simd_abi::__avx;
 using std::experimental::simd_abi::__avx512;
 using std::experimental::__fixed_size_storage_t;
 using std::experimental::_SimdTuple;
 
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 1>, _SimdTuple<float, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<int, 1>, _SimdTuple<int, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<char16_t, 1>, _SimdTuple<char16_t, scalar>>);
+template <class A, class B>
+constexpr int assert_equal()
+{
+  static_assert(std::is_same_v<A, B>);
+  return 0;
+}
 
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 2>, _SimdTuple<float, scalar, scalar>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 3>, _SimdTuple<float, scalar, scalar, scalar>>);
+int tmp[] = {
+  assert_equal<__fixed_size_storage_t<float, 1>, _SimdTuple<float, scalar>>(),
+  assert_equal<__fixed_size_storage_t<int, 1>, _SimdTuple<int, scalar>>(),
+  assert_equal<__fixed_size_storage_t<char16_t, 1>, _SimdTuple<char16_t, scalar>>(),
+#if _GLIBCXX_SIMD_HAVE_AVX512VL && _GLIBCXX_SIMD_X86INTRIN
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Avx512<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Avx512<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, _Avx512<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, _Avx512<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _Avx512<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  8>, _SimdTuple<float, _Avx512<32>>>(),
+  assert_equal<__fixed_size_storage_t<float, 12>, _SimdTuple<float, _Avx512<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 13>, _SimdTuple<float, _Avx512<52>>>(),
+  assert_equal<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>(),
+  assert_equal<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, _Avx512<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, _Avx512<32>>>(),
+  assert_equal<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, _Avx512<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, _Avx512<52>>>(),
+#else
 #if _GLIBCXX_SIMD_HAVE_SSE_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __sse, scalar>>);
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Sse<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Sse<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, __sse>>(),
+#if !_GLIBCXX_SIMD_HAVE_AVX_ABI
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, __sse, scalar>>(),
+#endif
+#elif _GLIBCXX_SIMD_HAVE_NEON
+  assert_equal<__fixed_size_storage_t<float, 2>, _SimdTuple<float, _Neon<8>>>(),
+  assert_equal<__fixed_size_storage_t<float, 3>, _SimdTuple<float, _Neon<12>>>(),
+  assert_equal<__fixed_size_storage_t<float, 4>, _SimdTuple<float, _Neon<16>>>(),
+  assert_equal<__fixed_size_storage_t<float, 5>, _SimdTuple<float, _Neon<16>, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 6>, _SimdTuple<float, _Neon<16>, _Neon<8>>>(),
 #endif  // _GLIBCXX_SIMD_HAVE_SSE_ABI
 #if _GLIBCXX_SIMD_HAVE_AVX_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float,  8>, _SimdTuple<float, __avx>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 12>, _SimdTuple<float, __avx, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 13>, _SimdTuple<float, __avx, __sse, scalar>>);
+  assert_equal<__fixed_size_storage_t<float,  5>, _SimdTuple<float, _Avx<20>>>(),
+  assert_equal<__fixed_size_storage_t<float,  8>, _SimdTuple<float, __avx>>(),
+#if !_GLIBCXX_SIMD_HAVE_AVX512F
+  assert_equal<__fixed_size_storage_t<float, 12>, _SimdTuple<float, __avx, __sse>>(),
+  assert_equal<__fixed_size_storage_t<float, 13>, _SimdTuple<float, __avx, _Avx<20>>>(),
+  assert_equal<__fixed_size_storage_t<float, 32>, _SimdTuple<float, __avx, __avx, __avx, __avx>>(),
 #endif
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, __avx>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, __avx, __sse>>);
-static_assert(std::is_same_v<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, __avx, __sse, scalar>>);
 #endif
+#if _GLIBCXX_SIMD_HAVE_AVX512F && !_GLIBCXX_SIMD_HAVE_AVX512VL && _GLIBCXX_SIMD_X86INTRIN
+  assert_equal<__fixed_size_storage_t<float, 16>, _SimdTuple<float, __avx512>>(),
+  assert_equal<__fixed_size_storage_t<float, 17>, _SimdTuple<float, __avx512, scalar>>(),
+  assert_equal<__fixed_size_storage_t<float, 20>, _SimdTuple<float, __avx512, __sse>>(),
+  assert_equal<__fixed_size_storage_t<float, 24>, _SimdTuple<float, __avx512, __avx>>(),
+  assert_equal<__fixed_size_storage_t<float, 28>, _SimdTuple<float, __avx512, _Avx512<48>>>(),
+  assert_equal<__fixed_size_storage_t<float, 29>, _SimdTuple<float, __avx512, _Avx512<52>>>(),
+#endif
+#endif
+};
+
 }  // namespace assertions
 
 // type lists {{{1
-using all_valid_scalars = expand_list<Typelist<Template<simd, std::experimental::simd_abi::scalar>,
-                                               Template<simd_mask, std::experimental::simd_abi::scalar>>,
-                                      testtypes>;
+using all_valid_scalars =
+  vir::expand_one<Template<simd, std::experimental::simd_abi::scalar>, testtypes>;
 
-using all_valid_fixed_size = expand_list<
-    concat<
-        VIR_CHOOSE_ONE_RANDOMLY(Typelist<Template<simd, std::experimental::simd_abi::fixed_size<1>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<2>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<3>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<4>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<5>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<6>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<7>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<8>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<9>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<10>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<11>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<12>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<13>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<14>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<15>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<16>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(Typelist<Template<simd, std::experimental::simd_abi::fixed_size<17>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<18>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<19>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<20>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<21>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<22>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<23>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<24>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<25>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<26>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<27>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<28>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<29>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<30>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<31>>,
-                                         Template<simd, std::experimental::simd_abi::fixed_size<32>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(
-            Typelist<Template<simd_mask, std::experimental::simd_abi::fixed_size<1>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<2>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<3>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<4>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<5>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<6>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<7>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<8>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<9>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<10>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<11>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<12>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<13>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<14>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<15>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<16>>>),
-        VIR_CHOOSE_ONE_RANDOMLY(
-            Typelist<Template<simd_mask, std::experimental::simd_abi::fixed_size<17>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<18>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<19>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<20>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<21>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<22>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<23>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<24>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<25>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<26>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<27>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<28>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<29>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<30>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<31>>,
-                     Template<simd_mask, std::experimental::simd_abi::fixed_size<32>>>)>,
-    testtypes>;
+using all_valid_fixed_size = expand_list<fixed_size_abi_list, testtypes>;
 
-using all_valid_simd = concat<
-#if _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
-                         Template<simd_mask, std::experimental::simd_abi::__sse>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_SSE_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
-                         Template<simd_mask, std::experimental::simd_abi::__sse>>,
-                testtypes_float>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_AVX_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx>>,
-                testtypes_fp>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx512>>,
-                testtypes_wo_ldouble>,
-#elif _GLIBCXX_SIMD_HAVE_AVX512_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__avx512>,
-                         Template<simd_mask, std::experimental::simd_abi::__avx512>>,
-                testtypes_64_32>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::__neon>,
-                         Template<simd_mask, std::experimental::simd_abi::__neon>>,
-                testtypes_wo_ldouble>,
-#endif
-    Typelist<>>;
+using all_valid_simd = native_test_types;
 
+#if ABITYPES == 0
 using all_native_simd_types = expand_list<
     Typelist<Template<simd, std::experimental::simd_abi::__sse>, Template<simd, std::experimental::simd_abi::__avx>,
              Template<simd, std::experimental::simd_abi::__avx512>, Template<simd, std::experimental::simd_abi::__neon>>,
@@ -217,6 +158,7 @@ TEST_TYPES(Tup, has_no_size,  //{{{1
             [](auto a, auto b) -> decltype(
                 std::experimental::simd_size<decltype(a), decltype(b)>::type) { return {}; })));
 }
+#endif
 
 template <class T> constexpr bool is_fixed_size_mask(T) { return false; }
 template <class T, int N> constexpr bool is_fixed_size_mask(std::experimental::fixed_size_simd_mask<T, N>)
@@ -224,40 +166,62 @@ template <class T, int N> constexpr bool is_fixed_size_mask(std::experimental::f
     return true;
 }
 
+template <class T> constexpr bool is_fixed_size_simd(T) { return false; }
+template <class T, int N> constexpr bool is_fixed_size_simd(std::experimental::fixed_size_simd<T, N>)
+{
+    return true;
+}
+
 TEST_TYPES(V, is_usable,  //{{{1
            concat<all_valid_scalars, all_valid_simd, all_valid_fixed_size>)
 {
-    if (!is_fixed_size_mask(V())) {
-        // fixed_size_simd_mask uses std::bitset for storage, which is not trivially
-        // constructible
-        // Actually, is_trivially_constructible is not a hard requirement by the spec, but
-        // something we want to support AFAIP.
-        VERIFY(std::is_trivially_constructible<V>::value);
-    }
-    VERIFY(std::is_destructible<V>::value);
-    VERIFY(std::is_copy_constructible<V>::value);
-    VERIFY(std::is_copy_assignable<V>::value);
+  using M = typename V::mask_type;
+#ifndef __SUPPORT_SNAN__
+  VERIFY(std::is_trivially_default_constructible<V>::value);
+  VERIFY(std::is_trivially_default_constructible<M>::value);
+#endif
+  // fixed_size must always pass via the stack, therefore not trivially
+  // copyable. All others preferably should be trivially copyable, though
+  // this is not required by the spec.
+  COMPARE(std::is_trivially_copyable<V>::value, !is_fixed_size_simd(V()));
+  // OTOH, fixed_size masks are stored as bitmasks and thus should pass via the
+  // stack
+  VERIFY(std::is_trivially_copyable<M>::value);
+
+  VERIFY(std::is_destructible<V>::value);
+  VERIFY(std::is_copy_constructible<V>::value);
+  VERIFY(std::is_copy_assignable<V>::value);
+  VERIFY(std::is_destructible<M>::value);
+  VERIFY(std::is_copy_constructible<M>::value);
+  VERIFY(std::is_copy_assignable<M>::value);
 }
 
 using unusable_abis = Typelist<
-#if !_GLIBCXX_SIMD_HAVE_SSE_ABI
-    Template<simd, std::experimental::simd_abi::__sse>, Template<simd_mask, std::experimental::simd_abi::__sse>,
+#if !(_GLIBCXX_SIMD_HAVE_SSE_ABI || _GLIBCXX_SIMD_HAVE_NEON)
+    Template<simd, std::experimental::simd_abi::_VecBuiltin<16>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltin<16>>,
 #endif
 #if !_GLIBCXX_SIMD_HAVE_AVX_ABI
-    Template<simd, std::experimental::simd_abi::__avx>, Template<simd_mask, std::experimental::simd_abi::__avx>,
+    Template<simd, std::experimental::simd_abi::_VecBuiltin<32>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltin<32>>,
 #endif
 #if !_GLIBCXX_SIMD_HAVE_AVX512_ABI
-    Template<simd, std::experimental::simd_abi::__avx512>, Template<simd_mask, std::experimental::simd_abi::__avx512>,
-#endif
-#if !_GLIBCXX_SIMD_HAVE_NEON_ABI
-    Template<simd, std::experimental::simd_abi::__neon>, Template<simd_mask, std::experimental::simd_abi::__neon>,
+    Template<simd, std::experimental::simd_abi::_VecBuiltin<64>>, Template<simd_mask, std::experimental::simd_abi::_VecBuiltin<64>>,
+    Template<simd, std::experimental::simd_abi::_Avx512<64>>, Template<simd_mask, std::experimental::simd_abi::_Avx512<64>>,
 #endif
     Template<simd, int>, Template<simd_mask, int>>;
 
-using unusable_fixed_size =
-    expand_list<Typelist<Template<simd, std::experimental::simd_abi::fixed_size<33>>,
-                         Template<simd_mask, std::experimental::simd_abi::fixed_size<33>>>,
-                testtypes>;
+template <typename... T>
+using first = typename vir::Typelist<T...>::template at<0>;
+
+template <typename... T>
+using maxplus1_fixed_simd =
+  stdx::fixed_size_simd<first<T...>, stdx::simd_abi::max_fixed_size<first<T...>> + 1>;
+template <typename... T>
+using maxplus1_fixed_simd_mask =
+  stdx::fixed_size_simd_mask<first<T...>, stdx::simd_abi::max_fixed_size<first<T...>> + 1>;
+
+using unusable_fixed_size = expand_list<
+  Typelist<Template<maxplus1_fixed_simd>, Template<maxplus1_fixed_simd_mask>>,
+  testtypes>;
 
 using unusable_simd_types =
     concat<expand_list<Typelist<Template<simd, std::experimental::simd_abi::__sse>,
@@ -416,7 +380,25 @@ TEST_TYPES(V, deduce_from_list, all_test_types)
     if constexpr (std::experimental::__is_fixed_size_abi_v<A>) {
         VERIFY((V::size() == std::experimental::simd_size_v<T, W>)) << vir::typeToString<W>();
     } else {
-        VERIFY((std::is_same_v<A, W>)) << vir::typeToString<W>();
+#ifdef __AVX512VL__
+        // with AVX512VL <float, 8> deduces to simd<float, _Avx512<32>>
+        if (sizeof(V) > 32) {
+            COMPARE(typeid(A), typeid(W));
+        } else if (V::size() == 1) {
+            COMPARE(typeid(A), typeid(std::experimental::simd_abi::scalar));
+        } else {
+            COMPARE(V::size(), (std::experimental::simd_size_v<T, W>)) << vir::typeToString<W>();
+	    COMPARE(typeid(W), typeid(std::experimental::simd_abi::
+#if _GLIBCXX_SIMD_X86INTRIN
+                                      _Avx512
+#else
+                                      _VecBuiltin
+#endif
+                                      <V::size() * sizeof(T)>));
+        }
+#else
+        COMPARE(typeid(A), typeid(W));
+#endif
     }
 }
 

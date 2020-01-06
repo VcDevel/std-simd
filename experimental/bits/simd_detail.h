@@ -33,7 +33,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#define Vir_SIMD_VERSION_STRING "1.0.0"
+#define Vir_SIMD_VERSION_STRING "2.0.0"
 
 #define _GLIBCXX_SIMD_BEGIN_NAMESPACE                                                    \
     namespace std _GLIBCXX_VISIBILITY(default)                                           \
@@ -48,81 +48,23 @@
     _GLIBCXX_END_NAMESPACE_VERSION                                                       \
     }
 
-_GLIBCXX_SIMD_BEGIN_NAMESPACE
-namespace simd_abi  // {{{
-{
-// implementation details:
-struct _ScalarAbi;
-template <int _N> struct _FixedAbi;
-
-template <int _Bytes = 16> struct _SseAbi;
-template <int _Bytes = 32> struct _AvxAbi;
-template <int _Bytes = 64> struct _Avx512Abi;
-template <int _Bytes = 16> struct _NeonAbi;
-
-template <int _N, class _Abi> struct _CombineAbi;
-
-// implementation-defined:
-template <int _NRegisters> using __sse_x = _CombineAbi<_NRegisters, _SseAbi<>>;
-template <int _NRegisters> using __avx_x = _CombineAbi<_NRegisters, _AvxAbi<>>;
-template <int _NRegisters> using __avx512_x = _CombineAbi<_NRegisters, _Avx512Abi<>>;
-template <int _NRegisters> using __neon_x = _CombineAbi<_NRegisters, _NeonAbi<>>;
-
-template <class _Tp, int _N> using __sse_n = _SseAbi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __avx_n = _AvxAbi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __avx512_n = _Avx512Abi<sizeof(_Tp) * _N>;
-template <class _Tp, int _N> using __neon_n = _NeonAbi<sizeof(_Tp) * _N>;
-
-using __sse = _SseAbi<>;
-using __avx = _AvxAbi<>;
-using __avx512 = _Avx512Abi<>;
-using __neon = _NeonAbi<>;
-
-using __neon128 = _NeonAbi<16>;
-using __neon64 = _NeonAbi<8>;
-
-// standard:
-template <class _Tp, size_t _N, class... > struct deduce;
-template <int _N> using fixed_size = _FixedAbi<_N>;
-using scalar = _ScalarAbi;
-}  // namespace simd_abi }}}
-// forward declarations is_simd(_mask), simd(_mask), simd_size {{{
-template <class _Tp> struct is_simd;
-template <class _Tp> struct is_simd_mask;
-template <class _Tp, class _Abi> class simd;
-template <class _Tp, class _Abi> class simd_mask;
-template <class _Tp, class _Abi> struct simd_size;
-// }}}
-
-// On Windows (WIN32) we might see macros called min and max. Just undefine them and hope
-// noone (re)defines them (defining NOMINMAX should help).
-// {{{
-#ifdef WIN32
-#define NOMINMAX 1
-#if defined min
-#undef min
-#endif
-#if defined max
-#undef max
-#endif
-#endif  // WIN32
-// }}}
-
 // ISA extension detection. The following defines all the _GLIBCXX_SIMD_HAVE_XXX macros
 // ARM{{{
-#ifdef __aarch64__
-#define _GLIBCXX_SIMD_IS_AARCH64 1
-#endif  // __aarch64__
-
-#ifdef __ARM_NEON
+#if defined __ARM_NEON
 #define _GLIBCXX_SIMD_HAVE_NEON 1
-#define _GLIBCXX_SIMD_HAVE_NEON_ABI 1
-#define _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI 1
 #else
 #define _GLIBCXX_SIMD_HAVE_NEON 0
-#define _GLIBCXX_SIMD_HAVE_NEON_ABI 0
-#define _GLIBCXX_SIMD_HAVE_FULL_NEON_ABI 0
-#endif  // _GLIBCXX_SIMD_HAVE_NEON
+#endif
+#if defined __ARM_NEON && (__ARM_ARCH >= 8 || defined __aarch64__)
+#define _GLIBCXX_SIMD_HAVE_NEON_A32 1
+#else
+#define _GLIBCXX_SIMD_HAVE_NEON_A32 0
+#endif
+#if defined __ARM_NEON && defined __aarch64__
+#define _GLIBCXX_SIMD_HAVE_NEON_A64 1
+#else
+#define _GLIBCXX_SIMD_HAVE_NEON_A64 0
+#endif
 //}}}
 // x86{{{
 #ifdef __MMX__
@@ -274,28 +216,21 @@ template <class _Tp, class _Abi> struct simd_size;
 #endif
 //}}}
 
-#define _GLIBCXX_SIMD_NORMAL_MATH [[gnu::__optimize__("finite-math-only,no-signed-zeros")]]
-#define _GLIBCXX_SIMD_NEVER_INLINE [[gnu::__noinline__]]
-#define _GLIBCXX_SIMD_INTRINSIC [[gnu::__always_inline__, gnu::__artificial__]] inline
+#define _GLIBCXX_SIMD_NORMAL_MATH [[__gnu__::__optimize__("finite-math-only,no-signed-zeros")]]
+#define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
+#define _GLIBCXX_SIMD_INTRINSIC [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
 #define _GLIBCXX_SIMD_CONST __attribute__((__const__))
-#define _GLIBCXX_SIMD_PURE __attribute__((__pure__))
-#define _GLIBCXX_SIMD_ALWAYS_INLINE [[gnu::__always_inline__]] inline
+#define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]] inline
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)
 
-#ifdef COMPILE_FOR_UNIT_TESTS
-#define _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST
-#else
-#define _GLIBCXX_SIMD_NOEXCEPT_OR_IN_TEST noexcept
-#endif
+#define _GLIBCXX_SIMD_LIST_BINARY(__macro) __macro(|) __macro(&) __macro(^)
+#define _GLIBCXX_SIMD_LIST_SHIFTS(__macro) __macro(<<) __macro(>>)
+#define _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) __macro(+) __macro(-) __macro(*) __macro(/) __macro(%)
 
-#define _GLIBCXX_SIMD_LIST_BINARY(macro) macro(|) macro(&) macro(^)
-#define _GLIBCXX_SIMD_LIST_SHIFTS(macro) macro(<<) macro(>>)
-#define _GLIBCXX_SIMD_LIST_ARITHMETICS(macro) macro(+) macro(-) macro(*) macro(/) macro(%)
-
-#define _GLIBCXX_SIMD_ALL_BINARY(macro) _GLIBCXX_SIMD_LIST_BINARY(macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_SHIFTS(macro) _GLIBCXX_SIMD_LIST_SHIFTS(macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_ARITHMETICS(macro) _GLIBCXX_SIMD_LIST_ARITHMETICS(macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_BINARY(__macro) _GLIBCXX_SIMD_LIST_BINARY(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_SHIFTS(__macro) _GLIBCXX_SIMD_LIST_SHIFTS(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_ARITHMETICS(__macro) _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) static_assert(true)
 
 #ifdef _GLIBCXX_SIMD_NO_ALWAYS_INLINE
 #undef _GLIBCXX_SIMD_ALWAYS_INLINE
@@ -326,8 +261,11 @@ template <class _Tp, class _Abi> struct simd_size;
 #define _GLIBCXX_SIMD_WORKAROUND_PR85480 1
 #endif
 
-// incorrect use of k0 register for _kortestc_mask64_u8 and _kortestc_mask32_u8:
-#define _GLIBCXX_SIMD_WORKAROUND_PR85538 1
+// Invalid instruction mov from xmm16-31
+#define _GLIBCXX_SIMD_WORKAROUND_PR89229 1
+
+// integer division not optimized
+#define _GLIBCXX_SIMD_WORKAROUND_PR90993 1
 
 // very bad codegen for extraction and concatenation of 128/256 "subregisters" with
 // sizeof(element type) < 8: https://godbolt.org/g/mqUsgM
@@ -346,6 +284,16 @@ template <class _Tp, class _Abi> struct simd_size;
 // bad codegen for integer division
 #define _GLIBCXX_SIMD_WORKAROUND_XXX_4 1
 
+// abs pattern may generate MMX instructions without EMMS cleanup (This only happens with SSSE3
+// because pabs[bwd] is part of SSSE3.)
+#if __GNUC__ < 10 && defined __SSSE3__ && _GLIBCXX_SIMD_X86INTRIN
+#define _GLIBCXX_SIMD_WORKAROUND_PR91533 1
+#endif
+
+#if __GNUC__ < 10 && defined __aarch64__
+#define _GLIBCXX_SIMD_WORKAROUND_XXX_5 1
+#endif
+
 // https://github.com/cplusplus/parallelism-ts/issues/65 (incorrect return type of
 // static_simd_cast)
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE65 1
@@ -354,7 +302,6 @@ template <class _Tp, class _Abi> struct simd_size;
 // (static)_simd_cast)
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE66 1
 // }}}
-_GLIBCXX_SIMD_END_NAMESPACE
 
 #endif  // __cplusplus >= 201703L
 #endif  // _GLIBCXX_EXPERIMENTAL_SIMD_DETAIL_H_

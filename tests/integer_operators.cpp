@@ -54,7 +54,7 @@ void for_constexpr(F&& fun)
     if constexpr (Begin <= End) {
         fun(std::integral_constant<T, Begin>());
         if constexpr (Begin < End) {
-            for_constexpr<T, Begin + Stride, End, Stride>(std::forward<F>(fun));
+            for_constexpr<T, Begin + Stride, End, Stride>(static_cast<F&&>(fun));
         }
     }
 }

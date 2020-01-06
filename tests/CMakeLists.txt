@@ -5,12 +5,21 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
    message(FATAL_ERROR "You don't want to configure in the source directory!")
 endif()
 
-project("std::simd tests")
+project("std::simd tests" CXX)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_REQUIRED_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "9.0")
    message(FATAL_ERROR "This std::experimental::simd implementation requires GCC 9 or higher.")
+endif()
+
+execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -dumpmachine
+   OUTPUT_VARIABLE dumpmachine
+   OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REPLACE "-" ";" dumpmachine "${dumpmachine}")
+list(GET dumpmachine 0 target_arch)
+if (NOT target_arch STREQUAL CMAKE_SYSTEM_PROCESSOR)
+   message(STATUS "Compiling for ${target_arch} (cmake thinks ${CMAKE_SYSTEM_PROCESSOR})")
 endif()
 
 include (AddTargetProperty)
@@ -19,7 +28,8 @@ include (CMakeParseArguments)
 
 set(Vc_X86 FALSE)
 set(Vc_ARM FALSE)
-if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "(x86|AMD64|amd64)")
+set(Vc_AARCH64 FALSE)
+if("${target_arch}" MATCHES "(x86|AMD64|amd64)")
    set(Vc_X86 TRUE)
 
    execute_process(
@@ -54,10 +64,28 @@ if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "(x86|AMD64|amd64)")
    check_predefined_macro(AVX512PF)
    check_predefined_macro(FMA)
    check_predefined_macro(FMA4)
-elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "(arm|aarch32|aarch64)")
+   if (HAVE_AVX512F AND HAVE_AVX512PF AND HAVE_AVX512ER)
+      set(HAVE_KNL TRUE)
+   else()
+      set(HAVE_KNL FALSE)
+   endif()
+   if (HAVE_AVX512F AND HAVE_AVX512VL AND HAVE_AVX512BW AND HAVE_AVX512DQ AND HAVE_AVX512CD)
+      set(HAVE_AVX512 TRUE)
+   else()
+      set(HAVE_AVX512 FALSE)
+   endif()
+elseif("${target_arch}" MATCHES "arm")
    set(Vc_ARM TRUE)
+elseif("${target_arch}" STREQUAL "aarch64")
+   set(Vc_AARCH64 TRUE)
+   if (CMAKE_CROSSCOMPILING)
+     find_program(QEMU "qemu-aarch64")
+     if (QEMU)
+       set(CMAKE_CROSSCOMPILING_EMULATOR "${QEMU}")
+     endif()
+   endif()
 else()
-   message(WARNING "No optimized implementation of the Vc types available for ${CMAKE_SYSTEM_PROCESSOR}")
+   message(WARNING "No optimized implementation of the Vc types available for ${target_arch}")
 endif()
 
 # set up ccache#{{{
@@ -85,7 +113,10 @@ endif(CMAKE_BUILD_TYPE STREQUAL "" AND NOT CMAKE_CXX_FLAGS MATCHES "-O[123]")#}}
 
 # Set default C(XX)FLAGS and includes#{{{
 ##################################################################
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -W -Wall -Wextra -Wpedantic -Wcast-align -Wshadow -Wundef -Wold-style-cast -fabi-version=0 -fabi-compat-version=0 -ffp-contract=fast -ftemplate-depth=512 -fmax-errors=10 -mfpmath=sse")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -W -Wall -Wextra -Wpedantic -Wcast-align -Wshadow -Wundef -Wold-style-cast -fabi-version=0 -fabi-compat-version=0 -ffp-contract=fast -ftemplate-depth=512 -fmax-errors=10")
+if(Vc_X86)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfpmath=sse")
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/virtest)
 #}}}
@@ -93,6 +124,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/v
 # Look for the Intel SDE if we're running on x86 and Linux#{{{
 ##################################################################
 if(Vc_X86 AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+   find_program(RUN_ON_AVX512 run_on_avx512 DOC "Path to a script that runs the executable on a skylake-avx512 machine")
+
    macro(Vc_find_sde)
       find_program(INTEL_SDE sde64 ${ARGN} DOC "Path to the Intel Software Development Emulator")
       if(INTEL_SDE)
@@ -161,13 +194,18 @@ if(Vc_X86)
    add_custom_target(KNL COMMENT "build KNL code" VERBATIM)
    add_custom_target(AVX512 COMMENT "build AVX512 code" VERBATIM)
 elseif(Vc_ARM)
+   add_custom_target(ARMV7 COMMENT "build ARMV7 code" VERBATIM)
+   add_custom_target(ARMV8 COMMENT "build ARMV8 code" VERBATIM)
+elseif(Vc_AARCH64)
    add_custom_target(NEON COMMENT "build NEON code" VERBATIM)
 endif()#}}}
 
 # Unit tests#{{{
 ##################################################################
 include (CTest)
-configure_file(${CMAKE_SOURCE_DIR}/../scripts/CTestCustom.cmake ${CMAKE_BINARY_DIR}/CTestCustom.cmake COPYONLY)
+add_custom_target(test_random ${CMAKE_CTEST_COMMAND} --schedule-random
+   USES_TERMINAL
+   )
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/virtest/vir/test.h")
    # first try to resolve the issue automatically
    message(STATUS "virtest missing: calling 'git submodule update --init'")
@@ -193,8 +231,9 @@ if(ENABLE_UBSAN)
    AddCompilerFlag("-fsanitize=undefined")
 endif()
 
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-prog-name=objcopy OUTPUT_VARIABLE OBJCOPY OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 function(vc_download_testdata)#{{{
-   find_program(OBJCOPY objcopy)
    set(_deps)
    foreach(fun sincos asin acos atan ln log2 log10)
       foreach(type f d)
@@ -214,8 +253,15 @@ function(vc_download_testdata)#{{{
             string(REGEX REPLACE "[.-]" "_" toreplace "_binary_${filename}_")
             string(LENGTH "${fun}" fun_len)
             set(replacement "_ZN14reference_dataIN8function${fun_len}${fun}E${type}E")
+            if (Vc_X86)
+              set(objcopy_args "-O;elf64-x86-64;-B;i386")
+            elseif(Vc_AARCH64)
+              set(objcopy_args "-O;elf64-littleaarch64;-B;aarch64")
+            elseif(Vc_ARM)
+              set(objcopy_args "-O;elf32-littlearm;-B;arm")
+            endif()
             add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${filename}.o"
-               COMMAND ${OBJCOPY} -I binary -O elf64-x86-64 -B i386
+               COMMAND ${OBJCOPY} -I binary ${objcopy_args}
                --redefine-sym ${toreplace}start=${replacement}6begin_E
                --redefine-sym ${toreplace}end=${replacement}4end_E
                --redefine-sym ${toreplace}size=${replacement}5size_E
@@ -243,18 +289,13 @@ function(vc_download_testdata)#{{{
       add_dependencies(KNL download-testdata)
       add_dependencies(AVX512 download-testdata)
    elseif(Vc_ARM)
+      add_dependencies(ARMV7 download-testdata)
+      add_dependencies(ARMV8 download-testdata)
+   elseif(Vc_AARCH64)
       add_dependencies(NEON download-testdata)
    endif()
 endfunction()
 vc_download_testdata()#}}}
-
-function(get_target_executable VAR TARGET)#{{{
-   get_target_property(exe "${TARGET}" OUTPUT_NAME)
-   if(NOT exe)
-      set(exe "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}")
-   endif()
-   set(${VAR} "${exe}" PARENT_SCOPE)
-endfunction()#}}}
 
 # typeToString can use cxxabi for demangling
 CHECK_CXX_SOURCE_COMPILES("#include <cxxabi.h>
@@ -272,7 +313,9 @@ function(vc_target_setup name sde_cpuid flags)#{{{
       message(STATUS "Building tests for ${name}: enabled")
       list(APPEND vc_all_target_variants ${name})
       set(vc_all_target_variants ${vc_all_target_variants} PARENT_SCOPE)
-      set(sde_cpuid_${name} "-${sde_cpuid}" PARENT_SCOPE)
+      if(sde_cpuid)
+         set(sde_cpuid_${name} "-${sde_cpuid}" PARENT_SCOPE)
+      endif()
    else()
       message(STATUS "Building tests for ${name}: disabled")
    endif()
@@ -289,7 +332,12 @@ if(Vc_X86)
    vc_target_setup(knl knl "-march=knl")
    vc_target_setup(avx512 skx "-march=skylake-avx512")
 elseif(Vc_ARM)
+   vc_target_setup(armv7 "" "-march=armv7-a+simd;-mfloat-abi=softfp")
+   vc_target_setup(armv8 "" "-march=armv8-a+simd;-mfloat-abi=softfp")
+   find_program(RUN_ON_ARM run_on_armel)
+elseif(Vc_AARCH64)
    vc_target_setup(neon "" "-march=armv8-a")
+   find_program(RUN_ON_AARCH64 run_on_aarch64)
 endif()
 
 macro(vc_add_run_target _target emulator run_target_list)#{{{
@@ -302,11 +350,10 @@ macro(vc_add_run_target _target emulator run_target_list)#{{{
          set(_test_args "")
       endif()
       if(emulator)
-         get_target_executable(_exe "${_target}")
          add_custom_target(run_${_target}
-            ${emulator} "${_exe}" "-v" ${_test_args}
+           ${emulator} $<TARGET_FILE:${_target}> "-v" ${_test_args}
             DEPENDS ${_target}
-            COMMENT "Execute ${_target} test"
+            COMMENT "Execute ${_target} test (via emulator)"
             VERBATIM
             )
       else()
@@ -330,7 +377,7 @@ function(vc_add_test name) #{{{
       return()
    endif()
 
-   cmake_parse_arguments("" "ROUNDINGMODES;NO_TESTTYPES;SINGLE_TESTTYPE;EXCLUDE_FROM_ALL" "SOURCE" "DEFINITIONS" ${ARGN})
+   cmake_parse_arguments("" "ROUNDINGMODES;NO_TESTABIS;NO_TESTTYPES;SINGLE_TESTTYPE;EXCLUDE_FROM_ALL" "SOURCE" "DEFINITIONS" ${ARGN})
 
    if(_SOURCE)
       set(src "${_SOURCE}")
@@ -361,9 +408,18 @@ function(vc_add_test name) #{{{
          if((impl STREQUAL "KNL" AND HAVE_AVX512PF AND HAVE_AVX512ER) OR
             (impl STREQUAL "AVX512" AND HAVE_AVX512DQ AND HAVE_AVX512VL AND HAVE_AVX512BW))
             set(can_exec_test TRUE)
+         elseif(Vc_X86 AND RUN_ON_AVX512 AND "${impl}" STREQUAL "avx512")
+            set(can_exec_test TRUE)
+            set(emulator "${RUN_ON_AVX512}")
          elseif(Vc_X86 AND INTEL_SDE)
             set(can_exec_test TRUE)
             set(emulator "${INTEL_SDE};${sde_cpuid_${impl}};--")
+         elseif(Vc_ARM AND RUN_ON_ARM)
+            set(can_exec_test TRUE)
+            set(emulator "${RUN_ON_ARM}")
+         elseif(Vc_AARCH64 AND RUN_ON_AARCH64)
+            set(can_exec_test TRUE)
+            set(emulator "${RUN_ON_AARCH64}")
          else()
             set(can_exec_test FALSE)
          endif()
@@ -375,67 +431,79 @@ function(vc_add_test name) #{{{
       else()
          set(type_split "ldouble,float,double,schar,uchar" "llong,long,ullong,ulong,char,wchar" "int,short,uint,ushort,char16,char32")
       endif()
+      if(_NO_TESTABIS)
+         set(abi_split " ")
+      else()
+         set(abi_split 0 1 2 3 4 5 6 7 8)
+      endif()
       foreach(types ${type_split})
-         if(impl STREQUAL "nosimd")#{{{
-            set(target ${_target})
-         else()
-            string(TOLOWER "${_target}" target)
-         endif()#}}}
-         if(NOT _NO_TESTTYPES)
-            string(REPLACE "," "_" target "${target}_${types}")
-         endif()
-
-         if(OBJCOPY)
-            list(APPEND _DEFINITIONS "_GLIBCXX_SIMD_LINK_TESTDATA")
-            if("${name}" STREQUAL "math")
-               foreach(fun sincos asin acos atan)
-                  foreach(filename reference-${fun}-sp.dat reference-${fun}-dp.dat)
-                     set(src ${src} ${CMAKE_CURRENT_BINARY_DIR}/${filename}.o)
-                  endforeach()
-               endforeach()
-            elseif("${name}" STREQUAL "logarithm")
-               foreach(fun ln log2 log10)
-                  foreach(filename reference-${fun}-sp.dat reference-${fun}-dp.dat)
-                     set(src ${src} ${CMAKE_CURRENT_BINARY_DIR}/${filename}.o)
-                  endforeach()
-               endforeach()
+         foreach(abis ${abi_split})
+            if(impl STREQUAL "nosimd")#{{{
+               set(target ${_target})
+            else()
+               string(TOLOWER "${_target}" target)
+            endif()#}}}
+            if(NOT _NO_TESTTYPES)
+               string(REPLACE "," "_" target "${target}_${types}")
             endif()
-         endif()
+            if(NOT _NO_TESTABIS)
+               set(target "${target}_${abis}")
+            endif()
 
-         add_executable(${target} EXCLUDE_FROM_ALL ${src})
-         set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "${_DEFINITIONS}")
-         set_property(TARGET ${target} APPEND PROPERTY COMPILE_OPTIONS "${flags}")
-         set_property(TARGET ${target} APPEND PROPERTY LINK_FLAGS "${link_flags}")
-         if(NOT _NO_TESTTYPES)
-            set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "TESTTYPES=${types}")
-         endif()
-         if(NOT _EXCLUDE_FROM_ALL)
-            add_target_property(${target} LABELS "${label}")
-            add_dependencies(build_tests ${target})
-            add_dependencies(${label} ${target})
-         endif()
-         if(${can_exec_test}) # add test and run target#{{{
+            if(OBJCOPY)
+               list(APPEND _DEFINITIONS "_GLIBCXX_SIMD_LINK_TESTDATA")
+               if("${name}" STREQUAL "math")
+                  foreach(fun sincos asin acos atan)
+                     foreach(filename reference-${fun}-sp.dat reference-${fun}-dp.dat)
+                        set(src ${src} ${CMAKE_CURRENT_BINARY_DIR}/${filename}.o)
+                     endforeach()
+                  endforeach()
+               elseif("${name}" STREQUAL "logarithm")
+                  foreach(fun ln log2 log10)
+                     foreach(filename reference-${fun}-sp.dat reference-${fun}-dp.dat)
+                        set(src ${src} ${CMAKE_CURRENT_BINARY_DIR}/${filename}.o)
+                     endforeach()
+                  endforeach()
+               endif()
+            endif()
+
+            add_executable(${target} EXCLUDE_FROM_ALL ${src})
+            set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "${_DEFINITIONS}")
+            set_property(TARGET ${target} APPEND PROPERTY COMPILE_OPTIONS "${flags}")
+            set_property(TARGET ${target} APPEND PROPERTY LINK_FLAGS "${link_flags}")
+            if(NOT _NO_TESTTYPES)
+               set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "TESTTYPES=${types}")
+            endif()
+            if(NOT _NO_TESTABIS)
+               set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "ABITYPES=${abis}")
+            endif()
             if(NOT _EXCLUDE_FROM_ALL)
-               if(_ROUNDINGMODES)
-                  set(_test_args "--roundingmodes")
-               else()
-                  set(_test_args "")
-               endif()
-               if(emulator)
-                  get_target_executable(_exe "${target}")
-                  add_test(NAME ${target}
-                     COMMAND ${emulator} "${_exe}" ${_test_args}
-                     )
-               else()
-                  add_test(${target} "${CMAKE_CURRENT_BINARY_DIR}/${target}" ${_test_args})
-               endif()
-               set_property(TEST ${target} PROPERTY LABELS "${label}")
+               add_target_property(${target} LABELS "${label}")
+               add_dependencies(build_tests ${target})
+               add_dependencies(${label} ${target})
             endif()
-            vc_add_run_target(${target} "${emulator}" run_targets)
-         endif()#}}}
-         if(impl STREQUAL "nosimd")
-            break()
-         endif()
+            if(${can_exec_test}) # add test and run target#{{{
+               if(NOT _EXCLUDE_FROM_ALL)
+                  if(_ROUNDINGMODES)
+                     set(_test_args "--roundingmodes")
+                  else()
+                     set(_test_args "")
+                  endif()
+                  if(emulator)
+                     add_test(NAME ${target}
+                       COMMAND ${emulator} $<TARGET_FILE:${target}> ${_test_args}
+                        )
+                  else()
+                     add_test(${target} "${CMAKE_CURRENT_BINARY_DIR}/${target}" ${_test_args})
+                  endif()
+                  set_property(TEST ${target} PROPERTY LABELS "${label}")
+               endif()
+               vc_add_run_target(${target} "${emulator}" run_targets)
+            endif()#}}}
+            if(impl STREQUAL "nosimd")
+               break()
+            endif()
+         endforeach()
       endforeach()
    endforeach()
    if(run_targets)
@@ -450,17 +518,18 @@ endfunction() #}}}
 vc_add_test(sfinae NO_TESTTYPES)
 vc_add_test(loadstore SINGLE_TESTTYPE DEFINITIONS ONE_RANDOM_ARITHMETIC_TYPE)
 vc_add_test(allcvt_loadstore SINGLE_TESTTYPE SOURCE loadstore.cpp SINGLE_TESTTYPE EXCLUDE_FROM_ALL)
-vc_add_test(mask NO_TESTTYPES)
-vc_add_test(mask_conversions NO_TESTTYPES)
-vc_add_test(simd NO_TESTTYPES)
+vc_add_test(mask)
+vc_add_test(mask_conversions SINGLE_TESTTYPE)
+vc_add_test(simd)
 vc_add_test(operators)
-vc_add_test(integer_operators)
+vc_add_test(integer_operators SINGLE_TESTTYPE) # without SINGLE_TESTTYPE GCC gets OOM killed
 vc_add_test(casts DEFINITIONS ONE_RANDOM_ARITHMETIC_TYPE)
-vc_add_test(allcvt_casts SOURCE casts.cpp EXCLUDE_FROM_ALL)
-vc_add_test(math NO_TESTTYPES ROUNDINGMODES)
-vc_add_test(specialmath NO_TESTTYPES ROUNDINGMODES)
+vc_add_test(allcvt_casts SOURCE casts.cpp EXCLUDE_FROM_ALL SINGLE_TESTTYPE)
+vc_add_test(math ROUNDINGMODES)
+vc_add_test(specialmath ROUNDINGMODES)
 vc_add_test(where NO_TESTTYPES)
 vc_add_test(bitset_conversions NO_TESTTYPES)
+vc_add_test(proposed)
 
 # ABI tests#{{{
 find_program(OBJDUMP objdump)
@@ -478,16 +547,15 @@ if(OBJDUMP AND NOT ENABLE_UBSAN) # ubsan changes codegen too much, just skip it
       add_target_property(${_target} LABELS "${_impl}")
       add_dependencies(${_impl} ${_target})
       add_dependencies(build_tests ${_target})
-      get_target_executable(_exe "${_target}")
       add_test(NAME ${_test}
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-         COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=${_exe} -DIMPL=${_impl}
+         COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=$<TARGET_FILE:${_target}> -DIMPL=${_impl}
          -DCOMPILER_IS_CLANG=${Vc_COMPILER_IS_CLANG} -DSYSTEM_NAME=${CMAKE_SYSTEM_NAME}
          -P ${CMAKE_CURRENT_SOURCE_DIR}/uninit.cmake
          )
       set_property(TEST ${_test} PROPERTY LABELS "${_impl}")
       add_custom_target(run_${_target}
-         ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=${_exe} -DIMPL=${_impl}
+         ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=$<TARGET_FILE:${_target}> -DIMPL=${_impl}
          -DCOMPILER_IS_CLANG=${Vc_COMPILER_IS_CLANG} -DSYSTEM_NAME=${CMAKE_SYSTEM_NAME}
          -P ${CMAKE_CURRENT_SOURCE_DIR}/uninit.cmake
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -514,17 +582,15 @@ if(OBJDUMP AND NOT ENABLE_UBSAN) # ubsan changes codegen too much, just skip it
          add_dependencies(${_impl} ${_target})
          add_dependencies(build_tests ${_target})
 
-         get_target_executable(_exe "${_target}")
-
          add_test(NAME ${_test}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=${_exe} -DIMPL=${_impl}
+            COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=$<TARGET_FILE:${_target}> -DIMPL=${_impl}
             -DCOMPILER_IS_CLANG=${Vc_COMPILER_IS_CLANG} -DSYSTEM_NAME=${CMAKE_SYSTEM_NAME}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/abi${suffix}.cmake
             )
          set_property(TEST ${_test} PROPERTY LABELS "${_impl}")
          add_custom_target(run_${_target}
-            ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=${_exe} -DIMPL=${_impl}
+            ${CMAKE_COMMAND} -DOBJDUMP=${OBJDUMP} -DBINARY=$<TARGET_FILE:${_target}> -DIMPL=${_impl}
             -DCOMPILER_IS_CLANG=${Vc_COMPILER_IS_CLANG} -DSYSTEM_NAME=${CMAKE_SYSTEM_NAME}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/abi${suffix}.cmake
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -536,7 +602,7 @@ if(OBJDUMP AND NOT ENABLE_UBSAN) # ubsan changes codegen too much, just skip it
       endforeach()
    endmacro()
 
-   if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "[x3-7]86")
+   if("${target_arch}" MATCHES "[x3-7]86")
       test_uninitialized(SSE ${Vc_sse2_flags})
       test_uninitialized(AVX ${Vc_avx_flags})
       test_uninitialized(KNL ${Vc_knl_flags})
@@ -567,10 +633,17 @@ add_dependencies(build_tests linkTest)
 add_dependencies(other linkTest)
 add_target_property(linkTestLibDynamic1 COMPILE_FLAGS "-DPOSTFIX=A")
 add_target_property(linkTestLibDynamic2 COMPILE_FLAGS "-DPOSTFIX=B")
-set_property(TARGET linkTestLibDynamic1 APPEND PROPERTY COMPILE_OPTIONS "-march=native")
-set_property(TARGET linkTestLibDynamic2 APPEND PROPERTY COMPILE_OPTIONS "-march=native")
-set_property(TARGET linkTestLibStatic APPEND PROPERTY COMPILE_OPTIONS "-march=native")
-set_property(TARGET linkTest APPEND PROPERTY COMPILE_OPTIONS "-march=native")
+if (Vc_X86)
+  set(link_march "-march=native")
+elseif (Vc_ARM)
+  set(link_march "-march=armv8-a+simd;-mfloat-abi=softfp")
+elseif (Vc_AARCH64)
+  set(link_march "-march=armv8-a")
+endif()
+set_property(TARGET linkTestLibDynamic1 APPEND PROPERTY COMPILE_OPTIONS "${link_march}")
+set_property(TARGET linkTestLibDynamic2 APPEND PROPERTY COMPILE_OPTIONS "${link_march}")
+set_property(TARGET linkTestLibStatic APPEND PROPERTY COMPILE_OPTIONS "${link_march}")
+set_property(TARGET linkTest APPEND PROPERTY COMPILE_OPTIONS "${link_march}")
 target_link_libraries(linkTest linkTestLibDynamic1 linkTestLibDynamic2 linkTestLibStatic)#}}}
 
 # vim: foldmethod=marker commentstring=#%s

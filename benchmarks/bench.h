@@ -188,8 +188,10 @@ template <class T, class... ExtraFlags> void bench_all()
             bench_lat_thr<V, ExtraFlags...>(id, ref);
         }
     }
-    std::strncpy(abistr, "simd_abi::__avx512", 18);
-    if (bench_lat_thr<simd<T, __avx512>, ExtraFlags...>(id, ref)) {
+    std::strncpy(abistr, "d_abi::_Avx512<32>", 18);
+    bench_lat_thr<simd<T, _Avx512<32>>, ExtraFlags...>(id, ref);
+    std::strncpy(abistr, "d_abi::_Avx512<64>", 18);
+    if (bench_lat_thr<simd<T, _Avx512<64>>, ExtraFlags...>(id, ref)) {
         using V [[gnu::vector_size(64)]] = T;
         if constexpr (alignof(V) == sizeof(V)) {
             std::strncpy(abistr, "vector_size(64)   ", 18);
@@ -216,7 +218,8 @@ double time_mean(F&& fun, Args&&... args)
     return elapsed / Iterations;
 }
 
-template <typename T, typename... Ts> void fake_modify(T& x, Ts&... more)
+template <typename T, typename... Ts>
+[[gnu::always_inline]] void fake_modify(T& x, Ts&... more)
 {
     if constexpr (sizeof(T) >= 16 || std::is_floating_point_v<T>) {
         asm volatile("" : "+x"(x));
@@ -228,7 +231,8 @@ template <typename T, typename... Ts> void fake_modify(T& x, Ts&... more)
     }
 }
 
-template <typename T, typename... Ts> void fake_read(const T& x, const Ts&... more)
+template <typename T, typename... Ts>
+[[gnu::always_inline]] void fake_read(const T& x, const Ts&... more)
 {
     if constexpr (sizeof(T) >= 16 || std::is_floating_point_v<T>) {
         asm volatile("" ::"x"(x));

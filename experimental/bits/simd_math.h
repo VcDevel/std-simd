@@ -30,31 +30,30 @@
 
 #if __cplusplus >= 201703L
 
-#include "simd_abis.h"
 #include <utility>
 #include <iomanip>
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
-template <class _Tp, class _V> using __samesize = fixed_size_simd<_Tp, _V::size()>;
+template <typename _Tp, typename _V> using __samesize = fixed_size_simd<_Tp, _V::size()>;
 // __math_return_type {{{
-template <class _DoubleR, class _Tp, class _Abi> struct __math_return_type;
-template <class _DoubleR, class _Tp, class _Abi>
+template <typename _DoubleR, typename _Tp, typename _Abi> struct __math_return_type;
+template <typename _DoubleR, typename _Tp, typename _Abi>
 using __math_return_type_t = typename __math_return_type<_DoubleR, _Tp, _Abi>::type;
 
-template <class _Tp, class _Abi> struct __math_return_type<double, _Tp, _Abi> {
+template <typename _Tp, typename _Abi> struct __math_return_type<double, _Tp, _Abi> {
     using type = std::experimental::simd<_Tp, _Abi>;
 };
-template <class _Tp, class _Abi> struct __math_return_type<bool, _Tp, _Abi> {
+template <typename _Tp, typename _Abi> struct __math_return_type<bool, _Tp, _Abi> {
     using type = std::experimental::simd_mask<_Tp, _Abi>;
 };
-template <class _DoubleR, class _Tp, class _Abi> struct __math_return_type {
+template <typename _DoubleR, typename _Tp, typename _Abi> struct __math_return_type {
     using type = std::experimental::fixed_size_simd<_DoubleR, simd_size_v<_Tp, _Abi>>;
 };
 //}}}
 // _GLIBCXX_SIMD_MATH_CALL_ {{{
 #define _GLIBCXX_SIMD_MATH_CALL_(__name)                                       \
-  template <class _Tp, class _Abi, class...,                                   \
-	    class _R = std::experimental::__math_return_type_t<                \
+  template <typename _Tp, typename _Abi, typename...,                          \
+	    typename _R = std::experimental::__math_return_type_t<             \
 	      decltype(std::__name(std::declval<double>())), _Tp, _Abi>>       \
   enable_if_t<std::is_floating_point_v<_Tp>, _R> __name(                       \
     std::experimental::simd<_Tp, _Abi> __x)                                    \
@@ -65,22 +64,22 @@ template <class _DoubleR, class _Tp, class _Abi> struct __math_return_type {
 
 // }}}
 //__extra_argument_type{{{
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type;
+template <typename _Up, typename _Tp, typename _Abi> struct __extra_argument_type;
 
-template <class _Tp, class _Abi> struct __extra_argument_type<_Tp *, _Tp, _Abi> {
+template <typename _Tp, typename _Abi> struct __extra_argument_type<_Tp *, _Tp, _Abi> {
     using type = std::experimental::simd<_Tp, _Abi> *;
     static constexpr double *declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x) { return &std::experimental::__data(*__x); }
     static constexpr bool __needs_temporary_scalar = true;
 };
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type<_U *, _Tp, _Abi> {
-    static_assert(std::is_integral_v<_U>);
-    using type = std::experimental::fixed_size_simd<_U, std::experimental::simd_size_v<_Tp, _Abi>> *;
-    static constexpr _U *declval();
+template <typename _Up, typename _Tp, typename _Abi> struct __extra_argument_type<_Up *, _Tp, _Abi> {
+    static_assert(std::is_integral_v<_Up>);
+    using type = std::experimental::fixed_size_simd<_Up, std::experimental::simd_size_v<_Tp, _Abi>> *;
+    static constexpr _Up *declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x) { return &std::experimental::__data(*__x); }
     static constexpr bool __needs_temporary_scalar = true;
 };
-template <class _Tp, class _Abi> struct __extra_argument_type<_Tp, _Tp, _Abi> {
+template <typename _Tp, typename _Abi> struct __extra_argument_type<_Tp, _Tp, _Abi> {
     using type = std::experimental::simd<_Tp, _Abi>;
     static constexpr double declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr decltype(auto) __data(const type &__x)
@@ -89,10 +88,10 @@ template <class _Tp, class _Abi> struct __extra_argument_type<_Tp, _Tp, _Abi> {
     }
     static constexpr bool __needs_temporary_scalar = false;
 };
-template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
-    static_assert(std::is_integral_v<_U>);
-    using type = std::experimental::fixed_size_simd<_U, std::experimental::simd_size_v<_Tp, _Abi>>;
-    static constexpr _U declval();
+template <typename _Up, typename _Tp, typename _Abi> struct __extra_argument_type {
+    static_assert(std::is_integral_v<_Up>);
+    using type = std::experimental::fixed_size_simd<_Up, std::experimental::simd_size_v<_Tp, _Abi>>;
+    static constexpr _Up declval();
     _GLIBCXX_SIMD_INTRINSIC static constexpr decltype(auto) __data(const type &__x)
     {
         return std::experimental::__data(__x);
@@ -102,10 +101,10 @@ template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
 //}}}
 // _GLIBCXX_SIMD_MATH_CALL2_ {{{
 #define _GLIBCXX_SIMD_MATH_CALL2_(__name, arg2_)                               \
-  template <class _Tp, class _Abi, class...,                                   \
-	    class _Arg2 =                                                      \
+  template <typename _Tp, typename _Abi, typename...,                          \
+	    typename _Arg2 =                                                   \
 	      std::experimental::__extra_argument_type<arg2_, _Tp, _Abi>,      \
-	    class _R = std::experimental::__math_return_type_t<                \
+	    typename _R = std::experimental::__math_return_type_t<             \
 	      decltype(std::__name(std::declval<double>(), _Arg2::declval())), \
 	      _Tp, _Abi>>                                                      \
   enable_if_t<std::is_floating_point_v<_Tp>, _R> __name(                       \
@@ -116,36 +115,37 @@ template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
 	    _Abi::_SimdImpl::__##__name(std::experimental::__data(__x),        \
 					_Arg2::__data(__y))};                  \
   }                                                                            \
-  template <class _U, class _Tp, class _Abi>                                   \
+  template <typename _Up, typename _Tp, typename _Abi>                         \
   _GLIBCXX_SIMD_INTRINSIC std::experimental::__math_return_type_t<             \
     decltype(std::__name(                                                      \
       std::declval<double>(),                                                  \
       std::declval<enable_if_t<                                                \
 	std::conjunction_v<                                                    \
 	  std::is_same<arg2_, _Tp>,                                            \
-	  std::negation<std::is_same<__remove_cvref_t<_U>,                     \
+	  std::negation<std::is_same<__remove_cvref_t<_Up>,                    \
 				     std::experimental::simd<_Tp, _Abi>>>,     \
-	  std::is_convertible<_U, std::experimental::simd<_Tp, _Abi>>,         \
+	  std::is_convertible<_Up, std::experimental::simd<_Tp, _Abi>>,        \
 	  std::is_floating_point<_Tp>>,                                        \
 	double>>())),                                                          \
     _Tp, _Abi>                                                                 \
-    __name(_U&& __xx, const std::experimental::simd<_Tp, _Abi>& __yy)          \
+    __name(_Up&& __xx, const std::experimental::simd<_Tp, _Abi>& __yy)         \
   {                                                                            \
     return std::experimental::__name(                                          \
-      std::experimental::simd<_Tp, _Abi>(std::forward<_U>(__xx)), __yy);       \
+      std::experimental::simd<_Tp, _Abi>(static_cast<_Up&&>(__xx)), __yy);     \
   }
 
 // }}}
 // _GLIBCXX_SIMD_MATH_CALL3_ {{{
 #define _GLIBCXX_SIMD_MATH_CALL3_(__name, arg2_, arg3_)                        \
-  template <                                                                   \
-    class _Tp, class _Abi, class...,                                           \
-    class _Arg2 = std::experimental::__extra_argument_type<arg2_, _Tp, _Abi>,  \
-    class _Arg3 = std::experimental::__extra_argument_type<arg3_, _Tp, _Abi>,  \
-    class _R    = std::experimental::__math_return_type_t<                     \
-      decltype(std::__name(std::declval<double>(), _Arg2::declval(),        \
-                           _Arg3::declval())),                              \
-      _Tp, _Abi>>                                                           \
+  template <typename _Tp, typename _Abi, typename...,                          \
+	    typename _Arg2 =                                                   \
+	      std::experimental::__extra_argument_type<arg2_, _Tp, _Abi>,      \
+	    typename _Arg3 =                                                   \
+	      std::experimental::__extra_argument_type<arg3_, _Tp, _Abi>,      \
+	    typename _R = std::experimental::__math_return_type_t<             \
+	      decltype(std::__name(std::declval<double>(), _Arg2::declval(),   \
+				   _Arg3::declval())),                         \
+	      _Tp, _Abi>>                                                      \
   enable_if_t<std::is_floating_point_v<_Tp>, _R> __name(                       \
     std::experimental::simd<_Tp, _Abi> __x, typename _Arg2::type __y,          \
     typename _Arg3::type __z)                                                  \
@@ -155,20 +155,20 @@ template <class _U, class _Tp, class _Abi> struct __extra_argument_type {
 					_Arg2::__data(__y),                    \
 					_Arg3::__data(__z))};                  \
   }                                                                            \
-  template <class _Tp, class _U, class _V, class...,                           \
-	    class _TT = __remove_cvref_t<_Tp>,                                 \
-	    class _UU = __remove_cvref_t<_U>,                                  \
-	    class _VV = __remove_cvref_t<_V>,                                  \
-	    class _Simd =                                                      \
+  template <typename _Tp, typename _Up, typename _V, typename...,              \
+	    typename _TT = __remove_cvref_t<_Tp>,                              \
+	    typename _UU = __remove_cvref_t<_Up>,                              \
+	    typename _VV = __remove_cvref_t<_V>,                               \
+	    typename _Simd =                                                   \
 	      std::conditional_t<std::experimental::is_simd_v<_UU>, _UU, _VV>> \
   _GLIBCXX_SIMD_INTRINSIC decltype(std::experimental::__name(                  \
-    _Simd(std::declval<_Tp>()), _Simd(std::declval<_U>()),                     \
+    _Simd(std::declval<_Tp>()), _Simd(std::declval<_Up>()),                    \
     _Simd(std::declval<_V>())))                                                \
-    __name(_Tp&& __xx, _U&& __yy, _V&& __zz)                                   \
+    __name(_Tp&& __xx, _Up&& __yy, _V&& __zz)                                  \
   {                                                                            \
-    return std::experimental::__name(_Simd(std::forward<_Tp>(__xx)),           \
-				     _Simd(std::forward<_U>(__yy)),            \
-				     _Simd(std::forward<_V>(__zz)));           \
+    return std::experimental::__name(_Simd(static_cast<_Tp&&>(__xx)),          \
+				     _Simd(static_cast<_Up&&>(__yy)),          \
+				     _Simd(static_cast<_V&&>(__zz)));          \
   }
 
 // }}}
@@ -265,7 +265,7 @@ _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> __zero_low_bits(simd<_Tp, _Abi> __x)
  * `y = round(x / ½π) * 2`.
  * If precision allows, `2/π * x` is better (faster).
  */
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 struct __folded
 {
   simd<_Tp, _Abi> _M_x;
@@ -288,7 +288,7 @@ inline constexpr double __2_over_pi = 0x1.45F306DC9C883p-1; // 2/π
 inline constexpr double __pi_2      = 0x1.921fb54442d18p0;  // π/2
 }
 
-template <class _Abi>
+template <typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE __folded<float, _Abi>
 			    __fold_input(const simd<float, _Abi>& __x)
 {
@@ -388,62 +388,62 @@ _GLIBCXX_SIMD_ALWAYS_INLINE __folded<double, _Abi>
 
 // }}}
 // __extract_exponent_bits {{{
-template <class _Abi>
+template <typename _Abi>
 rebind_simd_t<int, simd<float, _Abi>> __extract_exponent_bits(const simd<float, _Abi> &__v)
 {
     using namespace std::experimental::__proposed;
     using namespace std::experimental::__proposed::float_bitwise_operators;
     constexpr simd<float, _Abi> __exponent_mask =
         std::numeric_limits<float>::infinity();  // 0x7f800000
-    return simd_reinterpret_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v & __exponent_mask);
+    return __bit_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v & __exponent_mask);
 }
 
-template <class _Abi>
+template <typename _Abi>
 rebind_simd_t<int, simd<double, _Abi>> __extract_exponent_bits(const simd<double, _Abi> &__v)
 {
-    using namespace std::experimental::__proposed;
+    using namespace std::experimental::_P0918;
     using namespace std::experimental::__proposed::float_bitwise_operators;
     const simd<double, _Abi> __exponent_mask =
         std::numeric_limits<double>::infinity();  // 0x7ff0000000000000
-    constexpr auto _N = simd_size_v<double, _Abi> * 2;
+    constexpr auto _Np = simd_size_v<double, _Abi> * 2;
     constexpr auto _Max = simd_abi::max_fixed_size<int>;
-    if constexpr (_N > _Max) {
-        const auto tup = split<_Max / 2, (_N - _Max) / 2>(__v & __exponent_mask);
-        return concat(
-            shuffle<strided<2, 1>>(
-                simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
-                    std::get<0>(tup))),
-            shuffle<strided<2, 1>>(
-                simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _N - _Max>>>(
-                    std::get<1>(tup))));
+    if constexpr (_Np > _Max) {
+        const auto __tup = split<_Max / 2, (_Np - _Max) / 2>(__v & __exponent_mask);
+	return concat(
+	  shuffle<strided<2, 1>>(
+	    __bit_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
+	      std::get<0>(__tup))),
+	  shuffle<strided<2, 1>>(
+	    __bit_cast<simd<int, simd_abi::deduce_t<int, _Np - _Max>>>(
+	      std::get<1>(__tup))));
     } else {
-        return shuffle<strided<2, 1>>(
-            simd_reinterpret_cast<simd<int, simd_abi::deduce_t<int, _N>>>(__v &
-                                                                         __exponent_mask));
+	return shuffle<strided<2, 1>>(
+	  __bit_cast<simd<int, simd_abi::deduce_t<int, _Np>>>(__v &
+							      __exponent_mask));
     }
 }
 
 // }}}
 // __impl_or_fallback {{{
-template <class ImplFun, class FallbackFun, class... _Args>
+template <typename ImplFun, typename FallbackFun, typename... _Args>
 _GLIBCXX_SIMD_INTRINSIC auto __impl_or_fallback_dispatch(int, ImplFun&& __impl_fun,
                                                          FallbackFun&&, _Args&&... __args)
-    -> decltype(__impl_fun(std::forward<_Args>(__args)...))
+    -> decltype(__impl_fun(static_cast<_Args&&>(__args)...))
 {
-    return __impl_fun(std::forward<_Args>(__args)...);
+    return __impl_fun(static_cast<_Args&&>(__args)...);
 }
 
-template <class ImplFun, class FallbackFun, class... _Args>
+template <typename ImplFun, typename FallbackFun, typename... _Args>
 inline auto __impl_or_fallback_dispatch(float, ImplFun&&, FallbackFun&& __fallback_fun,
                                         _Args&&... __args)
-    -> decltype(__fallback_fun(std::forward<_Args>(__args)...))
+    -> decltype(__fallback_fun(static_cast<_Args&&>(__args)...))
 {
-    return __fallback_fun(std::forward<_Args>(__args)...);
+    return __fallback_fun(static_cast<_Args&&>(__args)...);
 }
 
-template <class... _Args> _GLIBCXX_SIMD_INTRINSIC auto __impl_or_fallback(_Args&&... __args)
+template <typename... _Args> _GLIBCXX_SIMD_INTRINSIC auto __impl_or_fallback(_Args&&... __args)
 {
-    return __impl_or_fallback_dispatch(int(), std::forward<_Args>(__args)...);
+    return __impl_or_fallback_dispatch(int(), static_cast<_Args&&>(__args)...);
 }  //}}}
 
 // trigonometric functions {{{
@@ -469,13 +469,12 @@ _GLIBCXX_SIMD_MATH_CALL2_(atan2, _Tp)
  * Fix sign.
  */
 //cos{{{
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
   cos(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
-  if constexpr (__is_abi<_Abi, simd_abi::scalar>() ||
-		__is_fixed_size_abi_v<_Abi>)
+  if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init, _Abi::_SimdImpl::__cos(__data(__x))};
     }
@@ -514,7 +513,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
     }
 }
 
-template <class _Tp>
+template <typename _Tp>
 _GLIBCXX_SIMD_ALWAYS_INLINE
     enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, simd_abi::scalar>>
     cos(simd<_Tp, simd_abi::scalar> __x)
@@ -523,13 +522,12 @@ _GLIBCXX_SIMD_ALWAYS_INLINE
 }
 //}}}
 //sin{{{
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
   sin(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
-  if constexpr (__is_abi<_Abi, simd_abi::scalar>() ||
-		__is_fixed_size_abi_v<_Abi>)
+  if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init, _Abi::_SimdImpl::__sin(__data(__x))};
     }
@@ -568,7 +566,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
     }
 }
 
-template <class _Tp>
+template <typename _Tp>
 _GLIBCXX_SIMD_ALWAYS_INLINE
     enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, simd_abi::scalar>>
     sin(simd<_Tp, simd_abi::scalar> __x)
@@ -591,59 +589,60 @@ _GLIBCXX_SIMD_MATH_CALL_(exp2)
 _GLIBCXX_SIMD_MATH_CALL_(expm1)
 // }}}
 // frexp {{{
-template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getexp(_SimdWrapper<_Tp, _N> __x)
+#if _GLIBCXX_SIMD_X86INTRIN
+template <typename _Tp, size_t _Np> _SimdWrapper<_Tp, _Np> __getexp(_SimdWrapper<_Tp, _Np> __x)
 {
-    if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
-        return _mm_getexp_ps(__x);
-    } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>()) {
-        return __lo128(_mm512_getexp_ps(__auto_bitcast(__x)));
-    } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>()) {
-        return _mm_getexp_pd(__x);
-    } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>()) {
-        return __lo128(_mm512_getexp_pd(__auto_bitcast(__x)));
-    } else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _N>()) {
-        return _mm256_getexp_ps(__x);
-    } else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _N>()) {
-        return __lo256(_mm512_getexp_ps(__auto_bitcast(__x)));
-    } else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _N>()) {
-        return _mm256_getexp_pd(__x);
-    } else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _N>()) {
-        return __lo256(_mm512_getexp_pd(__auto_bitcast(__x)));
-    } else if constexpr (__is_avx512_ps<_Tp, _N>()) {
-        return _mm512_getexp_ps(__x);
-    } else if constexpr (__is_avx512_pd<_Tp, _N>()) {
-        return _mm512_getexp_pd(__x);
-    } else {
-        __assert_unreachable<_Tp>();
-    }
+  if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _Np>())
+    return __auto_bitcast(_mm_getexp_ps(__to_intrin(__x)));
+  else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _Np>())
+    return __auto_bitcast(_mm512_getexp_ps(__auto_bitcast(__to_intrin(__x))));
+  else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _Np>())
+    return _mm_getexp_pd(__x);
+  else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _Np>())
+    return __lo128(_mm512_getexp_pd(__auto_bitcast(__x)));
+  else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _Np>())
+    return _mm256_getexp_ps(__x);
+  else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _Np>())
+    return __lo256(_mm512_getexp_ps(__auto_bitcast(__x)));
+  else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _Np>())
+    return _mm256_getexp_pd(__x);
+  else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _Np>())
+    return __lo256(_mm512_getexp_pd(__auto_bitcast(__x)));
+  else if constexpr (__is_avx512_ps<_Tp, _Np>())
+    return _mm512_getexp_ps(__x);
+  else if constexpr (__is_avx512_pd<_Tp, _Np>())
+    return _mm512_getexp_pd(__x);
+  else
+    __assert_unreachable<_Tp>();
 }
 
-#if _GLIBCXX_SIMD_X86INTRIN
-template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getmant_avx512(_SimdWrapper<_Tp, _N> __x)
+template <typename _Tp, size_t _Np> _SimdWrapper<_Tp, _Np> __getmant_avx512(_SimdWrapper<_Tp, _Np> __x)
 {
-    if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>()) {
-        return _mm_getmant_ps(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
-    } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _N>()) {
-        return __lo128(
-            _mm512_getmant_ps(__auto_bitcast(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
-    } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>()) {
+    if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _Np>()) {
+	return __auto_bitcast(_mm_getmant_ps(
+	  __to_intrin(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
+    } else if constexpr (__have_avx512f && __is_sse_ps<_Tp, _Np>()) {
+	return __auto_bitcast(
+	  _mm512_getmant_ps(__auto_bitcast(__to_intrin(__x)),
+			    _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
+    } else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _Np>()) {
         return _mm_getmant_pd(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
-    } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _N>()) {
+    } else if constexpr (__have_avx512f && __is_sse_pd<_Tp, _Np>()) {
         return __lo128(
             _mm512_getmant_pd(__auto_bitcast(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
-    } else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _N>()) {
+    } else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _Np>()) {
         return _mm256_getmant_ps(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
-    } else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _N>()) {
+    } else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _Np>()) {
         return __lo256(
             _mm512_getmant_ps(__auto_bitcast(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
-    } else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _N>()) {
+    } else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _Np>()) {
         return _mm256_getmant_pd(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
-    } else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _N>()) {
+    } else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _Np>()) {
         return __lo256(
             _mm512_getmant_pd(__auto_bitcast(__x), _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src));
-    } else if constexpr (__is_avx512_ps<_Tp, _N>()) {
+    } else if constexpr (__is_avx512_ps<_Tp, _Np>()) {
         return _mm512_getmant_ps(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
-    } else if constexpr (__is_avx512_pd<_Tp, _N>()) {
+    } else if constexpr (__is_avx512_pd<_Tp, _Np>()) {
         return _mm512_getmant_pd(__x, _MM_MANT_NORM_p5_1, _MM_MANT_SIGN_src);
     } else {
         __assert_unreachable<_Tp>();
@@ -657,7 +656,7 @@ template <class _Tp, size_t _N> _SimdWrapper<_Tp, _N> __getmant_avx512(_SimdWrap
  * The return value will be in the range [0.5, 1.0[
  * The \p __e value will be an integer defining the power-of-two exponent
  */
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
     const simd<_Tp, _Abi> &__x, __samesize<int, simd<_Tp, _Abi>> *__exp)
 {
@@ -671,22 +670,27 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
 #if _GLIBCXX_SIMD_X86INTRIN
     } else if constexpr (__have_avx512f) {
         using _IV = __samesize<int, simd<_Tp, _Abi>>;
-        constexpr size_t _N = simd_size_v<_Tp, _Abi>;
-        constexpr size_t NI = _N < 4 ? 4 : _N;
+        constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
+        constexpr size_t _NI = _Np < 4 ? 4 : _Np;
         const auto __v = __data(__x);
-        const auto __isnonzero = _Abi::_SimdImpl::__isnonzerovalue_mask(__v._M_data);
-        const auto __e =
-            __to_intrin(__blend(__isnonzero, __vector_type_t<int, NI>(),
-                                1 + __convert<_SimdWrapper<int, NI>>(__getexp(__v))._M_data));
-        __vector_store<_N * sizeof(int)>(__e, __exp, overaligned<alignof(_IV)>);
-        return {__private_init, __blend(__isnonzero, __v, __getmant_avx512(__v))};
+	const auto __isnonzero =
+	  _Abi::_SimdImpl::__isnonzerovalue_mask(__v._M_data);
+	const _SimdWrapper<int, _NI> __exp_plus1 =
+	  1 + __convert<_SimdWrapper<int, _NI>>(__getexp(__v))._M_data;
+	const _SimdWrapper<int, _Np> __e = __wrapper_bitcast<int, _Np>(
+	  _Abi::_CommonImpl::_S_blend(_SimdWrapper<bool, _NI>(__isnonzero),
+				      _SimdWrapper<int, _NI>(), __exp_plus1));
+	simd_abi::deduce_t<int, _Np>::_CommonImpl::__store(
+	  __e, __exp, overaligned<alignof(_IV)>);
+	return {__private_init, _Abi::_CommonImpl::_S_blend(
+				  _SimdWrapper<bool, _Np>(__isnonzero), __v,
+				  __getmant_avx512(__v))};
 #endif // _GLIBCXX_SIMD_X86INTRIN
     } else {
         // fallback implementation
         static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
         using _V = simd<_Tp, _Abi>;
         using _IV = rebind_simd_t<int, _V>;
-        using _IM = typename _IV::mask_type;
         using _Limits = std::numeric_limits<_Tp>;
         using namespace std::experimental::__proposed;
         using namespace std::experimental::__proposed::float_bitwise_operators;
@@ -707,19 +711,28 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> frexp(
                                                        __exp_adjust);
             return __mant;
         }
-        const auto __iszero_inf_nan = isunordered(__x * _Limits::infinity(), __x * _V());
+
+	// can't use isunordered(x*inf, x*0) because inf*0 raises invalid
+	const auto __as_int = __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
+	const auto __inf = __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(_V(std::numeric_limits<_Tp>::infinity()));
+	const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(__as_int == 0 || __as_int >= __inf);
+
         const _V __scaled_subnormal = __x * __subnorm_scale;
         const _V __mant_subnormal = __p5_1_exponent & (__exponent_mask | __scaled_subnormal);
         where(!isnormal(__x), __mant) = __mant_subnormal;
         where(__iszero_inf_nan, __mant) = __x;
         _IV __e = __extract_exponent_bits(__scaled_subnormal);
-        const _IM __value_isnormal = static_simd_cast<_IM>(isnormal(__x));
-        where(__value_isnormal, __e) = __exponent_bits;
-        const _IV __offset = (simd_reinterpret_cast<_IV>(__value_isnormal) & _IV(__exp_adjust)) |
-                          (simd_reinterpret_cast<_IV>((__exponent_bits == 0) &
-                                                     (static_simd_cast<_IM>(__x != 0))) &
-                           _IV(__exp_adjust + __exp_offset));
-        *__exp = simd_cast<__samesize<int, _V>>((__e >> __exp_shift) - __offset);
+	using _MaskType = typename std::conditional_t<
+	  sizeof(typename _V::mask_type) == sizeof(_IV), _V, _IV>::mask_type;
+	const _MaskType __value_isnormal     = isnormal(__x).__cvt();
+	where(__value_isnormal.__cvt(), __e) = __exponent_bits;
+	static_assert(sizeof(_IV) == sizeof(__value_isnormal));
+	const _IV __offset =
+	  (__bit_cast<_IV>(__value_isnormal) & _IV(__exp_adjust)) |
+	  (__bit_cast<_IV>(static_simd_cast<_MaskType>(__exponent_bits == 0) &
+			   static_simd_cast<_MaskType>(__x != 0)) &
+	   _IV(__exp_adjust + __exp_offset));
+	*__exp = simd_cast<__samesize<int, _V>>((__e >> __exp_shift) - __offset);
         return __mant;
     }
 }
@@ -734,12 +747,12 @@ _GLIBCXX_SIMD_MATH_CALL_(log1p)
 _GLIBCXX_SIMD_MATH_CALL_(log2)
 //}}}
 //logb{{{
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
     const simd<_Tp, _Abi> &__x)
 {
-    constexpr size_t _N = simd_size_v<_Tp, _Abi>;
-    if constexpr (_N == 1) {
+    constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
+    if constexpr (_Np == 1) {
         return std::logb(__x[0]);
     } else if constexpr (__is_fixed_size_abi_v<_Abi>) {
 	return {__private_init,
@@ -749,40 +762,43 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 		    std::experimental::logb(_V(__private_init, __xx)));
 		})};
       }
-    else if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _N>())
+#if _GLIBCXX_SIMD_X86INTRIN // {{{
+    else if constexpr (__have_avx512vl && __is_sse_ps<_Tp, _Np>())
       {
-	return {__private_init, _mm_getexp_ps(__data(__x))};
+	return {__private_init,
+		__auto_bitcast(_mm_getexp_ps(__to_intrin(__as_vector(__x))))};
       }
-    else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _N>())
+    else if constexpr (__have_avx512vl && __is_sse_pd<_Tp, _Np>())
       {
 	return {__private_init, _mm_getexp_pd(__data(__x))};
       }
-    else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _N>())
+    else if constexpr (__have_avx512vl && __is_avx_ps<_Tp, _Np>())
       {
 	return {__private_init, _mm256_getexp_ps(__data(__x))};
       }
-    else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _N>())
+    else if constexpr (__have_avx512vl && __is_avx_pd<_Tp, _Np>())
       {
 	return {__private_init, _mm256_getexp_pd(__data(__x))};
       }
-    else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _N>())
+    else if constexpr (__have_avx512f && __is_avx_ps<_Tp, _Np>())
       {
 	return {__private_init,
 		__lo256(_mm512_getexp_ps(__auto_bitcast(__data(__x))))};
       }
-    else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _N>())
+    else if constexpr (__have_avx512f && __is_avx_pd<_Tp, _Np>())
       {
 	return {__private_init,
 		__lo256(_mm512_getexp_pd(__auto_bitcast(__data(__x))))};
       }
-    else if constexpr (__is_avx512_ps<_Tp, _N>())
+    else if constexpr (__is_avx512_ps<_Tp, _Np>())
       {
 	return {__private_init, _mm512_getexp_ps(__data(__x))};
       }
-    else if constexpr (__is_avx512_pd<_Tp, _N>())
+    else if constexpr (__is_avx512_pd<_Tp, _Np>())
       {
 	return {__private_init, _mm512_getexp_pd(__data(__x))};
       }
+#endif // _GLIBCXX_SIMD_X86INTRIN }}}
     else
       {
 	using _V = simd<_Tp, _Abi>;
@@ -793,14 +809,14 @@ enable_if_t<std::is_floating_point<_Tp>::value, simd<_Tp, _Abi>> logb(
 	// inputs (domain-error => implementation-defined value is returned)
 	const _V abs_x = abs(__x);
 
-	// __exponent(__x) returns the exponent value (bias removed) as simd<_U>
-	// with integral _U
+	// __exponent(__x) returns the exponent value (bias removed) as simd<_Up>
+	// with integral _Up
 	auto&& __exponent = [](const _V& __v) {
 	  using namespace std::experimental::__proposed;
 	  using _IV = rebind_simd_t<
 	    std::conditional_t<sizeof(_Tp) == sizeof(_LLong), _LLong, int>,
 	    _V>;
-	  return (simd_reinterpret_cast<_IV>(__v) >>
+	  return (__bit_cast<_IV>(__v) >>
 		  (std::numeric_limits<_Tp>::digits - 1)) -
 		 (std::numeric_limits<_Tp>::max_exponent - 1);
 	};
@@ -854,13 +870,13 @@ _GLIBCXX_SIMD_MATH_CALL_(fabs)
 
 // [parallel.simd.math] only asks for is_floating_point_v<_Tp> and forgot to allow
 // signed integral _Tp
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<!std::is_floating_point_v<_Tp> && std::is_signed_v<_Tp>, simd<_Tp, _Abi>> abs(
     const simd<_Tp, _Abi> &__x)
 {
     return {__private_init, _Abi::_SimdImpl::__abs(__data(__x))};
 }
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<!std::is_floating_point_v<_Tp> && std::is_signed_v<_Tp>, simd<_Tp, _Abi>> fabs(
     const simd<_Tp, _Abi> &__x)
 {
@@ -870,11 +886,11 @@ enable_if_t<!std::is_floating_point_v<_Tp> && std::is_signed_v<_Tp>, simd<_Tp, _
 // the following are overloads for functions in <cstdlib> and not covered by
 // [parallel.simd.math]. I don't see much value in making them work, though
 /*
-template <class _Abi> simd<long, _Abi> labs(const simd<long, _Abi> &__x)
+template <typename _Abi> simd<long, _Abi> labs(const simd<long, _Abi> &__x)
 {
     return {__private_init, _Abi::_SimdImpl::abs(__data(__x))};
 }
-template <class _Abi> simd<long long, _Abi> llabs(const simd<long long, _Abi> &__x)
+template <typename _Abi> simd<long long, _Abi> llabs(const simd<long long, _Abi> &__x)
 {
     return {__private_init, _Abi::_SimdImpl::abs(__data(__x))};
 }
@@ -1092,7 +1108,7 @@ template <typename _VV> __remove_cvref_t<_VV> __hypot(_VV __x, _VV __y, _VV __z)
 #endif
 	  _V            __hi_exp = __hi;
 	  const _ULLong __tmp    = 0x8000'0000'0000'0000ull;
-	  std::memcpy(&__hi_exp, &__tmp, 8);
+	  __builtin_memcpy(&__hi_exp, &__tmp, 8);
 	  const _V __scale = 1 / __hi_exp;
 	  __hi *= __scale;
 	  __l0 *= __scale;
@@ -1220,16 +1236,16 @@ _GLIBCXX_SIMD_MATH_CALL_(isfinite)
 
 // isnan and isinf require special treatment because old glibc may declare
 // `int std::isinf(double)`.
-template <class _Tp, class _Abi, class...,
-          class _R = std::experimental::__math_return_type_t<bool, _Tp, _Abi>>
+template <typename _Tp, typename _Abi, typename...,
+          typename _R = std::experimental::__math_return_type_t<bool, _Tp, _Abi>>
 enable_if_t<std::is_floating_point_v<_Tp>, _R> isinf(
     std::experimental::simd<_Tp, _Abi> __x)
 {
   return {std::experimental::__private_init,
           _Abi::_SimdImpl::__isinf(std::experimental::__data(__x))};
 }
-template <class _Tp, class _Abi, class...,
-          class _R = std::experimental::__math_return_type_t<bool, _Tp, _Abi>>
+template <typename _Tp, typename _Abi, typename...,
+          typename _R = std::experimental::__math_return_type_t<bool, _Tp, _Abi>>
 enable_if_t<std::is_floating_point_v<_Tp>, _R> isnan(
     std::experimental::simd<_Tp, _Abi> __x)
 {
@@ -1238,7 +1254,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, _R> isnan(
 }
 _GLIBCXX_SIMD_MATH_CALL_(isnormal)
 
-template <class..., class _Tp, class _Abi>
+template <typename..., typename _Tp, typename _Abi>
 std::experimental::simd_mask<_Tp, _Abi>
   signbit(std::experimental::simd<_Tp, _Abi> __x)
 {
@@ -1262,31 +1278,31 @@ _GLIBCXX_SIMD_MATH_CALL2_(islessgreater, _Tp)
 _GLIBCXX_SIMD_MATH_CALL2_(isunordered, _Tp)
 
 /* not covered in [parallel.simd.math]
-template <class _Abi> __doublev<_Abi> nan(const char* tagp);
-template <class _Abi> __floatv<_Abi> nanf(const char* tagp);
-template <class _Abi> __ldoublev<_Abi> nanl(const char* tagp);
+template <typename _Abi> __doublev<_Abi> nan(const char* tagp);
+template <typename _Abi> __floatv<_Abi> nanf(const char* tagp);
+template <typename _Abi> __ldoublev<_Abi> nanl(const char* tagp);
 
-template <class _V> struct simd_div_t {
+template <typename _V> struct simd_div_t {
     _V quot, rem;
 };
-template <class _Abi>
+template <typename _Abi>
 simd_div_t<_SCharv<_Abi>> div(_SCharv<_Abi> numer,
                                          _SCharv<_Abi> denom);
-template <class _Abi>
+template <typename _Abi>
 simd_div_t<__shortv<_Abi>> div(__shortv<_Abi> numer,
                                          __shortv<_Abi> denom);
-template <class _Abi>
+template <typename _Abi>
 simd_div_t<__intv<_Abi>> div(__intv<_Abi> numer, __intv<_Abi> denom);
-template <class _Abi>
+template <typename _Abi>
 simd_div_t<__longv<_Abi>> div(__longv<_Abi> numer,
                                         __longv<_Abi> denom);
-template <class _Abi>
+template <typename _Abi>
 simd_div_t<__llongv<_Abi>> div(__llongv<_Abi> numer,
                                          __llongv<_Abi> denom);
 */
 
 // special math {{{
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> assoc_laguerre(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__m,
@@ -1295,7 +1311,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> assoc_laguerre(
     return std::experimental::simd<_Tp, _Abi>([&](auto __i) { return std::assoc_laguerre(__n[__i], __m[__i], __x[__i]); });
 }
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> assoc_legendre(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__m,
@@ -1317,7 +1333,7 @@ _GLIBCXX_SIMD_MATH_CALL2_(ellint_2, _Tp)
 _GLIBCXX_SIMD_MATH_CALL3_(ellint_3, _Tp, _Tp)
 _GLIBCXX_SIMD_MATH_CALL_(expint)
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> hermite(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::simd<_Tp, _Abi> &__x)
@@ -1325,7 +1341,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> hermite(
     return std::experimental::simd<_Tp, _Abi>([&](auto __i) { return std::hermite(__n[__i], __x[__i]); });
 }
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> laguerre(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::simd<_Tp, _Abi> &__x)
@@ -1333,7 +1349,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> laguerre(
     return std::experimental::simd<_Tp, _Abi>([&](auto __i) { return std::laguerre(__n[__i], __x[__i]); });
 }
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> legendre(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::simd<_Tp, _Abi> &__x)
@@ -1343,7 +1359,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> legendre(
 
 _GLIBCXX_SIMD_MATH_CALL_(riemann_zeta)
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> sph_bessel(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::simd<_Tp, _Abi> &__x)
@@ -1351,7 +1367,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> sph_bessel(
     return std::experimental::simd<_Tp, _Abi>([&](auto __i) { return std::sph_bessel(__n[__i], __x[__i]); });
 }
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> sph_legendre(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__l,
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__m,
@@ -1360,7 +1376,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> sph_legendre(
     return std::experimental::simd<_Tp, _Abi>([&](auto __i) { return std::assoc_legendre(__l[__i], __m[__i], theta[__i]); });
 }
 
-template <class _Tp, class _Abi>
+template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>> sph_neumann(
     const std::experimental::fixed_size_simd<unsigned, std::experimental::simd_size_v<_Tp, _Abi>> &__n,
     const std::experimental::simd<_Tp, _Abi> &__x)

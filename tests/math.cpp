@@ -73,7 +73,7 @@ void test_tuples(const std::initializer_list<std::array<typename V::value_type, 
                  F &&... fun_pack)
 {
     test_tuples_impl<V, N>(std::make_index_sequence<N>(), data,
-                           std::forward<F>(fun_pack)...);
+                           static_cast<F&&>(fun_pack)...);
 }
 
 TEST_TYPES(V, abs, all_test_types)  //{{{1
@@ -87,7 +87,7 @@ TEST_TYPES(V, abs, all_test_types)  //{{{1
             {100, L::lowest(), L::max()},
             [](V input) {
                 const V expected([&](auto i) { return T(std::abs(T(input[i]))); });
-                COMPARE(abs(input), expected);
+                COMPARE(abs(input), expected) << "input: " << input;
             });
     } else {
         // VERIFY(!(sfinae_is_callable<V &, const int *>(call_memload())));
@@ -101,17 +101,30 @@ TEST_TYPES(V, fpclassify, real_test_types)  //{{{1
         {0., -0., 1., -1., limits::infinity(), -limits::infinity(), limits::max(),
          -limits::max(), limits::min(), limits::min() * 0.9, -limits::min(),
          -limits::min() * 0.9, limits::denorm_min(), -limits::denorm_min(),
-         limits::quiet_NaN(), limits::signaling_NaN()},
+         limits::quiet_NaN()
+#ifdef __SUPPORT_SNAN__
+         , limits::signaling_NaN()
+#endif
+         },
         [](const V input) {
             using intv = std::experimental::fixed_size_simd<int, V::size()>;
+            std::feclearexcept(FE_ALL_EXCEPT);
             COMPARE(isfinite(input), !V([&](auto i) { return std::isfinite(input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE(isinf(input), !V([&](auto i) { return std::isinf(input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE(isnan(input), !V([&](auto i) { return std::isnan(input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE(isnormal(input), !V([&](auto i) { return std::isnormal(input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE(signbit(input), !V([&](auto i) { return std::signbit(input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE((isunordered(input, V())), !V([&](auto i) { return std::isunordered(input[i], 0) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE((isunordered(V(), input)), !V([&](auto i) { return std::isunordered(0, input[i]) ? 0 : 1; })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
             COMPARE(fpclassify(input), intv([&](auto i) { return std::fpclassify(input[i]); })) << input;
+            COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
         });
 }
 
@@ -209,7 +222,7 @@ TEST_TYPES(V, frexp, real_test_types)  //{{{1
                 expectedFraction[i] = std::frexp(input[i], &exp);
                 return exp;
             });
-            int_v exponent;
+            int_v exponent = {};
             const V fraction = frexp(input, &exponent);
             COMPARE(fraction, expectedFraction)
                 << ", input = " << input << ", delta: " << fraction - expectedFraction;
@@ -249,7 +262,7 @@ TEST_TYPES(V, frexp, real_test_types)  //{{{1
                 int exp;
                 return std::frexp(input[i], &exp);
             });
-            int_v exponent;
+            int_v exponent = {};
             const V fraction = frexp(input, &exponent);
             COMPARE(isnan(fraction), isnan(expectedFraction))
                 << fraction << ", input = " << input
@@ -553,91 +566,192 @@ TEST_TYPES(V, test2Arg, real_test_types)  //{{{1
     VERIFY((sfinae_is_callable<V, typename V::value_type>(
         [](auto a, auto b) -> decltype(hypot(a, b)) { return {}; })));
 
+    auto&& make_tester =
+      [](const char* name, auto fn) {
+	return [=](const auto... inputs) {
+	  const auto totest = fn(inputs...);
+	  using R           = std::remove_const_t<decltype(totest)>;
+	  auto&& expected   = [&](const auto&... vs) -> const R {
+            R tmp = {};
+            for (std::size_t i = 0; i < R::size(); ++i)
+	      {
+		tmp[i] = fn(vs[i]...);
+	      }
+	    return tmp;
+	  };
+	  const R expect1 = expected(inputs...);
+	  if constexpr (std::is_floating_point_v<typename R::value_type>)
+	    {
+	      ((COMPARE(isnan(totest), isnan(expect1)) << name << "(")
+	       << ... << inputs)
+		<< ") = " << totest << " != " << expect1;
+	      ((FUZZY_COMPARE(fn(iif(isnan(expect1), 0, inputs)...),
+			      expected(iif(isnan(expect1), 0, inputs)...))
+		<< "\nclean = ")
+	       << ... << iif(isnan(expect1), 0, inputs));
+	    }
+	  else
+	    {
+	      COMPARE(fn(inputs...), expect1)
+		.on_failure('\n', name, '(', inputs..., ')');
+	    }
+	};
+      };
+
     vir::test::setFuzzyness<float>(0);
     vir::test::setFuzzyness<double>(0);
     test_values_2arg<V>(
-        {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
-         limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
-        {10000, -limits::max()/2, limits::max()/2},
-        MAKE_TESTER(pow),
-        MAKE_TESTER(fmod),
-        MAKE_TESTER(remainder),
-        MAKE_TESTER(copysign),
-        MAKE_TESTER(nextafter),
-        //MAKE_TESTER(nexttoward),
-        MAKE_TESTER(fdim),
-        MAKE_TESTER(fmax),
-        MAKE_TESTER(fmin),
-        MAKE_TESTER(fdim),
-        MAKE_TESTER(isgreater),
-        MAKE_TESTER(isgreaterequal),
-        MAKE_TESTER(isless),
-        MAKE_TESTER(islessequal),
-        MAKE_TESTER(islessgreater),
-        MAKE_TESTER(isunordered)
-        );
-}
+      {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
+       limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
+      {10000, -limits::max() / 2, limits::max() / 2}, MAKE_TESTER(pow),
+      make_tester("fmod", [](auto a, auto b) {
+	using namespace std;
+	return fmod(a, b);
+      }),
+      make_tester("remainder", [](auto a, auto b) {
+	using namespace std;
+	return remainder(a, b);
+      }),
+      make_tester("copysign", [](auto a, auto b) {
+	using namespace std;
+	return copysign(a, b);
+      }),
+      MAKE_TESTER(nextafter),
+      // MAKE_TESTER(nexttoward),
+      MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
+      make_tester("isgreater", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = isgreater(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+	return r;
+      }),
+      make_tester("isgreaterequal", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = isgreaterequal(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+	return r;
+      }),
+      make_tester("isless", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = isless(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+	return r;
+      }),
+      make_tester("islessequal", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = islessequal(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+	return r;
+      }),
+      make_tester("islessgreater", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = islessgreater(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+	return r;
+      }),
+      make_tester("isunordered", [](auto a, auto b) {
+	using namespace std;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        const auto r = isunordered(a, b);
+        COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << a << b;
+	return r;
+      })
+      );
+      }
 
-TEST_TYPES(V, hypot3_fma, real_test_types)  //{{{1
-{
-    vir::test::setFuzzyness<float>(1);
-    vir::test::setFuzzyness<double>(1);
-    using T = typename V::value_type;
+    TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
+    {
+      vir::test::setFuzzyness<float>(1);
+      vir::test::setFuzzyness<double>(1);
+      using T = typename V::value_type;
 
-    using limits = std::numeric_limits<T>;
-    auto&& hypot3 = [](T x, T y, T z) -> T {
-        if (std::isinf(x) || std::isinf(y) || std::isinf(z)) {
+      using limits  = std::numeric_limits<T>;
+      auto&& hypot3 = [](T x, T y, T z) -> T {
+        if (std::isinf(x) || std::isinf(y) || std::isinf(z))
+	  {
             return limits::infinity();
-        } else if (std::isnan(x) || std::isnan(y) || std::isnan(z)) {
+	  }
+	else if (std::isnan(x) || std::isnan(y) || std::isnan(z))
+	  {
             return limits::quiet_NaN();
-        } else if (x == y && y == z) {
+	  }
+	else if (x == y && y == z)
+	  {
             return std::abs(x) * std::sqrt(T(3));
-        } else {
+	  }
+	else
+	  {
             const long double hi = std::max(std::max(x, y), z);
             const long double lo0 = std::min(std::max(x, y), z);
             const long double lo1 = std::min(x, y);
             return std::hypot(std::hypot(lo0, lo1), hi);
-        }
-    };
-    test_values_3arg<V>({limits::quiet_NaN(), limits::infinity(), -limits::infinity(),
-                         +0., -0., 1., -1., limits::denorm_min(), limits::min(),
-                         limits::max(), -limits::max(), limits::min() / 3},
-                        {100000, -limits::max(), limits::max()},
-                        MAKE_TESTER_2(hypot, hypot3));
-    COMPARE(hypot(V(limits::max()), V(limits::max()), V()), V(limits::infinity()));
-    COMPARE(hypot(V(limits::max()), V(), V(limits::max())), V(limits::infinity()));
-    COMPARE(hypot(V(), V(limits::max()), V(limits::max())), V(limits::infinity()));
-    COMPARE(hypot(V(limits::min()), V(limits::min()), V(limits::min())),
-            V(limits::min() * std::sqrt(T(3))));
+	  }
+      };
+      test_values_3arg<V>(
+	{limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
+	 1., -1., limits::denorm_min(), limits::min(), limits::max(),
+	 -limits::max(), limits::min() / 3},
+	{100000, -limits::max(), limits::max()}, MAKE_TESTER_2(hypot, hypot3));
+      COMPARE(hypot(V(limits::max()), V(limits::max()), V()),
+	      V(limits::infinity()));
+      COMPARE(hypot(V(limits::max()), V(), V(limits::max())),
+	      V(limits::infinity()));
+      COMPARE(hypot(V(), V(limits::max()), V(limits::max())),
+	      V(limits::infinity()));
+      COMPARE(hypot(V(limits::min()), V(limits::min()), V(limits::min())),
+	      V(limits::min() * std::sqrt(T(3))));
 
-    vir::test::setFuzzyness<float>(0);
-    vir::test::setFuzzyness<double>(0);
-    test_values_3arg<V>(
-        {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
-         limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
-        {10000, -limits::max()/2, limits::max()/2},
-        MAKE_TESTER(fma)
-        );
-    VERIFY((sfinae_is_callable<V, V, V>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<T, T, V>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<V, T, T>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<T, V, T>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<T, V, V>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<V, T, V>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<V, V, T>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<int, int, V>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<int, V, int>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-    VERIFY((sfinae_is_callable<V, T, int>(
-        [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
+      vir::test::setFuzzyness<float>(0);
+      vir::test::setFuzzyness<double>(0);
+      test_values_3arg<V>(
+	{limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
+	 limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
+	{10000, -limits::max() / 2, limits::max() / 2}, MAKE_TESTER(fma));
+      VERIFY((sfinae_is_callable<V, V, V>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<T, T, V>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<V, T, T>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<T, V, T>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<T, V, V>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<V, T, V>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<V, V, T>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<int, int, V>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<int, V, int>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
+      VERIFY((sfinae_is_callable<V, T, int>(
+	[](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) {
+	  return {};
+	})));
 }
 
 TEST_TYPES(V, ldexp_scalbn_scalbln_modf, real_test_types)  //{{{1
