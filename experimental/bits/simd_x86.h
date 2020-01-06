@@ -4620,8 +4620,8 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       {
 	constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
 	if constexpr (__have_sse4_1)
-	  return __testc(__as_vector(__k),
-			 _Abi::template __implicit_mask<_Tp>());
+	  return 0 != __testc(__as_vector(__k),
+			      _Abi::template __implicit_mask<_Tp>());
 	else if constexpr (std::is_same_v<_Tp, float>)
 	  return (_mm_movemask_ps(__to_intrin(__k._M_data)) & ((1 << _Np) - 1)) ==
 		 (1 << _Np) - 1;
@@ -4670,8 +4670,13 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       {
 	constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
 	if constexpr (__have_sse4_1)
-	  return 0 == __testz(__as_vector(__k),
-			      _Abi::template __implicit_mask<_Tp>());
+	  {
+	    if constexpr (_Abi::_S_is_partial || sizeof(__k) < 16)
+	      return 0 == __testz(__as_vector(__k),
+				  _Abi::template __implicit_mask<_Tp>());
+	    else
+	      return 0 == __testz(__as_vector(__k), __as_vector(__k));
+	  }
 	else if constexpr (std::is_same_v<_Tp, float>)
 	  return (_mm_movemask_ps(__to_intrin(__k._M_data)) &
 		  ((1 << _Np) - 1)) != 0;
@@ -4695,8 +4700,13 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
       {
 	constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
 	if constexpr (__have_sse4_1)
-	  return 0 != __testz(__as_vector(__k),
-			      _Abi::template __implicit_mask<_Tp>());
+	  {
+	    if constexpr (_Abi::_S_is_partial || sizeof(__k) < 16)
+	      return 0 != __testz(__as_vector(__k),
+				  _Abi::template __implicit_mask<_Tp>());
+	    else
+	      return 0 != __testz(__as_vector(__k), __as_vector(__k));
+	  }
 	else if constexpr (std::is_same_v<_Tp, float>)
 	  return (__movemask(__to_intrin(__k._M_data)) & ((1 << _Np) - 1)) == 0;
 	else if constexpr (std::is_same_v<_Tp, double>)
