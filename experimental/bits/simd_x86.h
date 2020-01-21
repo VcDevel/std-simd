@@ -1325,7 +1325,8 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
       __divides(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
     {
-      if (!__builtin_is_constant_evaluated())
+      if (!__builtin_is_constant_evaluated() &&
+	  !__builtin_constant_p(__y._M_data))
 	if constexpr (is_integral_v<_Tp> && sizeof(_Tp) <= 4)
 	  { // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
 	    using _Float = conditional_t<sizeof(_Tp) == 4, double, float>;
