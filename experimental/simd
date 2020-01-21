@@ -38,10 +38,6 @@
 
 #define __cpp_lib_experimental_parallel_simd 201803
 
-#if defined __GNUC__ && __GNUC__ < 9
-#define __gnu__ gnu
-#endif
-
 #pragma GCC diagnostic push
 // Many [[gnu::vector_size(N)]] types might lead to a -Wpsabi warning which is
 // irrelevant as those functions never appear on ABI borders
@@ -69,10 +65,6 @@
 #include "bits/simd_math.h"
 
 #pragma GCC diagnostic pop
-
-#if defined __GNUC__ && __GNUC__ < 9
-#undef __gnu__
-#endif
 
 #endif  // _GLIBCXX_EXPERIMENTAL_SIMD
 // vim: ft=cpp
