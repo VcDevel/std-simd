@@ -1719,8 +1719,6 @@ struct _SimdImplBuiltin
     template <typename _Tp, size_t _Np>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np> __modulus(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
     {
-      static_assert(std::is_integral<_Tp>::value,
-		    "modulus is only supported for integral types");
       if constexpr (!_Abi::_S_is_partial)
 	return __x._M_data % __y._M_data;
       else

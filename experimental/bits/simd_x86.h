@@ -1366,6 +1366,19 @@ struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR90993
 
     // }}}
+    // __modulus {{{
+    template <typename _Tp, size_t _Np>
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+      __modulus(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
+    {
+      if (__builtin_is_constant_evaluated() ||
+	  __builtin_constant_p(__y._M_data) || sizeof(_Tp) >= 8)
+	return _Base::__modulus(__x,__y);
+      else
+	return _Base::__minus(__x, __multiplies(__y, __divides(__x, __y)));
+    }
+
+    // }}}
     // __bit_shift_left {{{
     // Notes on UB. C++2a [expr.shift] says:
     // -1- [...] The operands shall be of integral or unscoped enumeration type
