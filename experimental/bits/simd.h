@@ -4017,7 +4017,8 @@ class _SimdIntOperators<_V, _Impl, true>
 {
     _GLIBCXX_SIMD_INTRINSIC const _V &__derived() const { return *static_cast<const _V *>(this); }
 
-    template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC static _V __make_derived(_Tp &&__d)
+    template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC static constexpr _V __make_derived(_Tp&& __d)
     {
         return {__private_init, static_cast<_Tp&&>(__d)};
     }
