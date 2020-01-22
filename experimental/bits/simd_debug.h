@@ -118,7 +118,7 @@ _GLIBCXX_SIMD_ALWAYS_INLINE void *__debug_instr_ptr()
 #elif defined __aarch64__
     asm volatile("adr %0,." : "=r"(__ip));
 #endif
-#endif  //__GNUC__
+#endif  //_GLIBCXX_SIMD_ENABLE_DEBUG
     return __ip;
 }
 
