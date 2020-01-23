@@ -1534,9 +1534,9 @@ __vector_broadcast(_Tp __x)
 
 // }}}
 // __generate_vector{{{
-template <typename _Tp, size_t _Np, typename _G, size_t... _I>
+template <typename _Tp, size_t _Np, typename _Gp, size_t... _I>
 _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _Np>
-__generate_vector_impl(_G&& __gen, std::index_sequence<_I...>)
+__generate_vector_impl(_Gp&& __gen, std::index_sequence<_I...>)
 {
 #ifdef _GLIBCXX_SIMD_WORKAROUND_PR89229
   // Using -S -fverbose-asm this function turned up as the place where the
@@ -1551,25 +1551,25 @@ __generate_vector_impl(_G&& __gen, std::index_sequence<_I...>)
     static_cast<_Tp>(__gen(_SizeConstant<_I>()))...};
 }
 
-template <typename _V, typename _VVT = _VectorTraits<_V>, typename _G>
+template <typename _V, typename _VVT = _VectorTraits<_V>, typename _Gp>
 _GLIBCXX_SIMD_INTRINSIC constexpr _V
-__generate_vector(_G&& __gen)
+__generate_vector(_Gp&& __gen)
 {
   if constexpr (__is_vector_type_v<_V>)
     return __generate_vector_impl<typename _VVT::value_type, _VVT::_S_width>(
-      static_cast<_G&&>(__gen), std::make_index_sequence<_VVT::_S_width>());
+      static_cast<_Gp&&>(__gen), std::make_index_sequence<_VVT::_S_width>());
   else
     return __generate_vector_impl<typename _VVT::value_type,
 				  _VVT::_S_partial_width>(
-      static_cast<_G&&>(__gen),
+      static_cast<_Gp&&>(__gen),
       std::make_index_sequence<_VVT::_S_partial_width>());
 }
 
-template <typename _Tp, size_t _Np, typename _G>
+template <typename _Tp, size_t _Np, typename _Gp>
 _GLIBCXX_SIMD_INTRINSIC constexpr __vector_type_t<_Tp, _Np>
-__generate_vector(_G&& __gen)
+__generate_vector(_Gp&& __gen)
 {
-  return __generate_vector_impl<_Tp, _Np>(static_cast<_G&&>(__gen),
+  return __generate_vector_impl<_Tp, _Np>(static_cast<_Gp&&>(__gen),
 					  std::make_index_sequence<_Np>());
 }
 
