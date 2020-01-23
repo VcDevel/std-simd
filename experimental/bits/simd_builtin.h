@@ -2481,27 +2481,30 @@ struct _MaskImplBuiltinMixin
       return __to_maskvector<_Up, _ToN>(std::bitset<_Np>(__x._M_data));
     else
       { // vector -> vector
-	// X 	[[maybe_unused]] const auto __y =
-	// __vector_bitcast<_Up>(__x._M_data);
-	// X 	if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4 &&
-	// sizeof(__y) == 16) X 	  return __vector_permute<1, 3, -1,
-	// -1>(__y); X else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2
-	// && sizeof(__y)
-	// == 16) X 	  return __vector_permute<1, 3, 5, 7, -1, -1, -1,
-	// -1>(__y); X 	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2
-	// && X 			   sizeof(__y) == 16) X 	  return
-	// __vector_permute<3, 7, -1, -1, -1, -1, -1, -1>(__y); X 	else if
-	// constexpr (sizeof(_Tp) == 2 && sizeof(_Up) == 1 && sizeof(__y) == 16)
-	// X 	  return __vector_permute<1, 3, 5, 7, 9, 11, 13, 15, -1, -1, -1,
-	// -1, -1, X 				  -1, -1, -1>(__y); X 	else if
-	// constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1 && X
-	// sizeof(__y) == 16) X 	  return __vector_permute<3, 7, 11, 15, -1,
-	// -1,
-	// -1, -1, -1, -1, -1, -1, X 				  -1, -1, -1,
-	// -1>(__y); X 	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1
-	// && X 			   sizeof(__y) == 16) X 	  return
-	// __vector_permute<7, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, X
-	// -1, -1, -1, -1>(__y); X 	else
+	/*
+	[[maybe_unused]] const auto __y = __vector_bitcast<_Up>(__x._M_data);
+	if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4 && sizeof(__y) == 16)
+	  return __vector_permute<1, 3, -1, -1>(__y);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2
+			   && sizeof(__y) == 16)
+	  return __vector_permute<1, 3, 5, 7, -1, -1, -1, -1>(__y);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2
+			   && sizeof(__y) == 16)
+	  return __vector_permute<3, 7, -1, -1, -1, -1, -1, -1>(__y);
+	else if constexpr (sizeof(_Tp) == 2 && sizeof(_Up) == 1
+			   && sizeof(__y) == 16)
+	  return __vector_permute<1, 3, 5, 7, 9, 11, 13, 15, -1, -1, -1, -1, -1,
+				  -1, -1, -1>(__y);
+	else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1
+			   && sizeof(__y) == 16)
+	  return __vector_permute<3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1,
+				  -1, -1, -1, -1>(__y);
+	else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1
+			   && sizeof(__y) == 16)
+	  return __vector_permute<7, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+				  -1, -1, -1, -1>(__y);
+	else
+	*/
 	{
 	  using _I = __int_for_sizeof_t<_Up>;
 	  const auto __y
