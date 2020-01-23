@@ -1,6 +1,6 @@
 // Debug utilities for use in the simd implementation -*- C++ -*-
 
-// Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+// Copyright © 2015-2020 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>
 //
 // Redistribution and use in source and binary forms, with or without
