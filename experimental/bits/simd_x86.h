@@ -38,10 +38,10 @@
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
 // __interleave128_lo {{{
-template <typename _A, typename _B, typename _Tp = std::common_type_t<_A, _B>,
+template <typename _Ap, typename _B, typename _Tp = std::common_type_t<_Ap, _B>,
 	  typename _Trait = _VectorTraits<_Tp>>
 _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__interleave128_lo(const _A& __av, const _B& __bv)
+__interleave128_lo(const _Ap& __av, const _B& __bv)
 {
   const _Tp __a(__av);
   const _Tp __b(__bv);
@@ -925,14 +925,14 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
       {
 	// TODO: copy pattern from __masked_store, which doesn't resort to
 	// fixed_size
-	using _A       = simd_abi::deduce_t<_Up, _Np>;
-	using _ATraits = _SimdTraits<_Up, _A>;
+	using _Ap       = simd_abi::deduce_t<_Up, _Np>;
+	using _ATraits = _SimdTraits<_Up, _Ap>;
 	using _AImpl   = typename _ATraits::_SimdImpl;
 	typename _ATraits::_SimdMember __uncvted{};
-	typename _ATraits::_MaskMember __kk = _A::_MaskImpl::template
+	typename _ATraits::_MaskMember __kk = _Ap::_MaskImpl::template
     __convert<_Up>(__k);
 	__uncvted = _AImpl::__masked_load(__uncvted, __kk, __mem, _Fp());
-	_SimdConverter<_Up, _A, _Tp, _Abi> __converter;
+	_SimdConverter<_Up, _Ap, _Tp, _Abi> __converter;
 	_Base::__masked_assign(__k, __merge, __converter(__uncvted));
       }
       */

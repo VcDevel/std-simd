@@ -816,9 +816,9 @@ __optimize_simd_tuple(const _SimdTuple<_Tp>)
   return {};
 }
 
-template <typename _Tp, typename _A>
-_GLIBCXX_SIMD_INTRINSIC const _SimdTuple<_Tp, _A>&
-__optimize_simd_tuple(const _SimdTuple<_Tp, _A>& __x)
+template <typename _Tp, typename _Ap>
+_GLIBCXX_SIMD_INTRINSIC const _SimdTuple<_Tp, _Ap>&
+__optimize_simd_tuple(const _SimdTuple<_Tp, _Ap>& __x)
 {
   return __x;
 }
@@ -1054,8 +1054,8 @@ template <typename _Tp> struct _AbisInSimdTuple<_SimdTuple<_Tp>>
   using _Counts = std::index_sequence<0>;
   using _Begins = std::index_sequence<0>;
 };
-template <typename _Tp, typename _A>
-struct _AbisInSimdTuple<_SimdTuple<_Tp, _A>>
+template <typename _Tp, typename _Ap>
+struct _AbisInSimdTuple<_SimdTuple<_Tp, _Ap>>
 {
   using _Counts = std::index_sequence<1>;
   using _Begins = std::index_sequence<0>;

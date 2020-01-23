@@ -291,16 +291,16 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
 
 // _SimdConverter "native" -> fixed_size<_Np> {{{1
 // i.e. 1 register to ? registers
-template <typename _From, typename _A, typename _To, int _Np>
-struct _SimdConverter<_From, _A, _To, simd_abi::fixed_size<_Np>,
-		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
+template <typename _From, typename _Ap, typename _To, int _Np>
+struct _SimdConverter<_From, _Ap, _To, simd_abi::fixed_size<_Np>,
+		      std::enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
 {
   static_assert(
-    _Np == simd_size_v<_From, _A>,
+    _Np == simd_size_v<_From, _Ap>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
   _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_To, _Np>
-  operator()(typename _SimdTraits<_From, _A>::_SimdMember __x) const noexcept
+  operator()(typename _SimdTraits<_From, _Ap>::_SimdMember __x) const noexcept
   {
     _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
 		   simd_abi::fixed_size<_Np>>
@@ -311,15 +311,15 @@ struct _SimdConverter<_From, _A, _To, simd_abi::fixed_size<_Np>,
 
 // _SimdConverter fixed_size<_Np> -> "native" {{{1
 // i.e. ? register to 1 registers
-template <typename _From, int _Np, typename _To, typename _A>
-struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To, _A,
-		      std::enable_if_t<!__is_fixed_size_abi_v<_A>>>
+template <typename _From, int _Np, typename _To, typename _Ap>
+struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To, _Ap,
+		      std::enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
 {
   static_assert(
-    _Np == simd_size_v<_To, _A>,
+    _Np == simd_size_v<_To, _Ap>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
-  _GLIBCXX_SIMD_INTRINSIC typename _SimdTraits<_To, _A>::_SimdMember
+  _GLIBCXX_SIMD_INTRINSIC typename _SimdTraits<_To, _Ap>::_SimdMember
   operator()(__fixed_size_storage_t<_From, _Np> __x) const noexcept
   {
     _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,

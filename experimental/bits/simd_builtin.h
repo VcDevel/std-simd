@@ -914,22 +914,22 @@ struct _GnuTraits
   // parameter type of one explicit simd constructor
   class _SimdCastType1
   {
-    using _A = __intrinsic_type_t<_Tp, _Np>;
+    using _Ap = __intrinsic_type_t<_Tp, _Np>;
     _SimdMember _M_data;
 
   public:
-    _SimdCastType1(_A __a) : _M_data(__vector_bitcast<_Tp>(__a)) {}
+    _SimdCastType1(_Ap __a) : _M_data(__vector_bitcast<_Tp>(__a)) {}
     operator _SimdMember() const { return _M_data; }
   };
 
   class _SimdCastType2
   {
-    using _A = __intrinsic_type_t<_Tp, _Np>;
+    using _Ap = __intrinsic_type_t<_Tp, _Np>;
     using _B = __vector_type_t<_Tp, _Np>;
     _SimdMember _M_data;
 
   public:
-    _SimdCastType2(_A __a) : _M_data(__vector_bitcast<_Tp>(__a)) {}
+    _SimdCastType2(_Ap __a) : _M_data(__vector_bitcast<_Tp>(__a)) {}
     _SimdCastType2(_B __b) : _M_data(__b) {}
     operator _SimdMember() const { return _M_data; }
   };
@@ -1805,33 +1805,33 @@ template <typename _Abi> struct _SimdImplBuiltin
 	else if constexpr (std::is_same_v<__remove_cvref_t<_BinaryOperation>,
 					  std::plus<>>)
 	  {
-	    using _A = simd_abi::deduce_t<_Tp, __full_size>;
-	    return _A::_SimdImpl::__reduce(
-	      simd<_Tp, _A>(__private_init, _Abi::__masked(__as_vector(__x))),
+	    using _Ap = simd_abi::deduce_t<_Tp, __full_size>;
+	    return _Ap::_SimdImpl::__reduce(
+	      simd<_Tp, _Ap>(__private_init, _Abi::__masked(__as_vector(__x))),
 	      __binary_op);
 	  }
 	else if constexpr (std::is_same_v<__remove_cvref_t<_BinaryOperation>,
 					  std::multiplies<>>)
 	  {
-	    using _A = simd_abi::deduce_t<_Tp, __full_size>;
+	    using _Ap = simd_abi::deduce_t<_Tp, __full_size>;
 	    using _TW = _SimdWrapper<_Tp, __full_size>;
 	    constexpr auto __implicit_mask_full
 	      = _Abi::template __implicit_mask<_Tp>().__as_full_vector();
 	    constexpr _TW __one = __vector_broadcast<__full_size>(_Tp(1));
 	    const _TW __x_full = __data(__x).__as_full_vector();
 	    const _TW __x_padded_with_ones
-	      = _A::_CommonImpl::_S_blend(__implicit_mask_full, __one,
-					  __x_full);
-	    return _A::_SimdImpl::__reduce(simd<_Tp, _A>(__private_init,
-							 __x_padded_with_ones),
-					   __binary_op);
+	      = _Ap::_CommonImpl::_S_blend(__implicit_mask_full, __one,
+					   __x_full);
+	    return _Ap::_SimdImpl::__reduce(
+	      simd<_Tp, _Ap>(__private_init, __x_padded_with_ones),
+	      __binary_op);
 	  }
 	else if constexpr (_Np & 1)
 	  {
-	    using _A = simd_abi::deduce_t<_Tp, _Np - 1>;
+	    using _Ap = simd_abi::deduce_t<_Tp, _Np - 1>;
 	    return __binary_op(
-	      simd<_Tp, simd_abi::scalar>(_A::_SimdImpl::__reduce(
-		simd<_Tp, _A>(__intrin_bitcast<__vector_type_t<_Tp, _Np - 1>>(
+	      simd<_Tp, simd_abi::scalar>(_Ap::_SimdImpl::__reduce(
+		simd<_Tp, _Ap>(__intrin_bitcast<__vector_type_t<_Tp, _Np - 1>>(
 		  __as_vector(__x))),
 		__binary_op)),
 	      simd<_Tp, simd_abi::scalar>(__x[_Np - 1]))[0];
@@ -1884,9 +1884,9 @@ template <typename _Abi> struct _SimdImplBuiltin
       {
 	static_assert(sizeof(__x) > __min_vector_size<_Tp>);
 	static_assert((_Np & (_Np - 1)) == 0); // _Np must be a power of 2
-	using _A = simd_abi::deduce_t<_Tp, _Np / 2>;
-	using _V = std::experimental::simd<_Tp, _A>;
-	return _A::_SimdImpl::__reduce(
+	using _Ap = simd_abi::deduce_t<_Tp, _Np / 2>;
+	using _V = std::experimental::simd<_Tp, _Ap>;
+	return _Ap::_SimdImpl::__reduce(
 	  __binary_op(_V(__private_init, __extract<0, 2>(__as_vector(__x))),
 		      _V(__private_init, __extract<1, 2>(__as_vector(__x)))),
 	  static_cast<_BinaryOperation&&>(__binary_op));
