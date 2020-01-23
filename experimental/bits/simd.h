@@ -4103,6 +4103,18 @@ public:
     {
     }
 
+    // explicit type conversion constructor
+#ifdef _GLIBCXX_SIMD_ENABLE_STATIC_CAST
+    template <typename _Up,
+	      typename _A2,
+	      typename = decltype(
+		static_simd_cast<simd>(std::declval<const simd<_Up, _A2>&>()))>
+    _GLIBCXX_SIMD_ALWAYS_INLINE explicit simd(const simd<_Up, _A2>& __x)
+    : simd(static_simd_cast<simd>(__x))
+    {
+    }
+#endif // _GLIBCXX_SIMD_ENABLE_STATIC_CAST
+
     // generator constructor
     template <typename _Fp>
     _GLIBCXX_SIMD_ALWAYS_INLINE explicit constexpr simd(
