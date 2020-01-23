@@ -35,21 +35,20 @@
 
 #define Vir_SIMD_VERSION_STRING "2.0.0"
 
-#define _GLIBCXX_SIMD_BEGIN_NAMESPACE                                                    \
-    namespace std _GLIBCXX_VISIBILITY(default)                                           \
-    {                                                                                    \
-    _GLIBCXX_BEGIN_NAMESPACE_VERSION namespace experimental                              \
-    {                                                                                    \
-    inline namespace parallelism_v2                                                      \
-    {
-#define _GLIBCXX_SIMD_END_NAMESPACE                                                      \
-    }                                                                                    \
-    }                                                                                    \
-    _GLIBCXX_END_NAMESPACE_VERSION                                                       \
-    }
+#define _GLIBCXX_SIMD_BEGIN_NAMESPACE                                          \
+  namespace std _GLIBCXX_VISIBILITY(default)                                   \
+  {                                                                            \
+    _GLIBCXX_BEGIN_NAMESPACE_VERSION                                           \
+      namespace experimental {                                                 \
+      inline namespace parallelism_v2 {
+#define _GLIBCXX_SIMD_END_NAMESPACE                                            \
+  }                                                                            \
+  }                                                                            \
+  _GLIBCXX_END_NAMESPACE_VERSION                                               \
+  }
 
-// ISA extension detection. The following defines all the _GLIBCXX_SIMD_HAVE_XXX macros
-// ARM{{{
+// ISA extension detection. The following defines all the _GLIBCXX_SIMD_HAVE_XXX
+// macros ARM{{{
 #if defined __ARM_NEON
 #define _GLIBCXX_SIMD_HAVE_NEON 1
 #else
@@ -216,9 +215,11 @@
 #endif
 //}}}
 
-#define _GLIBCXX_SIMD_NORMAL_MATH [[__gnu__::__optimize__("finite-math-only,no-signed-zeros")]]
+#define _GLIBCXX_SIMD_NORMAL_MATH                                              \
+  [[__gnu__::__optimize__("finite-math-only,no-signed-zeros")]]
 #define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
-#define _GLIBCXX_SIMD_INTRINSIC [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
+#define _GLIBCXX_SIMD_INTRINSIC                                                \
+  [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
 #define _GLIBCXX_SIMD_CONST __attribute__((__const__))
 #define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]] inline
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
@@ -227,11 +228,15 @@
 
 #define _GLIBCXX_SIMD_LIST_BINARY(__macro) __macro(|) __macro(&) __macro(^)
 #define _GLIBCXX_SIMD_LIST_SHIFTS(__macro) __macro(<<) __macro(>>)
-#define _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) __macro(+) __macro(-) __macro(*) __macro(/) __macro(%)
+#define _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro)                                \
+  __macro(+) __macro(-) __macro(*) __macro(/) __macro(%)
 
-#define _GLIBCXX_SIMD_ALL_BINARY(__macro) _GLIBCXX_SIMD_LIST_BINARY(__macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_SHIFTS(__macro) _GLIBCXX_SIMD_LIST_SHIFTS(__macro) static_assert(true)
-#define _GLIBCXX_SIMD_ALL_ARITHMETICS(__macro) _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_BINARY(__macro)                                      \
+  _GLIBCXX_SIMD_LIST_BINARY(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_SHIFTS(__macro)                                      \
+  _GLIBCXX_SIMD_LIST_SHIFTS(__macro) static_assert(true)
+#define _GLIBCXX_SIMD_ALL_ARITHMETICS(__macro)                                 \
+  _GLIBCXX_SIMD_LIST_ARITHMETICS(__macro) static_assert(true)
 
 #ifdef _GLIBCXX_SIMD_NO_ALWAYS_INLINE
 #undef _GLIBCXX_SIMD_ALWAYS_INLINE
@@ -268,8 +273,8 @@
 // integer division not optimized
 #define _GLIBCXX_SIMD_WORKAROUND_PR90993 1
 
-// very bad codegen for extraction and concatenation of 128/256 "subregisters" with
-// sizeof(element type) < 8: https://godbolt.org/g/mqUsgM
+// very bad codegen for extraction and concatenation of 128/256 "subregisters"
+// with sizeof(element type) < 8: https://godbolt.org/g/mqUsgM
 #if _GLIBCXX_SIMD_X86INTRIN
 #define _GLIBCXX_SIMD_WORKAROUND_XXX_1 1
 #endif
@@ -285,8 +290,8 @@
 // bad codegen for integer division
 #define _GLIBCXX_SIMD_WORKAROUND_XXX_4 1
 
-// abs pattern may generate MMX instructions without EMMS cleanup (This only happens with SSSE3
-// because pabs[bwd] is part of SSSE3.)
+// abs pattern may generate MMX instructions without EMMS cleanup (This only
+// happens with SSSE3 because pabs[bwd] is part of SSSE3.)
 #if __GNUC__ < 10 && defined __SSSE3__ && _GLIBCXX_SIMD_X86INTRIN
 #define _GLIBCXX_SIMD_WORKAROUND_PR91533 1
 #endif
@@ -295,15 +300,16 @@
 #define _GLIBCXX_SIMD_WORKAROUND_XXX_5 1
 #endif
 
-// https://github.com/cplusplus/parallelism-ts/issues/65 (incorrect return type of
-// static_simd_cast)
+// https://github.com/cplusplus/parallelism-ts/issues/65 (incorrect return type
+// of static_simd_cast)
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE65 1
 
-// https://github.com/cplusplus/parallelism-ts/issues/66 (incorrect SFINAE constraint on
-// (static)_simd_cast)
+// https://github.com/cplusplus/parallelism-ts/issues/66 (incorrect SFINAE
+// constraint on (static)_simd_cast)
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE66 1
 // }}}
 
-#endif  // __cplusplus >= 201703L
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD_DETAIL_H_
+#endif // __cplusplus >= 201703L
+#endif // _GLIBCXX_EXPERIMENTAL_SIMD_DETAIL_H_
+
 // vim: foldmethod=marker

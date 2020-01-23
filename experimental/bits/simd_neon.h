@@ -47,20 +47,16 @@ struct _CommonImplNeon : _CommonImplBuiltin
 
 // }}}
 // _SimdImplNeon {{{
-template <typename _Abi>
-struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
+template <typename _Abi> struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 {
   using _Base = _SimdImplBuiltin<_Abi>;
-  template <typename _Tp>
-  static constexpr size_t _S_max_store_size = 16;
+  template <typename _Tp> static constexpr size_t _S_max_store_size = 16;
 
   // __masked_load {{{
   template <typename _Tp, size_t _Np, typename _Up, typename _Fp>
   static inline _SimdWrapper<_Tp, _Np>
-    __masked_load(_SimdWrapper<_Tp, _Np> __merge,
-		  _SimdWrapper<_Tp, _Np> __k,
-		  const _Up*            __mem,
-		  _Fp) noexcept
+  __masked_load(_SimdWrapper<_Tp, _Np> __merge, _SimdWrapper<_Tp, _Np> __k,
+		const _Up* __mem, _Fp) noexcept
   {
     __execute_n_times<_Np>([&](auto __i) {
       if (__k[__i] != 0)
@@ -72,8 +68,9 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   // }}}
   // __masked_store_nocvt {{{
   template <typename _Tp, std::size_t _Np, typename _Fp>
-  _GLIBCXX_SIMD_INTRINSIC static void __masked_store_nocvt(
-    _SimdWrapper<_Tp, _Np> __v, _Tp* __mem, _Fp, _SimdWrapper<_Tp, _Np> __k)
+  _GLIBCXX_SIMD_INTRINSIC static void
+  __masked_store_nocvt(_SimdWrapper<_Tp, _Np> __v, _Tp* __mem, _Fp,
+		       _SimdWrapper<_Tp, _Np> __k)
   {
     __execute_n_times<_Np>([&](auto __i) {
       if (__k[__i] != 0)
@@ -84,28 +81,28 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   // }}}
   // __reduce {{{
   template <typename _Tp, typename _BinaryOperation>
-  _GLIBCXX_SIMD_INTRINSIC static _Tp
-    __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
+  _GLIBCXX_SIMD_INTRINSIC static _Tp __reduce(simd<_Tp, _Abi> __x,
+					      _BinaryOperation&& __binary_op)
   {
     constexpr size_t _Np = __x.size();
     if constexpr (sizeof(__x) == 16 && _Np >= 4 && !_Abi::_S_is_partial)
       {
 	const auto __halves = split<simd<_Tp, simd_abi::_Neon<8>>>(__x);
-	const auto __y      = __binary_op(__halves[0], __halves[1]);
+	const auto __y = __binary_op(__halves[0], __halves[1]);
 	return _SimdImplNeon<simd_abi::_Neon<8>>::__reduce(
 	  __y, static_cast<_BinaryOperation&&>(__binary_op));
       }
     else if constexpr (_Np == 8)
       {
-	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _Np>(
-		 __vector_permute<1, 0, 3, 2, 5, 4, 7, 6>(__x._M_data)));
-	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _Np>(
-		 __vector_permute<3, 2, 1, 0, 7, 6, 5, 4>(__x._M_data)));
-	__x = __binary_op(
-	  __x, _Base::template __make_simd<_Tp, _Np>(
-		 __vector_permute<7, 6, 5, 4, 3, 2, 1, 0>(__x._M_data)));
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
+				 __vector_permute<1, 0, 3, 2, 5, 4, 7, 6>(
+				   __x._M_data)));
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
+				 __vector_permute<3, 2, 1, 0, 7, 6, 5, 4>(
+				   __x._M_data)));
+	__x = __binary_op(__x, _Base::template __make_simd<_Tp, _Np>(
+				 __vector_permute<7, 6, 5, 4, 3, 2, 1, 0>(
+				   __x._M_data)));
 	return __x[0];
       }
     else if constexpr (_Np == 4)
@@ -215,12 +212,13 @@ struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
   //}}}
 }; // }}}
 // _MaskImplNeonMixin {{{
-struct _MaskImplNeonMixin {
+struct _MaskImplNeonMixin
+{
   using _Base = _MaskImplBuiltinMixin;
 
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_Np>
-    __to_bits(_SimdWrapper<_Tp, _Np> __x)
+  __to_bits(_SimdWrapper<_Tp, _Np> __x)
   {
     if (__builtin_is_constant_evaluated())
       return _Base::__to_bits(__x);
@@ -228,34 +226,36 @@ struct _MaskImplNeonMixin {
     using _I = __int_for_sizeof_t<_Tp>;
     if constexpr (sizeof(__x) == 16)
       {
-	auto                            __asint = __vector_bitcast<_I>(__x);
+	auto __asint = __vector_bitcast<_I>(__x);
 #ifdef __aarch64__
-	[[maybe_unused]] constexpr auto __zero  = decltype(__asint)();
+	[[maybe_unused]] constexpr auto __zero = decltype(__asint)();
 #else
 	[[maybe_unused]] constexpr auto __zero = decltype(__lo64(__asint))();
 #endif
 	if constexpr (sizeof(_Tp) == 1)
 	  {
-	    constexpr auto __bitsel =
-	      __generate_from_n_evaluations<16, __vector_type_t<_I, 16>>(
+	    constexpr auto __bitsel
+	      = __generate_from_n_evaluations<16, __vector_type_t<_I, 16>>(
 		[&](auto __i) {
 		  return static_cast<_I>(
 		    __i < _Np ? (__i < 8 ? 1 << __i : 1 << (__i - 8)) : 0);
 		});
 	    __asint &= __bitsel;
 #ifdef __aarch64__
-	    return __vector_bitcast<_UShort>(vpaddq_s8(
-	      vpaddq_s8(vpaddq_s8(__asint, __zero), __zero), __zero))[0];
+	    return __vector_bitcast<_UShort>(
+	      vpaddq_s8(vpaddq_s8(vpaddq_s8(__asint, __zero), __zero),
+			__zero))[0];
 #else
-	    return __vector_bitcast<_UShort>(vpadd_s8(
-	      vpadd_s8(vpadd_s8(__lo64(__asint), __hi64(__asint)), __zero),
-	      __zero))[0];
+	    return __vector_bitcast<_UShort>(
+	      vpadd_s8(vpadd_s8(vpadd_s8(__lo64(__asint), __hi64(__asint)),
+				__zero),
+		       __zero))[0];
 #endif
 	  }
 	else if constexpr (sizeof(_Tp) == 2)
 	  {
-	    constexpr auto __bitsel =
-	      __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
+	    constexpr auto __bitsel
+	      = __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
 		[&](auto __i) {
 		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
 		});
@@ -271,8 +271,8 @@ struct _MaskImplNeonMixin {
 	  }
 	else if constexpr (sizeof(_Tp) == 4)
 	  {
-	    constexpr auto __bitsel =
-	      __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
+	    constexpr auto __bitsel
+	      = __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
 		[&](auto __i) {
 		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
 		});
@@ -285,20 +285,18 @@ struct _MaskImplNeonMixin {
 #endif
 	  }
 	else if constexpr (sizeof(_Tp) == 8)
-	  {
-	    return (__asint[0] & 1) | (__asint[1] & 2);
-	  }
+	  return (__asint[0] & 1) | (__asint[1] & 2);
 	else
 	  __assert_unreachable<_Tp>();
       }
     else if constexpr (sizeof(__x) == 8)
       {
-	auto                            __asint = __vector_bitcast<_I>(__x);
-	[[maybe_unused]] constexpr auto __zero  = decltype(__asint)();
+	auto __asint = __vector_bitcast<_I>(__x);
+	[[maybe_unused]] constexpr auto __zero = decltype(__asint)();
 	if constexpr (sizeof(_Tp) == 1)
 	  {
-	    constexpr auto __bitsel =
-	      __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
+	    constexpr auto __bitsel
+	      = __generate_from_n_evaluations<8, __vector_type_t<_I, 8>>(
 		[&](auto __i) {
 		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
 		});
@@ -308,8 +306,8 @@ struct _MaskImplNeonMixin {
 	  }
 	else if constexpr (sizeof(_Tp) == 2)
 	  {
-	    constexpr auto __bitsel =
-	      __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
+	    constexpr auto __bitsel
+	      = __generate_from_n_evaluations<4, __vector_type_t<_I, 4>>(
 		[&](auto __i) {
 		  return static_cast<_I>(__i < _Np ? 1 << __i : 0);
 		});
@@ -334,8 +332,8 @@ struct _MaskImplNeonMixin {
 template <typename _Abi>
 struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
 {
-  using _MaskImplNeonMixin::__to_bits;
   using _MaskImplBuiltinMixin::__to_maskvector;
+  using _MaskImplNeonMixin::__to_bits;
   using _Base = _MaskImplBuiltin<_Abi>;
   using _Base::__convert;
 
@@ -343,9 +341,9 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
   {
-    const auto __kk =
-      __vector_bitcast<char>(__k._M_data) |
-      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    const auto __kk
+      = __vector_bitcast<char>(__k._M_data)
+	| ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
     if constexpr (sizeof(__k) == 16)
       {
 	const auto __x = __vector_bitcast<long long>(__kk);
@@ -362,9 +360,9 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
   {
-    const auto __kk =
-      __vector_bitcast<char>(__k._M_data) |
-      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    const auto __kk
+      = __vector_bitcast<char>(__k._M_data)
+	| ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
     if constexpr (sizeof(__k) == 16)
       {
 	const auto __x = __vector_bitcast<long long>(__kk);
@@ -381,9 +379,9 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
   {
-    const auto __kk =
-      __vector_bitcast<char>(__k._M_data) |
-      ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+    const auto __kk
+      = __vector_bitcast<char>(__k._M_data)
+	| ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
     if constexpr (sizeof(__k) == 16)
       {
 	const auto __x = __vector_bitcast<long long>(__kk);
@@ -402,9 +400,9 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
   {
     if constexpr (sizeof(__k) <= 8)
       {
-	const auto __kk =
-	  __vector_bitcast<char>(__k._M_data) |
-	  ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
+	const auto __kk
+	  = __vector_bitcast<char>(__k._M_data)
+	    | ~__vector_bitcast<char>(_Abi::template __implicit_mask<_Tp>());
 	using _Up = std::make_unsigned_t<__int_for_sizeof_t<decltype(__kk)>>;
 	return __bit_cast<_Up>(__kk) + 1 > 1;
       }
@@ -419,21 +417,21 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
   {
     if constexpr (sizeof(_Tp) == 1)
       {
-	const auto __s8  = __vector_bitcast<_SChar>(__k._M_data);
-	int8x8_t   __tmp = __lo64(__s8) + __hi64z(__s8);
+	const auto __s8 = __vector_bitcast<_SChar>(__k._M_data);
+	int8x8_t __tmp = __lo64(__s8) + __hi64z(__s8);
 	return -vpadd_s8(vpadd_s8(vpadd_s8(__tmp, int8x8_t()), int8x8_t()),
 			 int8x8_t())[0];
       }
     else if constexpr (sizeof(_Tp) == 2)
       {
 	const auto __s16 = __vector_bitcast<short>(__k._M_data);
-	int16x4_t  __tmp = __lo64(__s16) + __hi64z(__s16);
+	int16x4_t __tmp = __lo64(__s16) + __hi64z(__s16);
 	return -vpadd_s16(vpadd_s16(__tmp, int16x4_t()), int16x4_t())[0];
       }
     else if constexpr (sizeof(_Tp) == 4)
       {
 	const auto __s32 = __vector_bitcast<int>(__k._M_data);
-	int32x2_t  __tmp = __lo64(__s32) + __hi64z(__s32);
+	int32x2_t __tmp = __lo64(__s32) + __hi64z(__s32);
 	return -vpadd_s32(__tmp, int32x2_t())[0];
       }
     else if constexpr (sizeof(_Tp) == 8)
@@ -466,6 +464,6 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
 }; // }}}
 
 _GLIBCXX_SIMD_END_NAMESPACE
-#endif  // __cplusplus >= 201703L
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD_NEON_H_
+#endif // __cplusplus >= 201703L
+#endif // _GLIBCXX_EXPERIMENTAL_SIMD_NEON_H_
 // vim: foldmethod=marker sw=2 noet ts=8 sts=2 tw=80

@@ -43,9 +43,9 @@
 // irrelevant as those functions never appear on ABI borders
 #pragma GCC diagnostic ignored "-Wpsabi"
 
-// If __OPTIMIZE__ is not defined some intrinsics are defined as macros, making use of C casts
-// internally. This requires us to disable the warning as it would otherwise yield many false
-// positives.
+// If __OPTIMIZE__ is not defined some intrinsics are defined as macros, making
+// use of C casts internally. This requires us to disable the warning as it
+// would otherwise yield many false positives.
 #ifndef __OPTIMIZE__
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
@@ -66,5 +66,5 @@
 
 #pragma GCC diagnostic pop
 
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD
+#endif // _GLIBCXX_EXPERIMENTAL_SIMD
 // vim: ft=cpp
