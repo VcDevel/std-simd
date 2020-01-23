@@ -3976,8 +3976,60 @@ public:
     };
     _GLIBCXX_SIMD_INTRINSIC _CvtProxy __cvt() const { return {*this}; }
     // }}}
+    // operator?: overloads (suggested extension) {{{
+#ifdef __GXX_CONDITIONAL_IS_OVERLOADABLE__
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend simd_mask
+      operator?:(const simd_mask& __k,
+		 const simd_mask& __where_true,
+		 const simd_mask& __where_false)
+    {
+      auto __ret = __where_false;
+      _Impl::__masked_assign(__k._M_data, __ret._M_data, __where_true._M_data);
+      return __ret;
+    }
 
-private:
+    template <typename _U1,
+	      typename _U2,
+	      typename _Rp = simd<common_type_t<_U1, _U2>, _Abi>,
+	      typename     = enable_if_t<conjunction_v<
+                is_convertible<_U1, _Rp>,
+                is_convertible<_U2, _Rp>,
+                is_convertible<simd_mask, typename _Rp::mask_type>>>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend _Rp
+      operator?:(const simd_mask& __k,
+		 const _U1&       __where_true,
+		 const _U2&       __where_false)
+    {
+      _Rp __ret = __where_false;
+      _Rp::_Impl::__masked_assign(__data(static_cast<typename _Rp::mask_type>(__k)),
+			     __data(__ret),
+			     __data(static_cast<_Rp>(__where_true)));
+      return __ret;
+    }
+
+#ifdef _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
+    template <typename _Kp,
+	      typename _Ak,
+	      typename _Up,
+	      typename _Au,
+	      typename = enable_if_t<
+		conjunction_v<is_convertible<simd_mask<_Kp, _Ak>, simd_mask>,
+			      is_convertible<simd_mask<_Up, _Au>, simd_mask>>>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend simd_mask
+      operator?:(const simd_mask<_Kp, _Ak>& __k,
+		 const simd_mask&           __where_true,
+		 const simd_mask<_Up, _Au>& __where_false)
+    {
+      simd_mask __ret = __where_false;
+      _Impl::__masked_assign(simd_mask(__k)._M_data, __ret._M_data,
+			     __where_true._M_data);
+      return __ret;
+    }
+#endif // _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
+#endif // __GXX_CONDITIONAL_IS_OVERLOADABLE__
+    // }}}
+
+  private:
     friend const auto &__data<_Tp, abi_type>(const simd_mask &);
     friend auto &__data<_Tp, abi_type>(simd_mask &);
     alignas(_Traits::_S_mask_align) _MemberType _M_data;
@@ -4266,6 +4318,20 @@ public:
     {
         return simd::__make_mask(_Impl::__less_equal(__y._M_data, __x._M_data));
     }
+
+    // operator?: overloads (suggested extension) {{{
+#ifdef __GXX_CONDITIONAL_IS_OVERLOADABLE__
+    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr friend simd
+      operator?:(const mask_type& __k,
+		 const simd& __where_true,
+		 const simd& __where_false)
+    {
+      auto __ret = __where_false;
+      _Impl::__masked_assign(__data(__k), __data(__ret), __data(__where_true));
+      return __ret;
+    }
+#endif // __GXX_CONDITIONAL_IS_OVERLOADABLE__
+    // }}}
 
     // "private" because of the first arguments's namespace
     _GLIBCXX_SIMD_INTRINSIC constexpr simd(_PrivateInit,
