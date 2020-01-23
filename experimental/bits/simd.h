@@ -3781,6 +3781,20 @@ public:
 
     // }}}
     // implicit type conversion constructor {{{
+#ifdef _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
+    // proposed improvement
+    template <typename _Up,
+	      typename _A2,
+	      typename = enable_if_t<simd_size_v<_Up, _A2> == size()>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE explicit(
+      sizeof(_MemberType) !=
+      sizeof(typename _SimdTraits<_Up, _A2>::_MaskMember))
+      simd_mask(const simd_mask<_Up, _A2>& __x)
+    : simd_mask(__proposed::static_simd_cast<simd_mask>(__x))
+    {
+    }
+#else
+    // conforming to ISO/IEC 19570:2018
     template <typename _Up,
 	      typename = enable_if_t<
 		conjunction<is_same<abi_type, simd_abi::fixed_size<size()>>,
@@ -3790,6 +3804,7 @@ public:
     : _M_data(_Impl::__from_bitmask(__data(__x), _S_type_tag))
     {
     }
+#endif
     // }}}
     // load constructor {{{
     template <typename _Flags>
@@ -3839,6 +3854,29 @@ public:
 
     // }}}
     // simd_mask binary operators [simd_mask.binary] {{{
+#ifdef _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
+    // simd_mask<int> && simd_mask<uint> needs disambiguation
+    template <
+      typename _Up,
+      typename _A2,
+      typename = enable_if_t<is_convertible_v<simd_mask<_Up, _A2>, simd_mask>>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE friend simd_mask
+      operator&&(const simd_mask& __x, const simd_mask<_Up, _A2>& __y)
+    {
+      return {__private_init,
+	      _Impl::__logical_and(__x._M_data, simd_mask(__y)._M_data)};
+    }
+    template <
+      typename _Up,
+      typename _A2,
+      typename = enable_if_t<is_convertible_v<simd_mask<_Up, _A2>, simd_mask>>>
+    _GLIBCXX_SIMD_ALWAYS_INLINE friend simd_mask
+      operator||(const simd_mask& __x, const simd_mask<_Up, _A2>& __y)
+    {
+      return {__private_init,
+	      _Impl::__logical_or(__x._M_data, simd_mask(__y)._M_data)};
+    }
+#endif // _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
     _GLIBCXX_SIMD_ALWAYS_INLINE friend simd_mask operator&&(const simd_mask &__x, const simd_mask &__y)
     {
         return {__private_init, _Impl::__logical_and(__x._M_data, __y._M_data)};
