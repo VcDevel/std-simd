@@ -4289,46 +4289,103 @@ __data(simd_mask<_Tp, _Ap>& __x)
 
 // simd_mask reductions [simd_mask.reductions] {{{
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 all_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  return _Abi::_MaskImpl::__all_of(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (!__k[__i])
+	  return false;
+      return true;
+    }
+  else
+    return _Abi::_MaskImpl::__all_of(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 any_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  return _Abi::_MaskImpl::__any_of(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (__k[__i])
+	  return true;
+      return false;
+    }
+  else
+    return _Abi::_MaskImpl::__any_of(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 none_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  return _Abi::_MaskImpl::__none_of(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (__k[__i])
+	  return false;
+      return true;
+    }
+  else
+    return _Abi::_MaskImpl::__none_of(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 some_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  return _Abi::_MaskImpl::__some_of(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = 1; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (__k[__i] != __k[__i - 1])
+	  return true;
+      return false;
+    }
+  else
+    return _Abi::_MaskImpl::__some_of(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE int
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 popcount(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  return _Abi::_MaskImpl::__popcount(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      int __r = 0;
+      for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (__k[__i])
+	  ++__r;
+      return __r;
+    }
+  else
+    return _Abi::_MaskImpl::__popcount(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE int
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 find_first_set(const simd_mask<_Tp, _Abi>& __k)
 {
-  return _Abi::_MaskImpl::__find_first_set(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
+	if (__k[__i])
+	  return __i;
+      // no return to make none_of(__k) ill-formed
+    }
+  else
+    return _Abi::_MaskImpl::__find_first_set(__k);
 }
 template <typename _Tp, typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE int
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 find_last_set(const simd_mask<_Tp, _Abi>& __k)
 {
-  return _Abi::_MaskImpl::__find_last_set(__k);
+  if (__builtin_is_constant_evaluated())
+    {
+      for (size_t __i = simd_size_v<_Tp, _Abi>; __i > 0; --__i)
+	if (__k[__i - 1])
+	  return __i - 1;
+      // no return to make none_of(__k) ill-formed
+    }
+  else
+    return _Abi::_MaskImpl::__find_last_set(__k);
 }
 
 _GLIBCXX_SIMD_CONSTEXPR bool
