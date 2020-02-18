@@ -1704,9 +1704,12 @@ __andnot(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
 #if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
   if constexpr (sizeof(_Tp) >= 16)
     {
-      if (!__builtin_is_constant_evaluated())
+      const auto __ai = __to_intrin(__a);
+      const auto __bi = __to_intrin(__b);
+      if (!__builtin_is_constant_evaluated()
+	  && !(__builtin_constant_p(__ai) && __builtin_constant_p(__bi)))
 	{
-	  const auto __r = _S_x86_andnot(__to_intrin(__a), __to_intrin(__b));
+	  const auto __r = _S_x86_andnot(__ai, __bi);
 	  if constexpr (is_convertible_v<decltype(__r), _Tp>)
 	    return __r;
 	  else
