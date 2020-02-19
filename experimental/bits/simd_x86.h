@@ -3516,7 +3516,11 @@ struct _MaskImplX86Mixin
     using _UpUInt = std::make_unsigned_t<__int_for_sizeof_t<_Up>>;
     using _V = __vector_type_t<_UpUInt, _ToN>;
     constexpr size_t __bits_per_element = sizeof(_Up) * CHAR_BIT;
-    if constexpr (!__have_avx2 && __have_avx && sizeof(_V) == 32)
+    if constexpr (_ToN == 2)
+      {
+	return __vector_bitcast<_Up>(_V{_UpUInt(-__x[0]), _UpUInt(-__x[1])});
+      }
+    else if constexpr (!__have_avx2 && __have_avx && sizeof(_V) == 32)
       {
 	if constexpr (sizeof(_Up) == 4)
 	  return __vector_bitcast<_Up>(_mm256_cmp_ps(
@@ -3540,8 +3544,12 @@ struct _MaskImplX86Mixin
 	    [](auto __i) constexpr->_UpUInt {
 	      return __i < _ToN ? 1ull << __i : 0;
 	    });
-	return __vector_bitcast<_Up>(
-	  (__vector_broadcast<_ToN, _UpUInt>(__k) & __bitmask) != 0);
+	const auto __bits = __vector_broadcast<_ToN, _UpUInt>(__k) & __bitmask;
+	if constexpr (__bits_per_element > _ToN)
+	  return __vector_bitcast<_Up>(
+	    __vector_bitcast<__int_for_sizeof_t<_Up>>(__bits) > 0);
+	else
+	  return __vector_bitcast<_Up>(__bits != 0);
       }
     else
       {
