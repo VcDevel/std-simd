@@ -344,14 +344,15 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
     return reinterpret_cast<const char*>(this);
   }
 
-  template <size_t _Np> auto& __at()
+  template <size_t _Np> _GLIBCXX_SIMD_INTRINSIC constexpr auto& __at()
   {
     if constexpr (_Np == 0)
       return first;
     else
       return second.template __at<_Np - 1>();
   }
-  template <size_t _Np> const auto& __at() const
+  template <size_t _Np>
+  _GLIBCXX_SIMD_INTRINSIC constexpr const auto& __at() const
   {
     if constexpr (_Np == 0)
       return first;
@@ -359,7 +360,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
       return second.template __at<_Np - 1>();
   }
 
-  template <size_t _Np> auto __simd_at() const
+  template <size_t _Np> _GLIBCXX_SIMD_INTRINSIC constexpr auto __simd_at() const
   {
     if constexpr (_Np == 0)
       return simd<_Tp, _Abi0>(__private_init, first);
