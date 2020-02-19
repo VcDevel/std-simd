@@ -324,7 +324,7 @@ endfunction()#}}}
 # sets Vc_nosimd_flags, Vc_sse2_flags, ...
 if(Vc_X86)
    vc_target_setup(nosimd mrm "-mno-sse")
-   vc_target_setup(sse2 mrm "-march=athlon64")
+   vc_target_setup(sse2 mrm "-march=nocona;-mno-sse3")
    vc_target_setup(ssse3 mrm "-march=core2")
    vc_target_setup(sse4_2 nhm "-march=nehalem")
    vc_target_setup(avx snb "-march=sandybridge")
