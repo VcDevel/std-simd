@@ -300,6 +300,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   : _SimdTupleData<typename _SimdTraits<_Tp, _Abi0>::_SimdMember,
 		   _SimdTuple<_Tp, _Abis...>>
 {
+  static_assert(!__is_fixed_size_abi_v<_Abi0>);
   using value_type = _Tp;
   using _FirstType = typename _SimdTraits<_Tp, _Abi0>::_SimdMember;
   using _FirstAbi = _Abi0;
