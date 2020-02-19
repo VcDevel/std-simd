@@ -2076,7 +2076,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __equal_to(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    if constexpr (__is_avx512_abi<_Abi>())
+    if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
 	if (__builtin_is_constant_evaluated())
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
@@ -2128,7 +2128,15 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	  return _mm_mask_cmpeq_epi8_mask(__k1, __xi, __yi);
 	else
 	  __assert_unreachable<_Tp>();
-      }
+      } // }}}
+    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+      {
+	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
+			    == __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
+	_MaskMember<_Tp> __r64;
+	__builtin_memcpy(&__r64._M_data, &__r128, sizeof(__r64));
+	return __r64;
+      } // }}}
     else
       return _Base::__equal_to(__x, __y);
   }
@@ -2139,7 +2147,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __not_equal_to(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    if constexpr (__is_avx512_abi<_Abi>())
+    if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
 	if (__builtin_is_constant_evaluated())
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
@@ -2191,7 +2199,15 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	  return ~_mm_mask_cmpeq_epi8_mask(__k1, __xi, __yi);
 	else
 	  __assert_unreachable<_Tp>();
-      }
+      } // }}}
+    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+      {
+	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
+			    != __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
+	_MaskMember<_Tp> __r64;
+	__builtin_memcpy(&__r64._M_data, &__r128, sizeof(__r64));
+	return __r64;
+      } // }}}
     else
       return _Base::__not_equal_to(__x, __y);
   }
@@ -2202,7 +2218,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __less(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    if constexpr (__is_avx512_abi<_Abi>())
+    if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
 	if (__builtin_is_constant_evaluated())
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
@@ -2288,7 +2304,15 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	  }
 	else
 	  __assert_unreachable<_Tp>();
-      }
+      } // }}}
+    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+      {
+	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
+			    < __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
+	_MaskMember<_Tp> __r64;
+	__builtin_memcpy(&__r64._M_data, &__r128, sizeof(__r64));
+	return __r64;
+      } // }}}
     else
       return _Base::__less(__x, __y);
   }
@@ -2299,7 +2323,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __less_equal(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    if constexpr (__is_avx512_abi<_Abi>())
+    if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
 	if (__builtin_is_constant_evaluated())
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
@@ -2385,7 +2409,15 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	  }
 	else
 	  __assert_unreachable<_Tp>();
-      }
+      } // }}}
+    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+      {
+	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
+			    <= __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
+	_MaskMember<_Tp> __r64;
+	__builtin_memcpy(&__r64._M_data, &__r128, sizeof(__r64));
+	return __r64;
+      } // }}}
     else
       return _Base::__less_equal(__x, __y);
   }
