@@ -16,7 +16,7 @@ ifeq (,$(NINJA))
 else
 	GENERATOR := -G Ninja
 	HELP_TARGET := -- -t targets all
-	BUILD_FLAGS := -j 100 -k $(cores)
+	BUILD_FLAGS := -j 100 -l $(cores)
 endif
 
 ifeq (,$(CMAKE_TOOLCHAIN_FILE))
