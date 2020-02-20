@@ -188,6 +188,13 @@ struct __tuple_element_meta : public _Abi::_SimdImpl
   static constexpr _MaskImpl _S_mask_impl = {};
 
   template <size_t _Np, bool _Sanitized>
+  _GLIBCXX_SIMD_INTRINSIC static auto
+  __submask(_BitMask<_Np, _Sanitized> __bits)
+  {
+    return __bits.template _M_extract<_Offset, size()>();
+  }
+
+  template <size_t _Np, bool _Sanitized>
   _GLIBCXX_SIMD_INTRINSIC static _MaskMember
   __make_mask(_BitMask<_Np, _Sanitized> __bits)
   {
@@ -1456,8 +1463,10 @@ template <int _Np> struct _SimdImplFixedSize
   {
     auto __merge = __old;
     __for_each(__merge, [&](auto __meta, auto& __native) {
-      __native = __meta.__masked_load(__native, __meta.__make_mask(__bits),
-				      &__mem[__meta._S_offset], __f);
+      // __mem + __mem._S_offset could be UB ([expr.add]/4.3
+      if (__meta.__submask(__bits).any())
+	__native = __meta.__masked_load(__native, __meta.__make_mask(__bits),
+					__mem + __meta._S_offset, __f);
     });
     return __merge;
   }
@@ -1479,8 +1488,9 @@ template <int _Np> struct _SimdImplFixedSize
 				    const _MaskMember __bits) noexcept
   {
     __for_each(__v, [&](auto __meta, auto __native) {
-      __meta.__masked_store(__native, &__mem[__meta._S_offset], __f,
-			    __meta.__make_mask(__bits));
+      if (__meta.__submask(__bits).any())
+	__meta.__masked_store(__native, __mem + __meta._S_offset, __f,
+			      __meta.__make_mask(__bits));
     });
   }
 
