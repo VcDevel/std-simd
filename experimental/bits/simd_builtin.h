@@ -2365,8 +2365,8 @@ template <typename _Abi> struct _SimdImplBuiltin
 
   // smart_reference access {{{2
   template <typename _Tp, size_t _Np, typename _Up>
-  _GLIBCXX_SIMD_INTRINSIC static void __set(_SimdWrapper<_Tp, _Np>& __v,
-					    int __i, _Up&& __x) noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr static void
+  __set(_SimdWrapper<_Tp, _Np>& __v, int __i, _Up&& __x) noexcept
   {
     __v.__set(__i, static_cast<_Up&&>(__x));
   }
@@ -2732,12 +2732,31 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
 
   // smart_reference access {{{2
   template <typename _Tp, size_t _Np>
-  static void __set(_SimdWrapper<_Tp, _Np>& __k, int __i, bool __x) noexcept
+  static constexpr void __set(_SimdWrapper<_Tp, _Np>& __k, int __i,
+			      bool __x) noexcept
   {
     if constexpr (std::is_same_v<_Tp, bool>)
       __k.__set(__i, __x);
     else
-      __k._M_data[__i] = __bit_cast<_Tp>(__int_for_sizeof_t<_Tp>(-__x));
+      {
+	using _Ip = __int_for_sizeof_t<_Tp>;
+	auto __ki = __vector_bitcast<_Ip>(__k._M_data);
+	if (__builtin_is_constant_evaluated())
+	  {
+	    __k = __vector_bitcast<_Tp>(
+	      __generate_from_n_evaluations<_Np, decltype(__ki)>([&](auto __j) {
+		if (__i == __j)
+		  return _Ip(-__x);
+		else
+		  return __ki[+__j];
+	      }));
+	  }
+	else
+	  {
+	    __ki[__i] = _Ip(-__x);
+	    __k = __vector_bitcast<_Tp>(__ki);
+	  }
+      }
   }
 
   // __masked_assign{{{2

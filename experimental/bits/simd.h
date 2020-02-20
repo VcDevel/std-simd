@@ -2197,7 +2197,7 @@ struct _SimdWrapper<
   {
     return _M_data & (_BuiltinType(1) << __i);
   }
-  _GLIBCXX_SIMD_INTRINSIC void __set(size_t __i, value_type __x)
+  _GLIBCXX_SIMD_INTRINSIC constexpr void __set(size_t __i, value_type __x)
   {
     if (__x)
       _M_data |= (_BuiltinType(1) << __i);
@@ -2298,7 +2298,7 @@ struct _SimdWrapper<
     return _M_data[__i];
   }
 
-  _GLIBCXX_SIMD_INTRINSIC void __set(size_t __i, _Tp __x)
+  _GLIBCXX_SIMD_INTRINSIC constexpr void __set(size_t __i, _Tp __x)
   {
     _M_data[__i] = __x;
   }
@@ -4188,10 +4188,11 @@ public:
   // private_init generator ctor {{{
   template <typename _Fp,
 	    typename = decltype(bool(std::declval<_Fp>()(size_t())))>
-  _GLIBCXX_SIMD_INTRINSIC simd_mask(_PrivateInit, _Fp&& __gen)
+  _GLIBCXX_SIMD_INTRINSIC constexpr simd_mask(_PrivateInit, _Fp&& __gen)
+    : _M_data()
   {
     __execute_n_times<size()>(
-      [&](auto __i) { _Impl::__set(_M_data, __i, __gen(__i)); });
+      [&](auto __i) constexpr { _Impl::__set(_M_data, __i, __gen(__i)); });
   }
 
   // }}}
