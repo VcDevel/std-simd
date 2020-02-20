@@ -1087,122 +1087,6 @@ struct _AbisInSimdTuple<_SimdTuple<_Tp, _A0, _A1, _As...>>
 };
 
 // }}}
-// __binary_tree_reduce {{{
-template <size_t _Count, size_t _Begin, typename _Tp, typename... _As,
-	  typename _BinaryOperation>
-auto
-__binary_tree_reduce(const _SimdTuple<_Tp, _As...>& __tup,
-		     const _BinaryOperation& __binary_op) noexcept
-{
-  static_assert(_Count > 0);
-  if constexpr (_Count == 1)
-    return __get_simd_at<_Begin>(__tup);
-  else if constexpr (_Count == 2)
-    return __binary_op(__get_simd_at<_Begin>(__tup),
-		       __get_simd_at<_Begin + 1>(__tup));
-  else
-    {
-      constexpr size_t __left = __next_power_of_2(_Count) / 2;
-      constexpr size_t __right = _Count - __left;
-      return __binary_op(
-	__binary_tree_reduce<__left, _Begin>(__tup, __binary_op),
-	__binary_tree_reduce<__right, _Begin + __left>(__tup, __binary_op));
-    }
-}
-
-// }}}
-// __vec_to_scalar_reduction {{{
-// This helper function implements the second step in a generic fixed_size
-// reduction.
-// -  Input: a tuple of native simd (or scalar) objects of decreasing size.
-// - Output: a scalar (the reduction).
-// - Approach:
-//   1. reduce the first two tuple elements
-//      a) If the number of elements differs by a factor of 2, split the first
-//      object into
-//         two objects of the second type and reduce all three to one object of
-//         second type.
-//      b) If the number of elements differs by a factor of 4, split the first
-//      object into
-//         two equally sized objects, reduce, and split to two objects of the
-//         second type. Finally, reduce all three remaining objects to one
-//         object of second type.
-//      c) Otherwise use std::experimental::reduce to reduce both inputs to a
-//      scalar, and binary_op to
-//         reduce to a single scalar.
-//
-//      (This optimizes all native cases on x86, e.g. <AVX512, SSE, Scalar>.)
-//
-//   2. Concate the result of (1) with the remaining tuple elements to recurse
-//   into
-//      __vec_to_scalar_reduction.
-//
-//   3. If __vec_to_scalar_reduction is called with a one-element tuple, call
-//   std::experimental::reduce to
-//      reduce to a scalar and return.
-template <typename _Tp, typename _A0, typename _BinaryOperation>
-_GLIBCXX_SIMD_INTRINSIC _Tp
-__vec_to_scalar_reduction(const _SimdTuple<_Tp, _A0>& __tup,
-			  const _BinaryOperation& __binary_op)
-{
-  return std::experimental::reduce(simd<_Tp, _A0>(__private_init, __tup.first),
-				   __binary_op);
-}
-
-template <typename _Tp, typename _A0, typename _A1, typename... _As,
-	  typename _BinaryOperation>
-_GLIBCXX_SIMD_INTRINSIC _Tp
-__vec_to_scalar_reduction(const _SimdTuple<_Tp, _A0, _A1, _As...>& __tup,
-			  const _BinaryOperation& __binary_op)
-{
-  using _Simd0 = simd<_Tp, _A0>;
-  using _Simd1 = simd<_Tp, _A1>;
-  static_assert(_Simd0::size() != _Simd1::size());
-
-  const _Simd0 __left(__private_init, __tup.first);
-  [[maybe_unused]] const _Simd1 __right(__private_init, __tup.second.first);
-  if constexpr (sizeof(_Simd0) == sizeof(_Simd1) && _A1::_S_is_partial
-		&& std::is_same_v<_BinaryOperation, std::plus<>>)
-    return reduce(__binary_op(__left, _Simd0(__private_init,
-					     _A1::__masked(
-					       __tup.second.first._M_data))),
-		  __binary_op);
-  else if constexpr (sizeof(_Simd0) == sizeof(_Simd1) && _A1::_S_is_partial
-		     && std::is_same_v<_BinaryOperation, std::multiplies<>>)
-    return reduce(
-      __binary_op(__left, _Simd0(__private_init,
-				 __vector_bitcast<_Tp, _Simd0::size()>(
-				   _A1::_CommonImpl::_S_blend(
-				     _A1::template __implicit_mask<_Tp>(),
-				     __data(_Simd1(1)), __tup.second.first)))),
-      __binary_op);
-  else if constexpr (_Simd0::size() == 2 * _Simd1::size()
-		     && !_A1::_S_is_partial)
-    {
-      const auto [__l0, __l1] = split<_Simd1>(__left);
-      const _Simd1 __reduced = __binary_op(__binary_op(__l0, __right), __l1);
-      return __vec_to_scalar_reduction(
-	__simd_tuple_concat(__make_simd_tuple(__reduced), __tup.second.second),
-	__binary_op);
-    }
-  else if constexpr (_Simd0::size() == 4 * _Simd1::size()
-		     && !_A1::_S_is_partial)
-    {
-      using _SimdIntermed = __deduced_simd<_Tp, _Simd0::size() / 2>;
-      const auto [__l0, __l1] = split<_SimdIntermed>(__left);
-      const auto [__m0, __m1] = split<_Simd1>(__binary_op(__l0, __l1));
-      const _Simd1 __reduced = __binary_op(__binary_op(__m0, __right), __m1);
-      return __vec_to_scalar_reduction(
-	__simd_tuple_concat(__make_simd_tuple(__reduced), __tup.second.second),
-	__binary_op);
-    }
-  else // use reduction via scalar
-    return __binary_op(simd<_Tp, simd_abi::scalar>(reduce(__left, __binary_op)),
-		       simd<_Tp, simd_abi::scalar>(
-			 reduce(__right, __binary_op)))[0];
-}
-
-// }}}
 // __autocvt_to_simd {{{
 template <typename _Tp, bool = std::is_arithmetic_v<__remove_cvref_t<_Tp>>>
 struct __autocvt_to_simd
@@ -1508,31 +1392,79 @@ template <int _Np> struct _SimdImplFixedSize
   }
 
   // reductions {{{2
-private:
-  template <typename _Tp, typename... _As, typename _BinaryOperation,
-	    size_t... _Counts, size_t... _Begins>
-  static inline _Tp __reduce(const _SimdTuple<_Tp, _As...>& __tup,
-			     const _BinaryOperation& __binary_op,
-			     std::index_sequence<_Counts...>,
-			     std::index_sequence<_Begins...>)
-  {
-    // 1. reduce all tuple elements with equal ABI to a single element in the
-    // output tuple
-    const auto __reduced_vec = __make_simd_tuple(
-      __binary_tree_reduce<_Counts, _Begins>(__tup, __binary_op)...);
-    // 2. split and reduce until a scalar results
-    return __vec_to_scalar_reduction(__reduced_vec, __binary_op);
-  }
-
-public:
   template <typename _Tp, typename _BinaryOperation>
   static inline _Tp __reduce(const _Simd<_Tp>& __x,
 			     const _BinaryOperation& __binary_op)
   {
-    using _Ranges = _AbisInSimdTuple<_SimdMember<_Tp>>;
-    return _SimdImplFixedSize::__reduce(__x._M_data, __binary_op,
-					typename _Ranges::_Counts(),
-					typename _Ranges::_Begins());
+    using _Tup = _SimdMember<_Tp>;
+    const _Tup& __tup = __data(__x);
+    if constexpr (_Tup::_S_tuple_size == 1)
+      return _Tup::_FirstAbi::_SimdImpl::__reduce(__tup.template __simd_at<0>(),
+						  __binary_op);
+    else if constexpr (_Tup::_S_tuple_size == 2
+		       && _Tup::size() > 2
+		       && _Tup::_SecondType::size() == 1)
+      {
+	return __binary_op(simd<_Tp, simd_abi::scalar>(
+			     reduce(__tup.template __simd_at<0>(),
+				    __binary_op)),
+			   __tup.template __simd_at<1>())[0];
+      }
+    else if constexpr (_Tup::_S_tuple_size == 2
+		       && _Tup::size() > 4
+		       && _Tup::_SecondType::size() == 2)
+      {
+	return __binary_op(
+	  simd<_Tp, simd_abi::scalar>(
+	    reduce(__tup.template __simd_at<0>(), __binary_op)),
+	  simd<_Tp, simd_abi::scalar>(
+	    reduce(__tup.template __simd_at<1>(), __binary_op)))[0];
+      }
+    else
+      {
+	const auto& __x2
+	  = __call_with_n_evaluations<__div_roundup(_Tup::_S_tuple_size, 2)>(
+	    [](auto __first_simd, auto... __remaining) {
+	      if constexpr (sizeof...(__remaining) == 0)
+		return __first_simd;
+	      else
+		{
+		  using _Tup2
+		    = _SimdTuple<_Tp, typename decltype(__first_simd)::abi_type,
+				 typename decltype(__remaining)::abi_type...>;
+		  return fixed_size_simd<_Tp, _Tup2::size()>(
+		    __private_init,
+		    __make_simd_tuple(__first_simd, __remaining...));
+		}
+	    },
+	    [&](auto __i) {
+	      auto __left = __tup.template __simd_at<2 * __i>();
+	      if constexpr (2 * __i + 1 == _Tup::_S_tuple_size)
+		return __left;
+	      else
+		{
+		  auto __right = __tup.template __simd_at<2 * __i + 1>();
+		  using _LT = decltype(__left);
+		  using _RT = decltype(__right);
+		  if constexpr (_LT::size() == _RT::size())
+		    return __binary_op(__left, __right);
+		  else
+		    {
+		      constexpr
+			typename _LT::mask_type __k(__private_init,
+						    [](auto __j) {
+						      return __j < _RT::size();
+						    });
+		      _LT __ext_right = __left;
+		      where(__k, __ext_right)
+			= __proposed::resizing_simd_cast<_LT>(__right);
+		      where(__k, __left) = __binary_op(__left, __ext_right);
+		      return __left;
+		    }
+		}
+	    });
+	return reduce(__x2, __binary_op);
+      }
   }
 
   // __min, __max {{{2
