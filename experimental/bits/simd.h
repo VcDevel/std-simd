@@ -477,7 +477,7 @@ public:
 };
 
 // }}}
-// __execute_on_index_sequence(_with_return){{{
+// __execute_n_times{{{
 template <typename _Fp, size_t... _I>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
 __execute_on_index_sequence(_Fp&& __f, std::index_sequence<_I...>)
@@ -490,15 +490,6 @@ _GLIBCXX_SIMD_INTRINSIC constexpr void
 __execute_on_index_sequence(_Fp&&, std::index_sequence<>)
 {}
 
-template <typename _R, typename _Fp, size_t... _I>
-_GLIBCXX_SIMD_INTRINSIC constexpr _R
-__execute_on_index_sequence_with_return(_Fp&& __f, std::index_sequence<_I...>)
-{
-  return _R{__f(_SizeConstant<_I>())...};
-}
-
-// }}}
-// __execute_n_times{{{
 template <size_t _Np, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr void
 __execute_n_times(_Fp&& __f)
@@ -509,6 +500,13 @@ __execute_n_times(_Fp&& __f)
 
 // }}}
 // __generate_from_n_evaluations{{{
+template <typename _R, typename _Fp, size_t... _I>
+_GLIBCXX_SIMD_INTRINSIC constexpr _R
+__execute_on_index_sequence_with_return(_Fp&& __f, std::index_sequence<_I...>)
+{
+  return _R{__f(_SizeConstant<_I>())...};
+}
+
 template <size_t _Np, typename _R, typename _Fp>
 _GLIBCXX_SIMD_INTRINSIC constexpr _R
 __generate_from_n_evaluations(_Fp&& __f)
