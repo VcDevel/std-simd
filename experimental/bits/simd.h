@@ -983,6 +983,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
   _Tp _M_bits[_S_array_size];
   static constexpr int _S_unused_bits
     = _Np == 1 ? 0 : _S_array_size * sizeof(_Tp) * CHAR_BIT - _Np;
+  static constexpr _Tp _S_bitmask = +_Tp(~_Tp()) >> _S_unused_bits;
 
   constexpr _BitMask() noexcept = default;
   constexpr _BitMask(unsigned long long __x) noexcept
@@ -1040,7 +1041,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
 	for (int __i = 0; __i < _S_array_size; ++__i)
 	  __r._M_bits[__i] = _M_bits[__i];
 	if constexpr (_S_unused_bits > 0)
-	  __r._M_bits[_S_array_size - 1] &= _Tp(_Tp(~_Tp()) >> _S_unused_bits);
+	  __r._M_bits[_S_array_size - 1] &= _S_bitmask;
 	return __r;
       }
   }
@@ -1096,7 +1097,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
 	for (int __i = 0; __i < _S_array_size - 1; ++__i)
 	  if (_M_bits[__i] != __allbits)
 	    return false;
-	return _M_bits[_S_array_size - 1] == (__allbits >> _S_unused_bits);
+	return _M_bits[_S_array_size - 1] == _S_bitmask;
       }
   }
 
@@ -1219,7 +1220,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
 	  __result._M_bits[__i] = ~_M_bits[__i];
 	if constexpr (_Sanitized)
 	  __result._M_bits[_S_array_size - 1]
-	    = _M_bits[_S_array_size - 1] ^ _Tp(_Tp(~_Tp()) >> _S_unused_bits);
+	    = _M_bits[_S_array_size - 1] ^ _S_bitmask;
 	else
 	  __result._M_bits[_S_array_size - 1] = ~_M_bits[_S_array_size - 1];
 	return __result;
