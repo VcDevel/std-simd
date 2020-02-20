@@ -3176,6 +3176,9 @@ _GLIBCXX_SIMD_INTRINSIC typename _V::value_type
 reduce(const const_where_expression<_M, _V>& __x,
        typename _V::value_type __identity_element, _BinaryOperation __binary_op)
 {
+  if (__builtin_expect(none_of(__get_mask(__x)), false))
+    return __identity_element;
+
   _V __tmp = __identity_element;
   _V::_Impl::__masked_assign(__data(__get_mask(__x)), __data(__tmp),
 			     __data(__get_lvalue(__x)));
