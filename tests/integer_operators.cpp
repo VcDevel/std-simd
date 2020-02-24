@@ -34,18 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 #include "testtypes.h"
 
-// make_value_unknown {{{1
-template <class T> T make_value_unknown(const T& x)
-{
-    if constexpr (std::is_constructible_v<T, const volatile T&>) {
-        const volatile T& y = x;
-        return y;
-    } else {
-        T y = x;
-        asm("" : "+m"(y));
-        return y;
-    }
-}
+using vir::test::make_value_unknown;
 
 // for_constexpr {{{1
 template <typename T, T Begin, T End, T Stride = 1, typename F>
@@ -175,8 +164,9 @@ TEST_TYPES(V, operators, all_test_types)  //{{{1
             // - negative LHS is implementation defined
             // - negative RHS or RHS >= #bits is UB
             // - no other UB
-            COMPARE(V(~T()) >> V(0), V(~T()));
-            for (int s = 1; s < nbits; ++s) {
+	    COMPARE(NOINLINE(V(~T()) >> V(0)), V(~T()));
+	    COMPARE(NOINLINE(V(~T()) >> V(make_value_unknown(0))), V(~T()));
+	    for (int s = 1; s < nbits; ++s) {
                 COMPARE(V(~T()) >> V(s), V(T(~T()) >> s)) << "s: " << s;
             }
             for (int s = 1; s < nbits; ++s) {
