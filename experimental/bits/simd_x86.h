@@ -690,8 +690,17 @@ struct _CommonImplX86 : _CommonImplBuiltin
   _S_blend(_SimdWrapper<_Tp, _Np> __k, _SimdWrapper<_Tp, _Np> __at0,
 	   _SimdWrapper<_Tp, _Np> __at1)
   {
-    if constexpr (((__have_avx512f && sizeof(__at0) == 64) || __have_avx512vl)
-		  && (sizeof(_Tp) >= 4 || __have_avx512bw))
+    if (__builtin_is_constant_evaluated()
+	|| (__k._M_is_constprop() && __at0._M_is_constprop()
+	    && __at1._M_is_constprop()))
+      {
+	auto __r = __or(__andnot(__k, __at0), __and(__k, __at1));
+	if (__r._M_is_constprop())
+	  return __r;
+      }
+    if constexpr (((__have_avx512f && sizeof(__at0) == 64)
+			|| __have_avx512vl)
+		       && (sizeof(_Tp) >= 4 || __have_avx512bw))
       // convert to bitmask and call overload above
       return _S_blend(_SimdWrapper<bool, _Np>(
 			__make_dependent_t<_Tp, _MaskImplX86Mixin>::__to_bits(
@@ -1262,7 +1271,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _V __multiplies(_V __x, _V __y)
   {
     using _Tp = typename _VVT::value_type;
-    if (__builtin_is_constant_evaluated())
+    if (__builtin_is_constant_evaluated() || __x._M_is_constprop()
+	|| __y._M_is_constprop())
       return __as_vector(__x) * __as_vector(__y);
     else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 2)
       {
@@ -1735,7 +1745,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     _V __x = __xx;
     [[maybe_unused]] const auto __ix = __to_intrin(__x);
     [[maybe_unused]] const auto __iy = __to_intrin(__y);
-    if (__builtin_is_constant_evaluated())
+    if (__builtin_is_constant_evaluated()
+	|| (__builtin_constant_p(__x) && __builtin_constant_p(__y)))
       return __x >> __y;
     else if constexpr (sizeof(_Up) == 1) //{{{
       {
@@ -2026,8 +2037,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	      0x4f00'0000u - (__vector_bitcast<unsigned, 4>(__y) << 23));
 	    const __m128i __factor
 	      = __builtin_constant_p(__factor_f) ? __to_intrin(
-		  __make_vector<int>(__factor_f[0], __factor_f[1],
-				     __factor_f[2], __factor_f[3]))
+		  __make_vector<unsigned>(__factor_f[0], __factor_f[1],
+					  __factor_f[2], __factor_f[3]))
 						 : _mm_cvttps_epi32(__factor_f);
 	    const auto __r02
 	      = _mm_srli_epi64(_mm_mul_epu32(__ix, __factor), 31);
@@ -3932,17 +3943,19 @@ struct _MaskImplX86Mixin
   {
     if constexpr (is_same_v<_Tp, bool>)
       return _BitMask<_Np>(__x._M_data)._M_sanitized();
-    else if (__builtin_is_constant_evaluated())
-      {
-	using _I = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
-	const auto __bools = __vector_bitcast<_I>(__x) ? _I(1) : _I(0);
-	_ULLong __k = 0;
-	for (size_t i = 0; i < _Np; ++i)
-	  __k |= (_ULLong(__bools[i]) << i);
-	return __k;
-      }
     else
       {
+	if (__builtin_is_constant_evaluated() || __builtin_constant_p(__x._M_data))
+	  {
+	    using _I = __int_for_sizeof_t<_Tp>;
+	    const auto __bools = -__vector_bitcast<_I>(__x);
+	    _ULLong __k = 0;
+	    __execute_n_times<_Np>([&](auto __i) {
+	      __k |= (_ULLong(__bools[int(__i)]) << __i);
+	      });
+	    if(__builtin_is_constant_evaluated() || __builtin_constant_p(__k))
+	      return __k;
+	  }
 	const auto __xi = __to_intrin(__x);
 	if constexpr (is_floating_point_v<_Tp>)
 	  if constexpr (sizeof(_Tp) == 4) // float

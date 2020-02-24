@@ -292,6 +292,15 @@ template <typename _FirstType, typename _SecondType> struct _SimdTupleData
 {
   _FirstType first;
   _SecondType second;
+
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    if constexpr(is_class_v<_FirstType>)
+      return first._M_is_constprop() && second._M_is_constprop();
+    else
+      return __builtin_constant_p(first) && second._M_is_constprop();
+  }
 };
 
 template <typename _FirstType, typename _Tp>
@@ -299,6 +308,15 @@ struct _SimdTupleData<_FirstType, _SimdTuple<_Tp>>
 {
   _FirstType first;
   static constexpr _SimdTuple<_Tp> second = {};
+
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    if constexpr(is_class_v<_FirstType>)
+      return first._M_is_constprop();
+    else
+      return __builtin_constant_p(first);
+  }
 };
 
 // 1 or more {{{2

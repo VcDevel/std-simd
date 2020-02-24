@@ -1264,6 +1264,20 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
     __r &= __b;
     return __r;
   }
+
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    if constexpr (_S_array_size == 0)
+      return __builtin_constant_p(_M_bits[0]);
+    else
+      {
+	for (int __i = 0; __i < _S_array_size; ++__i)
+	  if (!__builtin_constant_p(_M_bits[__i]))
+	    return false;
+	return true;
+      }
+  }
 };
 
 // }}}
@@ -2203,6 +2217,12 @@ struct _SimdWrapper<
       _M_data &= ~(_BuiltinType(1) << __i);
   }
 
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    return __builtin_constant_p(_M_data);
+  }
+
   _BuiltinType _M_data;
 };
 
@@ -2299,6 +2319,12 @@ struct _SimdWrapper<
   _GLIBCXX_SIMD_INTRINSIC constexpr void __set(size_t __i, _Tp __x)
   {
     _M_data[__i] = __x;
+  }
+
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    return __builtin_constant_p(_M_data);
   }
 };
 
@@ -4269,6 +4295,17 @@ public:
 #endif // _GLIBCXX_SIMD_ENABLE_IMPLICIT_MASK_CAST
 #endif // __GXX_CONDITIONAL_IS_OVERLOADABLE__
   // }}}
+  // _M_is_constprop {{{
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    if constexpr (__is_scalar_abi<_Abi>())
+      return __builtin_constant_p(_M_data);
+    else
+      return _M_data._M_is_constprop();
+  }
+
+  // }}}
 
 private:
   friend const auto& __data<_Tp, abi_type>(const simd_mask&);
@@ -4298,7 +4335,7 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 all_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
 	if (!__k[__i])
@@ -4312,7 +4349,7 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 any_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
 	if (__k[__i])
@@ -4326,7 +4363,7 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 none_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
 	if (__k[__i])
@@ -4340,7 +4377,7 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 some_of(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = 1; __i < simd_size_v<_Tp, _Abi>; ++__i)
 	if (__k[__i] != __k[__i - 1])
@@ -4354,7 +4391,7 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 popcount(const simd_mask<_Tp, _Abi>& __k) noexcept
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       int __r = 0;
       for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
@@ -4369,12 +4406,12 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 find_first_set(const simd_mask<_Tp, _Abi>& __k)
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = 0; __i < simd_size_v<_Tp, _Abi>; ++__i)
 	if (__k[__i])
 	  return __i;
-      // no return to make none_of(__k) ill-formed
+      __builtin_unreachable(); // make none_of(__k) UB/ill-formed
     }
   else
     return _Abi::_MaskImpl::__find_first_set(__k);
@@ -4383,12 +4420,12 @@ template <typename _Tp, typename _Abi>
 _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 find_last_set(const simd_mask<_Tp, _Abi>& __k)
 {
-  if (__builtin_is_constant_evaluated())
+  if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
     {
       for (size_t __i = simd_size_v<_Tp, _Abi>; __i > 0; --__i)
 	if (__k[__i - 1])
 	  return __i - 1;
-      // no return to make none_of(__k) ill-formed
+      __builtin_unreachable(); // make none_of(__k) UB/ill-formed
     }
   else
     return _Abi::_MaskImpl::__find_last_set(__k);
@@ -4782,6 +4819,15 @@ public:
     : _M_data()
   {
     where(mask_type(__bitset_init, __init), *this) = ~*this;
+  }
+
+  _GLIBCXX_SIMD_INTRINSIC
+  constexpr bool _M_is_constprop() const
+  {
+    if constexpr (__is_scalar_abi<_Abi>())
+      return __builtin_constant_p(_M_data);
+    else
+      return _M_data._M_is_constprop();
   }
 
 private:
