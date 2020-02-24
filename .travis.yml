@@ -1,27 +1,14 @@
 language: cpp
 
-cache: ccache
-
-os:
-    - linux
-
-compiler:
-    - gcc
-
-matrix:
-    exclude:
-        - env: arch=aarch64
-          os: osx
-
-dist: xenial
-
+os: linux
+dist: bionic
 addons:
   apt:
     sources:
-      - ppa:ubuntu-toolchain-r/test
+      - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
+      - libboost-all-dev
       - g++-9
-
 env:
   - CC=gcc-9 CXX=g++-9 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2
 

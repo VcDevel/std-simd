@@ -1,6 +1,6 @@
 // Simd _Combine ABI specific implementations -*- C++ -*-
 
-// Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+// Copyright © 2015-2020 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,16 +35,14 @@ _GLIBCXX_SIMD_BEGIN_NAMESPACE
 template <int _Np, typename _Abi> struct _SimdImplCombine;
 template <int _Np, typename _Abi> struct _MaskImplCombine;
 // simd_abi::_Combine {{{
-template <int _Np, typename _Abi>
-struct simd_abi::_Combine
+template <int _Np, typename _Abi> struct simd_abi::_Combine
 {
   template <typename _Tp>
   static constexpr size_t size = _Np* _Abi::template size<_Tp>;
-  template <typename _Tp>
-  static constexpr size_t _S_full_size = size<_Tp>;
+  template <typename _Tp> static constexpr size_t _S_full_size = size<_Tp>;
 
   static constexpr int _S_factor = _Np;
-  using _MemberAbi               = _Abi;
+  using _MemberAbi = _Abi;
 
   // validity traits {{{
   // allow 2x, 3x, and 4x "unroll"
@@ -58,7 +56,7 @@ struct simd_abi::_Combine
   };
   template <typename _Tp>
   struct _IsValid
-  : conjunction<_IsValidAbiTag, typename _Abi::template _IsValid<_Tp>>
+    : conjunction<_IsValidAbiTag, typename _Abi::template _IsValid<_Tp>>
   {
   };
   template <typename _Tp>
@@ -76,22 +74,21 @@ struct simd_abi::_Combine
   {
   };
 
-  template <typename _Tp>
-  struct __traits<_Tp, true>
+  template <typename _Tp> struct __traits<_Tp, true>
   {
-    using _IsValid  = true_type;
+    using _IsValid = true_type;
     using _SimdImpl = _SimdImplCombine<_Np, _Abi>;
     using _MaskImpl = _MaskImplCombine<_Np, _Abi>;
 
     // simd and simd_mask member types {{{
-    using _SimdMember =
-      std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
-    using _MaskMember =
-      std::array<typename _Abi::template __traits<_Tp>::_MaskMember, _Np>;
-    static constexpr size_t _S_simd_align =
-      _Abi::template __traits<_Tp>::_S_simd_align;
-    static constexpr size_t _S_mask_align =
-      _Abi::template __traits<_Tp>::_S_mask_align;
+    using _SimdMember
+      = std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
+    using _MaskMember
+      = std::array<typename _Abi::template __traits<_Tp>::_MaskMember, _Np>;
+    static constexpr size_t _S_simd_align
+      = _Abi::template __traits<_Tp>::_S_simd_align;
+    static constexpr size_t _S_mask_align
+      = _Abi::template __traits<_Tp>::_S_mask_align;
 
     // }}}
     // _SimdBase / base class for simd, providing extra conversions {{{
@@ -118,10 +115,7 @@ struct simd_abi::_Combine
     // _SimdCastType {{{
     struct _SimdCastType
     {
-      _SimdCastType(const _SimdMember& dd)
-      : _M_data(dd)
-      {
-      }
+      _SimdCastType(const _SimdMember& dd) : _M_data(dd) {}
       explicit operator const _SimdMember&() const { return _M_data; }
 
     private:
@@ -132,10 +126,7 @@ struct simd_abi::_Combine
     // _MaskCastType {{{
     struct _MaskCastType
     {
-      _MaskCastType(const _MaskMember& dd)
-      : _M_data(dd)
-      {
-      }
+      _MaskCastType(const _MaskMember& dd) : _M_data(dd) {}
       explicit operator const _MaskMember&() const { return _M_data; }
 
     private:
@@ -147,56 +138,54 @@ struct simd_abi::_Combine
 };
 
 // }}}
-template <int _Np, typename _Abi>
-struct _SimdImplCombine
+template <int _Np, typename _Abi> struct _SimdImplCombine
 {
   // member types {{{
   using abi_type = simd_abi::_Combine<_Np, _Abi>;
-  template <typename _Tp> using _TypeTag = _Tp *;
+  template <typename _Tp> using _TypeTag = _Tp*;
   using _PartImpl = typename _Abi::_SimdImpl;
   template <typename _Tp>
-  using _SimdMember =
-    std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
+  using _SimdMember
+    = std::array<typename _Abi::template __traits<_Tp>::_SimdMember, _Np>;
 
   // }}}
   // broadcast {{{
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdMember<_Tp>
-    __broadcast(_Tp __x) noexcept
+  __broadcast(_Tp __x) noexcept
   {
-    return __generate_from_n_evaluations<_Np, _SimdMember<_Tp>>(
-      [&](int) constexpr { return _PartImpl::__broadcast(__x); });
+    return __generate_from_n_evaluations<_Np, _SimdMember<_Tp>>([&](
+      int) constexpr { return _PartImpl::__broadcast(__x); });
   }
 
   // }}}
   // load {{{
-//X   template <typename _Tp, typename _Up, typename _Fp>
-//X   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
-//X     __load(const _U* __mem, _Fp, _TypeTag<_Tp> __x) noexcept
-//X   {
-//X     return __generate_from_n_evaluations<_Np, _Tp>(
-//X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i * __part_size<_Tp>, _Fp{}, __x); });
-//X   }
-//X 
+  // X   template <typename _Tp, typename _Up, typename _Fp>
+  // X   _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+  // X     __load(const _U* __mem, _Fp, _TypeTag<_Tp> __x) noexcept
+  // X   {
+  // X     return __generate_from_n_evaluations<_Np, _Tp>(
+  // X       [&](auto __i) constexpr { return _PartImpl::__load(__mem + __i *
+  // __part_size<_Tp>, _Fp{}, __x); }); X   }
+  // X
   // }}}
 };
-template <int _Np, typename _MemberAbi>
-struct _MaskImplCombine
+template <int _Np, typename _MemberAbi> struct _MaskImplCombine
 {
-  using _Abi            = simd_abi::_Combine<_Np, _MemberAbi>;
+  using _Abi = simd_abi::_Combine<_Np, _MemberAbi>;
   using _MemberMaskImpl = typename _MemberAbi::_MaskImpl;
-  template <typename _Tp>
-  using _MemberSimdMask = simd_mask<_Tp, _MemberAbi>;
+  template <typename _Tp> using _MemberSimdMask = simd_mask<_Tp, _MemberAbi>;
 
   // __all_of {{{
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
   {
-    bool __r =
-      _MemberMaskImpl::__all_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    bool __r
+      = _MemberMaskImpl::__all_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
     __execute_n_times<_Np - 1>([&](auto __i) {
-      __r = __r && _MemberMaskImpl::__all_of(
-		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+      __r = __r
+	    && _MemberMaskImpl::__all_of(
+	      _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
     });
     return __r;
   }
@@ -206,11 +195,12 @@ struct _MaskImplCombine
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
   {
-    bool __r =
-      _MemberMaskImpl::__any_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    bool __r
+      = _MemberMaskImpl::__any_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
     __execute_n_times<_Np - 1>([&](auto __i) {
-      __r = __r || _MemberMaskImpl::__any_of(
-		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+      __r = __r
+	    || _MemberMaskImpl::__any_of(
+	      _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
     });
     return __r;
   }
@@ -220,11 +210,12 @@ struct _MaskImplCombine
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
   {
-    bool __r =
-      _MemberMaskImpl::__none_of(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    bool __r = _MemberMaskImpl::__none_of(
+      _MemberSimdMask<_Tp>(__private_init, __k[0]));
     __execute_n_times<_Np - 1>([&](auto __i) {
-      __r = __r && _MemberMaskImpl::__none_of(
-		     _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
+      __r = __r
+	    && _MemberMaskImpl::__none_of(
+	      _MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
     });
     return __r;
   }
@@ -242,8 +233,8 @@ struct _MaskImplCombine
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
   {
-    int __count =
-      _MemberMaskImpl::__popcount(_MemberSimdMask<_Tp>(__private_init, __k[0]));
+    int __count = _MemberMaskImpl::__popcount(
+      _MemberSimdMask<_Tp>(__private_init, __k[0]));
     __execute_n_times<_Np - 1>([&](auto __i) {
       __count += _MemberMaskImpl::__popcount(
 	_MemberSimdMask<_Tp>(__private_init, __k[__i + 1]));
@@ -259,11 +250,13 @@ struct _MaskImplCombine
     for (int __i = 0; __i < _Np - 1; ++__i)
       if (_MemberMaskImpl::__any_of(
 	    _MemberSimdMask<_Tp>(__private_init, __k[__i])))
-	return __i * simd_size_v<_Tp, _MemberAbi> +
-	       _MemberMaskImpl::__find_first_set(
-		 _MemberSimdMask<_Tp>(__private_init, __k[__i]));
-    return (_Np - 1) * simd_size_v<_Tp, _MemberAbi> +
-	   __find_first_set(__k[_Abi::_S_factor - 1]);
+	return __i
+		 * simd_size_v<
+		   _Tp,
+		   _MemberAbi> + _MemberMaskImpl::__find_first_set(_MemberSimdMask<_Tp>(__private_init, __k[__i]));
+    return (_Np - 1)
+	     * simd_size_v<
+	       _Tp, _MemberAbi> + __find_first_set(__k[_Abi::_S_factor - 1]);
   }
 
   // }}}
@@ -275,17 +268,20 @@ struct _MaskImplCombine
     for (int __i = 0; __i < _Np - 1; ++__i)
       if (_MemberMaskImpl::__any_of(
 	    _MemberSimdMask<_Tp>(__private_init, __k[__i])))
-	return __i * simd_size_v<_Tp, _MemberAbi> +
-	       _MemberMaskImpl::__find_last_set(
-		 _MemberSimdMask<_Tp>(__private_init, __k[__i]));
-    return (_Np - 1) * simd_size_v<_Tp, _MemberAbi> +
-	   __find_last_set(__k[_Abi::_S_factor - 1]);
+	return __i
+		 * simd_size_v<
+		   _Tp,
+		   _MemberAbi> + _MemberMaskImpl::__find_last_set(_MemberSimdMask<_Tp>(__private_init, __k[__i]));
+    return (_Np - 1)
+	     * simd_size_v<
+	       _Tp, _MemberAbi> + __find_last_set(__k[_Abi::_S_factor - 1]);
   }
 
   // }}}
 };
 
 _GLIBCXX_SIMD_END_NAMESPACE
-#endif  // __cplusplus >= 201703L
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD_COMBINE_H_
+#endif // __cplusplus >= 201703L
+#endif // _GLIBCXX_EXPERIMENTAL_SIMD_COMBINE_H_
+
 // vim: foldmethod=marker sw=2 noet ts=8 sts=2 tw=80

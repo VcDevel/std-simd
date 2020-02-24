@@ -1,6 +1,6 @@
 // Debug utilities for use in the simd implementation -*- C++ -*-
 
-// Copyright © 2015-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+// Copyright © 2015-2020 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 //                       Matthias Kretz <m.kretz@gsi.de>
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,20 +36,22 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#endif  // _GLIBCXX_SIMD_ENABLE_DEBUG
+#endif // _GLIBCXX_SIMD_ENABLE_DEBUG
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
 template <typename... T>
-[[__gnu__::__noinline__]] void __tag()
+[[__gnu__::__noinline__]] void
+__tag()
 {
   asm("");
 }
 
-enum class __area : unsigned {
-    __disabled = 0,
-    __enabled = 1,
-    __ = __enabled,
+enum class __area : unsigned
+{
+  __disabled = 0,
+  __enabled = 1,
+  __ = __enabled,
 
 #ifdef _GLIBCXX_SIMD_DEBUG
 
@@ -60,12 +62,12 @@ enum class __area : unsigned {
 #define _Logarithm  0x0000000000000010ull
 #define _Frexp      0x0000000000000020ull
 
-    __Sine       = ((_GLIBCXX_SIMD_DEBUG) &       _Sine) ? __enabled : __disabled,
-    __Cosine     = ((_GLIBCXX_SIMD_DEBUG) &     _Cosine) ? __enabled : __disabled,
-    __SIMD_TUPLE = ((_GLIBCXX_SIMD_DEBUG) & _SIMD_TUPLE) ? __enabled : __disabled,
-    __Simd_view  = ((_GLIBCXX_SIMD_DEBUG) & _Simd_view ) ? __enabled : __disabled,
-    __Logarithm  = ((_GLIBCXX_SIMD_DEBUG) & _Logarithm ) ? __enabled : __disabled,
-    __Frexp      = ((_GLIBCXX_SIMD_DEBUG) &     _Frexp ) ? __enabled : __disabled,
+  __Sine       = ((_GLIBCXX_SIMD_DEBUG) &       _Sine) ? __enabled : __disabled,
+  __Cosine     = ((_GLIBCXX_SIMD_DEBUG) &     _Cosine) ? __enabled : __disabled,
+  __SIMD_TUPLE = ((_GLIBCXX_SIMD_DEBUG) & _SIMD_TUPLE) ? __enabled : __disabled,
+  __Simd_view  = ((_GLIBCXX_SIMD_DEBUG) & _Simd_view ) ? __enabled : __disabled,
+  __Logarithm  = ((_GLIBCXX_SIMD_DEBUG) & _Logarithm ) ? __enabled : __disabled,
+  __Frexp      = ((_GLIBCXX_SIMD_DEBUG) &     _Frexp ) ? __enabled : __disabled,
 #undef _Sine
 #undef _Cosine
 #undef _SIMD_TUPLE
@@ -76,18 +78,19 @@ enum class __area : unsigned {
 #undef _GLIBCXX_SIMD_DEBUG
 
 #else // _GLIBCXX_SIMD_DEBUG
-    __Sine = __disabled,
-    __Cosine = __disabled,
-    __SIMD_TUPLE = __disabled,
-    __Simd_view  = __disabled,
-    __Logarithm  = __disabled,
-    __Frexp = __disabled,
+  __Sine = __disabled,
+  __Cosine = __disabled,
+  __SIMD_TUPLE = __disabled,
+  __Simd_view = __disabled,
+  __Logarithm = __disabled,
+  __Frexp = __disabled,
 #endif // _GLIBCXX_SIMD_DEBUG
 };
 
-#define _GLIBCXX_SIMD_DEBUG(_Area)                                                       \
-    std::experimental::__debug_stream<std::experimental::__area::_##_Area>(              \
-        __PRETTY_FUNCTION__, __FILE__, __LINE__, std::experimental::__debug_instr_ptr())
+#define _GLIBCXX_SIMD_DEBUG(_Area)                                             \
+  std::experimental::__debug_stream<std::experimental::__area::_##_Area>(      \
+    __PRETTY_FUNCTION__, __FILE__, __LINE__,                                   \
+    std::experimental::__debug_instr_ptr())
 
 #ifdef _GLIBCXX_SIMD_ENABLE_DEBUG
 #define _GLIBCXX_SIMD_PRETTY_PRINT(var_) std::setw(16), #var_ " = ", (var_)
@@ -95,31 +98,34 @@ enum class __area : unsigned {
 #define _GLIBCXX_SIMD_CONCAT_IMPL(a_, b_, c_) a_##b_##c_
 #define _GLIBCXX_SIMD_CONCAT(a_, b_, c_) _GLIBCXX_SIMD_CONCAT_IMPL(a_, b_, c_)
 
-#define _GLIBCXX_SIMD_DEBUG_DEFERRED(_Area, ...)                                         \
-    const auto &_GLIBCXX_SIMD_CONCAT(_GLIBCXX_SIMD_deferred_, __LINE__, _) =             \
-        __defer([&]() { _GLIBCXX_SIMD_DEBUG(_Area)                                       \
-                        (__VA_ARGS__); });
-#else   // _GLIBCXX_SIMD_ENABLE_DEBUG
+#define _GLIBCXX_SIMD_DEBUG_DEFERRED(_Area, ...)                               \
+  const auto& _GLIBCXX_SIMD_CONCAT(_GLIBCXX_SIMD_deferred_, __LINE__, _)       \
+    = __defer([&]() {                                                          \
+	_GLIBCXX_SIMD_DEBUG(_Area)                                             \
+	(__VA_ARGS__);                                                         \
+      });
+#else // _GLIBCXX_SIMD_ENABLE_DEBUG
 #define _GLIBCXX_SIMD_PRETTY_PRINT(var_) (var_)
 
 #define _GLIBCXX_SIMD_DEBUG_DEFERRED(_Area, ...)
-#endif  // _GLIBCXX_SIMD_ENABLE_DEBUG
+#endif // _GLIBCXX_SIMD_ENABLE_DEBUG
 
-_GLIBCXX_SIMD_ALWAYS_INLINE void *__debug_instr_ptr()
+_GLIBCXX_SIMD_ALWAYS_INLINE void*
+__debug_instr_ptr()
 {
   void* __ip = nullptr;
 #if defined _GLIBCXX_SIMD_ENABLE_DEBUG
 #ifdef __x86_64__
-    asm volatile("lea 0(%%rip),%0" : "=r"(__ip));
+  asm volatile("lea 0(%%rip),%0" : "=r"(__ip));
 #elif defined __i386__
-    asm volatile("1: movl $1b,%0" : "=r"(__ip));
+  asm volatile("1: movl $1b,%0" : "=r"(__ip));
 #elif defined __arm__
-    asm volatile("mov %0,pc" : "=r"(__ip));
+  asm volatile("mov %0,pc" : "=r"(__ip));
 #elif defined __aarch64__
-    asm volatile("adr %0,." : "=r"(__ip));
+  asm volatile("adr %0,." : "=r"(__ip));
 #endif
-#endif  //__GNUC__
-    return __ip;
+#endif //_GLIBCXX_SIMD_ENABLE_DEBUG
+  return __ip;
 }
 
 template <__area> class __debug_stream;
@@ -127,24 +133,24 @@ template <__area> class __debug_stream;
 #ifdef _GLIBCXX_SIMD_ENABLE_DEBUG
 template <> class __debug_stream<__area::__enabled>
 {
-    std::stringstream __buffer;
-    int __color = 31;
+  std::stringstream __buffer;
+  int __color = 31;
 
 public:
-    __debug_stream(const char *__func, const char *__file, int __line, void *__instr_ptr)
-    {
-        __buffer << "\033[1;40;" << __color << "mDEBUG: " << __file << ':' << __line
-                 << " @ " << __instr_ptr << "\n       " << __func;
-    }
+  __debug_stream(const char* __func, const char* __file, int __line,
+		 void* __instr_ptr)
+  {
+    __buffer << "\033[1;40;" << __color << "mDEBUG: " << __file << ':' << __line
+	     << " @ " << __instr_ptr << "\n       " << __func;
+  }
 
-    ~__debug_stream()
-    {
-        __buffer << "\033[0m\n";
-        std::cout << __buffer.str() << std::flush;
-    }
+  ~__debug_stream()
+  {
+    __buffer << "\033[0m\n";
+    std::cout << __buffer.str() << std::flush;
+  }
 
-  template <typename... _Ts>
-  __debug_stream& operator()(const _Ts&... __args)
+  template <typename... _Ts> __debug_stream& operator()(const _Ts&... __args)
   {
     __color = __color > 37 ? 30 : __color + 1;
     __buffer << "\n\033[1;40;" << __color << "m      ";
@@ -153,7 +159,8 @@ public:
   }
 
 private:
-  template <typename _Tp, typename = decltype(__buffer << std::declval<const _Tp&>())>
+  template <typename _Tp,
+	    typename = decltype(__buffer << std::declval<const _Tp&>())>
   void __print(const _Tp& __x, int)
   {
     __buffer << ' ' << __x;
@@ -173,13 +180,12 @@ private:
   }
 
   static char hexChar(char __x) { return __x + (__x > 9 ? 87 : 48); }
-  template <typename _Tp>
-  void __print(const _Tp& __x, ...)
+  template <typename _Tp> void __print(const _Tp& __x, ...)
   {
     __buffer.put(' ');
-    using _Bytes   = char[sizeof(_Tp)];
+    using _Bytes = char[sizeof(_Tp)];
     auto&& __bytes = reinterpret_cast<const _Bytes&>(__x);
-    int    __i     = -1;
+    int __i = -1;
     for (const unsigned char __b : __bytes)
       {
 	if (++__i && (__i & 0x3) == 0)
@@ -191,32 +197,40 @@ private:
       }
   }
 };
-#endif  // _GLIBCXX_SIMD_ENABLE_DEBUGGING
+#endif // _GLIBCXX_SIMD_ENABLE_DEBUGGING
 
 template <> class __debug_stream<__area::__disabled>
 {
 public:
-    __debug_stream(const char *, const char *, int, void *) {}
-    template <typename... _Ts> const __debug_stream &operator()(_Ts &&...) const { return *this; }
+  __debug_stream(const char*, const char*, int, void*) {}
+  template <typename... _Ts> const __debug_stream& operator()(_Ts&&...) const
+  {
+    return *this;
+  }
 };
 
 template <typename _Fp> class __defer_raii
 {
 public:
-    // construct the object from the given callable
-    template <typename _FF> __defer_raii(_FF &&__f) : __cleanup_function(static_cast<_FF&&>(__f))
-    {
-    }
+  // construct the object from the given callable
+  template <typename _FF>
+  __defer_raii(_FF&& __f) : __cleanup_function(static_cast<_FF&&>(__f))
+  {}
 
-    // when the object goes out of scope call the cleanup function
-    ~__defer_raii() { __cleanup_function(); }
+  // when the object goes out of scope call the cleanup function
+  ~__defer_raii() { __cleanup_function(); }
 
 private:
-    _Fp __cleanup_function;
+  _Fp __cleanup_function;
 };
 
-template <typename _Fp> __defer_raii<_Fp> __defer(_Fp &&__f) { return {static_cast<_Fp&&>(__f)}; }
+template <typename _Fp>
+__defer_raii<_Fp>
+__defer(_Fp&& __f)
+{
+  return {static_cast<_Fp&&>(__f)};
+}
 
 _GLIBCXX_SIMD_END_NAMESPACE
 
-#endif  // _GLIBCXX_EXPERIMENTAL_SIMD_DEBUG_H_
+#endif // _GLIBCXX_EXPERIMENTAL_SIMD_DEBUG_H_

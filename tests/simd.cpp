@@ -909,14 +909,17 @@ TEST_TYPES(V, operator_conversions, current_native_test_types)  //{{{1
         binary_op_return_type<vi8<char>, int, vi8<char>>();
         binary_op_return_type<vi8<char>, vi8<char>, vi8<char>>();
 
-        binary_op_return_type<vi8<short>, vi8<char>>();
-        binary_op_return_type<vi8<int>, vi8<char>>();
-        binary_op_return_type<vi8<long>, vi8<char>>();
-        binary_op_return_type<vi8<llong>, vi8<char>>();
-        binary_op_return_type<vi8<float>, vi8<char>>();
-        binary_op_return_type<vi8<double>, vi8<char>>();
+	if constexpr (vi8<schar>::size() <= simd_abi::max_fixed_size<short>)
+	  {
+	    binary_op_return_type<vi8<short>, vi8<char>>();
+	    binary_op_return_type<vi8<int>, vi8<char>>();
+	    binary_op_return_type<vi8<long>, vi8<char>>();
+	    binary_op_return_type<vi8<llong>, vi8<char>>();
+	    binary_op_return_type<vi8<float>, vi8<char>>();
+	    binary_op_return_type<vi8<double>, vi8<char>>();
+	  }
 
-        VERIFY((is_substitution_failure<vi8<char>, llong>));
+	VERIFY((is_substitution_failure<vi8<char>, llong>));
         VERIFY((is_substitution_failure<vi8<char>, double>));
         VERIFY((is_substitution_failure<vchar, vuchar>));
         COMPARE((is_substitution_failure<vchar, uchar>), std::is_signed_v<char>);
@@ -964,14 +967,17 @@ TEST_TYPES(V, operator_conversions, current_native_test_types)  //{{{1
         binary_op_return_type<vi8<schar>, int, vi8<schar>>();
         binary_op_return_type<vi8<schar>, vi8<schar>, vi8<schar>>();
 
-        binary_op_return_type<vi8<short>, vi8<schar>>();
-        binary_op_return_type<vi8<int>, vi8<schar>>();
-        binary_op_return_type<vi8<long>, vi8<schar>>();
-        binary_op_return_type<vi8<llong>, vi8<schar>>();
-        binary_op_return_type<vi8<float>, vi8<schar>>();
-        binary_op_return_type<vi8<double>, vi8<schar>>();
+	if constexpr (vi8<schar>::size() <= simd_abi::max_fixed_size<short>)
+	  {
+	    binary_op_return_type<vi8<short>, vi8<schar>>();
+	    binary_op_return_type<vi8<int>, vi8<schar>>();
+	    binary_op_return_type<vi8<long>, vi8<schar>>();
+	    binary_op_return_type<vi8<llong>, vi8<schar>>();
+	    binary_op_return_type<vi8<float>, vi8<schar>>();
+	    binary_op_return_type<vi8<double>, vi8<schar>>();
+	  }
 
-        VERIFY((is_substitution_failure<vi8<schar>, llong>));
+	VERIFY((is_substitution_failure<vi8<schar>, llong>));
         VERIFY((is_substitution_failure<vi8<schar>, double>));
         VERIFY((is_substitution_failure<vschar, vuchar>));
         VERIFY((is_substitution_failure<vschar, uchar>));
@@ -1020,18 +1026,21 @@ TEST_TYPES(V, operator_conversions, current_native_test_types)  //{{{1
         binary_op_return_type<vi8<uchar>, uint, vi8<uchar>>();
         binary_op_return_type<vi8<uchar>, vi8<uchar>, vi8<uchar>>();
 
-        binary_op_return_type<vi8<short>, vi8<uchar>>();
-        binary_op_return_type<vi8<ushort>, vi8<uchar>>();
-        binary_op_return_type<vi8<int>, vi8<uchar>>();
-        binary_op_return_type<vi8<uint>, vi8<uchar>>();
-        binary_op_return_type<vi8<long>, vi8<uchar>>();
-        binary_op_return_type<vi8<ulong>, vi8<uchar>>();
-        binary_op_return_type<vi8<llong>, vi8<uchar>>();
-        binary_op_return_type<vi8<ullong>, vi8<uchar>>();
-        binary_op_return_type<vi8<float>, vi8<uchar>>();
-        binary_op_return_type<vi8<double>, vi8<uchar>>();
+	if constexpr (vi8<schar>::size() <= simd_abi::max_fixed_size<short>)
+	  {
+	    binary_op_return_type<vi8<short>, vi8<uchar>>();
+	    binary_op_return_type<vi8<ushort>, vi8<uchar>>();
+	    binary_op_return_type<vi8<int>, vi8<uchar>>();
+	    binary_op_return_type<vi8<uint>, vi8<uchar>>();
+	    binary_op_return_type<vi8<long>, vi8<uchar>>();
+	    binary_op_return_type<vi8<ulong>, vi8<uchar>>();
+	    binary_op_return_type<vi8<llong>, vi8<uchar>>();
+	    binary_op_return_type<vi8<ullong>, vi8<uchar>>();
+	    binary_op_return_type<vi8<float>, vi8<uchar>>();
+	    binary_op_return_type<vi8<double>, vi8<uchar>>();
+	  }
 
-        VERIFY((is_substitution_failure<vi8<uchar>, ullong>));
+	VERIFY((is_substitution_failure<vi8<uchar>, ullong>));
         VERIFY((is_substitution_failure<vi8<uchar>, double>));
         VERIFY((is_substitution_failure<vuchar, schar>));
         VERIFY((is_substitution_failure<vuchar, vschar>));
