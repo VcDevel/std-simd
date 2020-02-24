@@ -3332,7 +3332,9 @@ struct _MaskImplX86Mixin
     using _UV = __vector_type_t<_Up, _ToN>;
     using _UI = __intrinsic_type_t<_Up, _ToN>;
     const auto __k = __x._M_to_bits();
-    if constexpr (sizeof(_Up) == 1)
+    if constexpr (_Np == 1)
+      return __to_maskvector<_Up, _ToN>(__k);
+    else if constexpr (sizeof(_Up) == 1)
       {
 	if constexpr (sizeof(_UI) == 16)
 	  {
