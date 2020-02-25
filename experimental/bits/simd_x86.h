@@ -1274,64 +1274,68 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
     if (__builtin_is_constant_evaluated() || __x._M_is_constprop()
 	|| __y._M_is_constprop())
       return __as_vector(__x) * __as_vector(__y);
-    else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 2)
-      {
-	const auto __xs = reinterpret_cast<short>(__x._M_data);
-	const auto __ys = reinterpret_cast<short>(__y._M_data);
-	return reinterpret_cast<__vector_type_t<_Tp, 2>>(
-	  short(((__xs * __ys) & 0xff) | ((__xs >> 8) * (__ys & 0xff00))));
-      }
-    else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 4
-		       && _VVT::_S_partial_width == 3)
-      {
-	const auto __xi = reinterpret_cast<int>(__x._M_data);
-	const auto __yi = reinterpret_cast<int>(__y._M_data);
-	return reinterpret_cast<__vector_type_t<_Tp, 3>>(
-	  ((__xi * __yi) & 0xff) | (((__xi >> 8) * (__yi & 0xff00)) & 0xff00)
-	  | ((__xi >> 16) * (__yi & 0xff0000)));
-      }
-    else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 4)
-      {
-	const auto __xi = reinterpret_cast<int>(__x._M_data);
-	const auto __yi = reinterpret_cast<int>(__y._M_data);
-	return reinterpret_cast<__vector_type_t<_Tp, 4>>(
-	  ((__xi * __yi) & 0xff) | (((__xi >> 8) * (__yi & 0xff00)) & 0xff00)
-	  | (((__xi >> 16) * (__yi & 0xff0000)) & 0xff0000)
-	  | ((__xi >> 24) * (__yi & 0xff000000u)));
-      }
-    else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 8 && __have_avx2
-		       && std::is_signed_v<_Tp>)
-      return __convert<typename _VVT::type>(
-	__vector_bitcast<short>(_mm_cvtepi8_epi16(__to_intrin(__x)))
-	* __vector_bitcast<short>(_mm_cvtepi8_epi16(__to_intrin(__y))));
-    else if constexpr (sizeof(_Tp) == 1 && sizeof(_V) == 8 && __have_avx2
-		       && std::is_unsigned_v<_Tp>)
-      return __convert<typename _VVT::type>(
-	__vector_bitcast<short>(_mm_cvtepu8_epi16(__to_intrin(__x)))
-	* __vector_bitcast<short>(_mm_cvtepu8_epi16(__to_intrin(__y))));
     else if constexpr (sizeof(_Tp) == 1)
       {
-	// codegen of `x*y` is suboptimal (as of GCC 9.0.1)
-	constexpr size_t __full_size = _VVT::_S_width;
-	constexpr int _Np = sizeof(_V) >= 16 ? __full_size / 2 : 8;
-	using _ShortW = _SimdWrapper<short, _Np>;
-	const _ShortW __even = __vector_bitcast<short, _Np>(__x)
-			       * __vector_bitcast<short, _Np>(__y);
-	_ShortW __high_byte = _ShortW()._M_data - 256;
-	//[&]() { asm("" : "+x"(__high_byte._M_data)); }();
-	const _ShortW __odd
-	  = (__vector_bitcast<short, _Np>(__x) >> 8)
-	    * (__vector_bitcast<short, _Np>(__y) & __high_byte._M_data);
-	if constexpr (__have_avx512bw && sizeof(_V) > 2)
-	  return _CommonImplX86::_S_blend_avx512(0xaaaa'aaaa'aaaa'aaaaLL,
-						 __vector_bitcast<_Tp>(__even),
-						 __vector_bitcast<_Tp>(__odd));
-	else if constexpr (__have_sse4_1 && sizeof(_V) > 2)
-	  return _CommonImplX86::_S_blend_intrin(__to_intrin(__high_byte),
-						 __to_intrin(__even),
-						 __to_intrin(__odd));
+	if constexpr (sizeof(_V) == 2)
+	  {
+	    const auto __xs = reinterpret_cast<short>(__x._M_data);
+	    const auto __ys = reinterpret_cast<short>(__y._M_data);
+	    return reinterpret_cast<__vector_type_t<_Tp, 2>>(
+	      short(((__xs * __ys) & 0xff) | ((__xs >> 8) * (__ys & 0xff00))));
+	  }
+	else if constexpr (sizeof(_V) == 4 && _VVT::_S_partial_width == 3)
+	  {
+	    const auto __xi = reinterpret_cast<int>(__x._M_data);
+	    const auto __yi = reinterpret_cast<int>(__y._M_data);
+	    return reinterpret_cast<__vector_type_t<_Tp, 3>>(
+	      ((__xi * __yi) & 0xff)
+	      | (((__xi >> 8) * (__yi & 0xff00)) & 0xff00)
+	      | ((__xi >> 16) * (__yi & 0xff0000)));
+	  }
+	else if constexpr (sizeof(_V) == 4)
+	  {
+	    const auto __xi = reinterpret_cast<int>(__x._M_data);
+	    const auto __yi = reinterpret_cast<int>(__y._M_data);
+	    return reinterpret_cast<__vector_type_t<_Tp, 4>>(
+	      ((__xi * __yi) & 0xff)
+	      | (((__xi >> 8) * (__yi & 0xff00)) & 0xff00)
+	      | (((__xi >> 16) * (__yi & 0xff0000)) & 0xff0000)
+	      | ((__xi >> 24) * (__yi & 0xff000000u)));
+	  }
+	else if constexpr (sizeof(_V) == 8 && __have_avx2
+			   && std::is_signed_v<_Tp>)
+	  return __convert<typename _VVT::type>(
+	    __vector_bitcast<short>(_mm_cvtepi8_epi16(__to_intrin(__x)))
+	    * __vector_bitcast<short>(_mm_cvtepi8_epi16(__to_intrin(__y))));
+	else if constexpr (sizeof(_V) == 8 && __have_avx2
+			   && std::is_unsigned_v<_Tp>)
+	  return __convert<typename _VVT::type>(
+	    __vector_bitcast<short>(_mm_cvtepu8_epi16(__to_intrin(__x)))
+	    * __vector_bitcast<short>(_mm_cvtepu8_epi16(__to_intrin(__y))));
 	else
-	  return __to_intrin(__or(__andnot(__high_byte, __even), __odd));
+	  {
+	    // codegen of `x*y` is suboptimal (as of GCC 9.0.1)
+	    constexpr size_t __full_size = _VVT::_S_width;
+	    constexpr int _Np = sizeof(_V) >= 16 ? __full_size / 2 : 8;
+	    using _ShortW = _SimdWrapper<short, _Np>;
+	    const _ShortW __even = __vector_bitcast<short, _Np>(__x)
+				   * __vector_bitcast<short, _Np>(__y);
+	    _ShortW __high_byte = _ShortW()._M_data - 256;
+	    //[&]() { asm("" : "+x"(__high_byte._M_data)); }();
+	    const _ShortW __odd
+	      = (__vector_bitcast<short, _Np>(__x) >> 8)
+		* (__vector_bitcast<short, _Np>(__y) & __high_byte._M_data);
+	    if constexpr (__have_avx512bw && sizeof(_V) > 2)
+	      return _CommonImplX86::_S_blend_avx512(
+		0xaaaa'aaaa'aaaa'aaaaLL, __vector_bitcast<_Tp>(__even),
+		__vector_bitcast<_Tp>(__odd));
+	    else if constexpr (__have_sse4_1 && sizeof(_V) > 2)
+	      return _CommonImplX86::_S_blend_intrin(__to_intrin(__high_byte),
+						     __to_intrin(__even),
+						     __to_intrin(__odd));
+	    else
+	      return __to_intrin(__or(__andnot(__high_byte, __even), __odd));
+	  }
       }
     else
       return _Base::__multiplies(__x, __y);
