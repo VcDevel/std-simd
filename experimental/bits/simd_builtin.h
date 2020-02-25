@@ -1789,16 +1789,16 @@ template <typename _Abi> struct _SimdImplBuiltin
 					      _BinaryOperation&& __binary_op)
   {
     constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
-    if constexpr (_Abi::_S_is_partial) //{{{
+    if constexpr (_Np == 1)
+      return __x[0];
+    else if constexpr (_Np == 2)
+      return __binary_op(simd<_Tp, simd_abi::scalar>(__x[0]),
+			 simd<_Tp, simd_abi::scalar>(__x[1]))[0];
+    else if constexpr (_Abi::_S_is_partial) //{{{
       {
 	[[maybe_unused]] constexpr auto __full_size
 	  = _Abi::template _S_full_size<_Tp>;
-	if constexpr (_Np == 1)
-	  return __x[0];
-	else if constexpr (_Np == 2)
-	  return __binary_op(simd<_Tp, simd_abi::scalar>(__x[0]),
-			     simd<_Tp, simd_abi::scalar>(__x[1]))[0];
-	else if constexpr (_Np == 3)
+	if constexpr (_Np == 3)
 	  return __binary_op(__binary_op(simd<_Tp, simd_abi::scalar>(__x[0]),
 					 simd<_Tp, simd_abi::scalar>(__x[1])),
 			     simd<_Tp, simd_abi::scalar>(__x[2]))[0];
@@ -1878,8 +1878,6 @@ template <typename _Abi> struct _SimdImplBuiltin
 				 __vector_permute<1, 1>(__y))));
 	return __x[0];
       } //}}}
-    else if constexpr (_Np == 2)
-      return __binary_op(__x, simd<_Tp, _Abi>(__x[1]))[0];
     else
       {
 	static_assert(sizeof(__x) > __min_vector_size<_Tp>);
