@@ -1365,10 +1365,16 @@ template <int _Np> struct _SimdImplFixedSize
   {
     auto __merge = __old;
     __for_each(__merge, [&](auto __meta, auto& __native) {
-      // __mem + __mem._S_offset could be UB ([expr.add]/4.3
       if (__meta.__submask(__bits).any())
+#pragma GCC diagnostic push
+      // __mem + __mem._S_offset could be UB ([expr.add]/4.3, but it punts the
+      // responsibility for avoiding UB to the caller of the masked load via the
+      // mask. Consequently, the compiler may assume this branch is unreachable,
+      // if the pointer arithmetic is UB.
+#pragma GCC diagnostic ignored "-Warray-bounds"
 	__native = __meta.__masked_load(__native, __meta.__make_mask(__bits),
 					__mem + __meta._S_offset, __f);
+#pragma GCC diagnostic pop
     });
     return __merge;
   }
@@ -1391,8 +1397,15 @@ template <int _Np> struct _SimdImplFixedSize
   {
     __for_each(__v, [&](auto __meta, auto __native) {
       if (__meta.__submask(__bits).any())
+#pragma GCC diagnostic push
+      // __mem + __mem._S_offset could be UB ([expr.add]/4.3, but it punts the
+      // responsibility for avoiding UB to the caller of the masked store via the
+      // mask. Consequently, the compiler may assume this branch is unreachable,
+      // if the pointer arithmetic is UB.
+#pragma GCC diagnostic ignored "-Warray-bounds"
 	__meta.__masked_store(__native, __mem + __meta._S_offset, __f,
 			      __meta.__make_mask(__bits));
+#pragma GCC diagnostic pop
     });
   }
 
