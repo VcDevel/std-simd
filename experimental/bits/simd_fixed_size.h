@@ -582,7 +582,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 
   template <typename _Fp, typename... _More>
   _GLIBCXX_SIMD_INTRINSIC constexpr friend _SanitizedBitMask<size()>
-  __test(_Fp&& __fun, const _SimdTuple& __x, const _More&... __more)
+  __test(const _Fp& __fun, const _SimdTuple& __x, const _More&... __more)
   {
     const _SanitizedBitMask<_S_first_size> __first
       = _Abi0::_MaskImpl::__to_bits(__fun(__tuple_element_meta<_Tp, _Abi0, 0>(),
