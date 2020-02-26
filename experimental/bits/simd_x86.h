@@ -3635,6 +3635,15 @@ struct _MaskImplX86Mixin
 	_BitMask<_Np>(__x._M_data)._M_sanitized());
     else
       { // vector -> vector {{{
+	if (__x._M_is_constprop() || __builtin_is_constant_evaluated())
+	  {
+	    const auto __y = __vector_bitcast<__int_for_sizeof_t<_Tp>>(__x);
+	    using _Ip = __int_for_sizeof_t<_Up>;
+	    return __vector_bitcast<_Up>(
+	      __generate_from_n_evaluations<std::min(_ToN, _Np),
+					    __vector_type_t<_Ip, _ToN>>(
+		[&](auto __i) -> _Ip { return __y[__i.value]; }));
+	  }
 	using _To = __vector_type_t<_Up, _ToN>;
 	[[maybe_unused]] constexpr size_t _FromN = _Np;
 	constexpr int _FromBytes = sizeof(_Tp);
