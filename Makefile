@@ -34,36 +34,12 @@ test: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target test_random -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
 
 help: $(build_dir)/CMakeCache.txt
-	@echo "Compiler_Explorer_AVX512"
-	@echo "Compiler_Explorer_Skylake"
-	@echo "Compiler_Explorer_Nehalem"
 	@$(CMAKE) --build $(build_dir) $(HELP_TARGET)
 
 ccmake:
 	@test -n "$(build_dir)"
 	@mkdir -p "$(build_dir)"
 	ccmake $(GENERATOR) $(CMAKE_ARGS) -Htests -B"$(build_dir)"
-
-Compiler_Explorer_AVX512:
-	$(CXX) -Wall -I. -S -std=c++17 -O2 -march=skylake-avx512 -masm=intel $(CXXFLAGS) -o - ce.cpp | \
-		egrep -v -e '^\s+\.(weak|align|hidden|section|type|file|text|p2align|cfi|size|globl|ident)' -e '^.LF' > ce.tmp
-	sed /\.intel_syntax/d ce.tmp | c++filt > ce.asm
-	sed -n '/ret/q;p' ce.tmp | llvm-mca-10 --mcpu=skylake-avx512 > ce.mca
-	@rm ce.tmp
-
-Compiler_Explorer_Skylake:
-	$(CXX) -Wall -I. -S -std=c++17 -O2 -march=skylake -masm=intel $(CXXFLAGS) -o - ce.cpp | \
-		egrep -v -e '^\s+\.(weak|align|hidden|section|type|file|text|p2align|cfi|size|globl|ident)' -e '^.LF' > ce.tmp
-	sed /\.intel_syntax/d ce.tmp | c++filt > ce.asm
-	sed -n '/ret/q;p' ce.tmp | llvm-mca-10 --mcpu=skylake > ce.mca
-	@rm ce.tmp
-
-Compiler_Explorer_Nehalem:
-	$(CXX) -Wall -I. -S -std=c++17 -O2 -march=nehalem -masm=intel $(CXXFLAGS) -o - ce.cpp | \
-		egrep -v -e '^\s+\.(weak|align|hidden|section|type|file|text|p2align|cfi|size|globl|ident)' -e '^.LF' > ce.tmp
-	sed /\.intel_syntax/d ce.tmp | c++filt > ce.asm
-	sed -n '/ret/q;p' ce.tmp | llvm-mca-10 --mcpu=nehalem > ce.mca
-	@rm ce.tmp
 
 %:: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target $* -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
