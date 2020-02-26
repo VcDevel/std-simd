@@ -1861,36 +1861,19 @@ struct _ZeroExtendProxy
 #ifdef _GLIBCXX_SIMD_WORKAROUND_XXX_3
 	if constexpr (__have_avx512dq && _TVT::template __is<double, 2>)
 	  {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85480
-	    asm("vmovapd %0, %0" : "+__x"(__x));
-	    return __vector_bitcast<value_type>(_mm512_castpd128_pd512(__x));
-#else
 	    return __vector_bitcast<value_type>(
 	      _mm512_insertf64x2(__m512d(), __x, 0));
-#endif
 	  }
 	else if constexpr (__have_avx512f
 			   && std::is_floating_point_v<value_type>)
 	  {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85480
-	    asm("vmovaps %0, %0" : "+__x"(__x));
-	    return __vector_bitcast<value_type>(
-	      _mm512_castps128_ps512(reinterpret_cast<__m128>(__x)));
-#else
 	    return __vector_bitcast<value_type>(
 	      _mm512_insertf32x4(__m512(), reinterpret_cast<__m128>(__x), 0));
-#endif
 	  }
 	else if constexpr (__have_avx512f && _Np * sizeof(value_type) == 16)
 	  {
-#ifdef _GLIBCXX_SIMD_WORKAROUND_PR85480
-	    asm("vmovadq %0, %0" : "+__x"(__x));
-	    return __vector_bitcast<value_type>(
-	      _mm512_castsi128_si512(__to_intrin(__x)));
-#else
 	    return __vector_bitcast<value_type>(
 	      _mm512_inserti32x4(__m512i(), __to_intrin(__x), 0));
-#endif
 	  }
 #endif
 	return __concat(__concat(__x, _Tp()),

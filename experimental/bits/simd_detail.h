@@ -262,11 +262,6 @@
 #define _GLIBCXX_SIMD_WORKAROUND_PR85048 1
 #endif
 
-// zero extension from xmm to zmm not optimized:
-#if __GNUC__ < 9
-#define _GLIBCXX_SIMD_WORKAROUND_PR85480 1
-#endif
-
 // Invalid instruction mov from xmm16-31
 #define _GLIBCXX_SIMD_WORKAROUND_PR89229 1
 
