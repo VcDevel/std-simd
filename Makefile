@@ -5,7 +5,7 @@ tmp := "case $$(readlink -f $(build_dir)) in *icecc) which $${ICECC_CXX:-g++};; 
 build_dir := $(shell sh -c $(tmp))
 build_dir := $(realpath $(build_dir))
 build_dir := build-$(subst /,-,$(build_dir:/%=%))
-cols := $(shell sh -c '{ stty size 2>/dev/null || echo 0 80; }|cut -d" " -f2')
+COLUMNS ?= $(shell sh -c '{ stty size 2>/dev/null || echo 0 140; }|cut -d" " -f2')
 cores := $(shell sh -c 'grep -c processor /proc/cpuinfo')
 
 NINJA ?= $(shell which ninja)
@@ -27,7 +27,7 @@ endif
 
 CMAKE=cmake
 BUILD_OUTPUT_TRANSFORMATION ?= -e 's/std::\(experimental::\([a-z_0-9]\+::\)\?\)\?/⠶/g'
-FIX_OUTPUT=sed -u $(BUILD_OUTPUT_TRANSFORMATION)|stdbuf -oL fold -s -w $(cols)
+FIX_OUTPUT=sed -u $(BUILD_OUTPUT_TRANSFORMATION)|stdbuf -oL fold -s -w $(COLUMNS)
 
 test: $(build_dir)/CMakeCache.txt
 	$(CMAKE) --build $(build_dir) --target all -- $(BUILD_FLAGS) | $(FIX_OUTPUT)
