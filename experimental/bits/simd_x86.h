@@ -2093,7 +2093,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   {
     if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
-	if (__builtin_is_constant_evaluated())
+	if (__builtin_is_constant_evaluated()
+	    || (__x._M_is_constprop() && __y._M_is_constprop()))
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
 	    __vector_bitcast<_Tp>(__x._M_data == __y._M_data)));
 
@@ -2164,7 +2165,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   {
     if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
-	if (__builtin_is_constant_evaluated())
+	if (__builtin_is_constant_evaluated()
+	    || (__x._M_is_constprop() && __y._M_is_constprop()))
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
 	    __vector_bitcast<_Tp>(__x._M_data != __y._M_data)));
 
@@ -2235,7 +2237,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   {
     if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
-	if (__builtin_is_constant_evaluated())
+	if (__builtin_is_constant_evaluated()
+	    || (__x._M_is_constprop() && __y._M_is_constprop()))
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
 	    __vector_bitcast<_Tp>(__x._M_data < __y._M_data)));
 
@@ -2340,7 +2343,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
   {
     if constexpr (__is_avx512_abi<_Abi>()) // {{{
       {
-	if (__builtin_is_constant_evaluated())
+	if (__builtin_is_constant_evaluated()
+	    || (__x._M_is_constprop() && __y._M_is_constprop()))
 	  return _MaskImpl::__to_bits(_SimdWrapper<_Tp, _Np>(
 	    __vector_bitcast<_Tp>(__x._M_data <= __y._M_data)));
 
