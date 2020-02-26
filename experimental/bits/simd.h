@@ -2620,7 +2620,7 @@ namespace __proposed {
 template <typename _Tp, typename _Up, typename _Ap,
 	  typename _R
 	  = typename __static_simd_cast_return_type<_Tp, _Up, _Ap>::type>
-_GLIBCXX_SIMD_INTRINSIC typename _R::mask_type
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONSTEXPR typename _R::mask_type
 static_simd_cast(const simd_mask<_Up, _Ap>& __x)
 {
   using _RM = typename _R::mask_type;

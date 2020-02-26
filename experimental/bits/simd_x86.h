@@ -3353,6 +3353,14 @@ struct _MaskImplX86Mixin
     [[maybe_unused]] const auto __k = __x._M_to_bits();
     if constexpr (_Np == 1)
       return __to_maskvector<_Up, _ToN>(__k);
+    else if (__x._M_is_constprop() || __builtin_is_constant_evaluated())
+      {
+	using _Ip = __int_for_sizeof_t<_Up>;
+	return __vector_bitcast<_Up>(
+	  __generate_from_n_evaluations<std::min(_ToN, _Np),
+					__vector_type_t<_Ip, _ToN>>(
+	    [&](auto __i) -> _Ip { return -__x[__i.value]; }));
+      }
     else if constexpr (sizeof(_Up) == 1)
       {
 	if constexpr (sizeof(_UI) == 16)
