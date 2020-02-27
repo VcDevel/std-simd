@@ -495,17 +495,22 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _To
 __vector_convert(_From... __xs)
 {
 #ifdef _GLIBCXX_SIMD_WORKAROUND_PR85048
-  if constexpr ((sizeof...(_From) & (sizeof...(_From) - 1))
-		== 0) // power-of-two number of arguments
-    return __convert_x86<_To>(__as_vector(__xs)...);
+  if (!(... && __builtin_constant_p(__xs)))
+    {
+      if constexpr ((sizeof...(_From) & (sizeof...(_From) - 1))
+		    == 0) // power-of-two number of arguments
+	return __convert_x86<_To>(__as_vector(__xs)...);
+      else
+	{
+	  using _FF = __first_of_pack_t<_From...>;
+	  return __vector_convert<_To>(__xs..., _FF{});
+	}
+    }
   else
+#endif
     return __vector_convert<_To>(
       __xs...,
       make_index_sequence<std::min(_ToT::_S_width, _FromT::_S_width)>());
-#else
-  return __vector_convert<_To>(
-    __xs..., make_index_sequence<std::min(_ToT::_S_width, _FromT::_S_width)>());
-#endif
 }
 
 // This overload takes a vectorizable type _To and produces a return type that

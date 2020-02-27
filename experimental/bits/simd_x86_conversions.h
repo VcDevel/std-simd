@@ -172,18 +172,14 @@ __convert_x86(_V __v)
     = is_floating_point_v<_Tp> && sizeof(_Tp) == 8
       && is_floating_point_v<_Up> && sizeof(_Up) == 4;
 
-  if constexpr (__i_to_i && __y_to_x && !__have_avx2)
-    { //{{{2
-      return __convert_x86<_To>(__lo128(__v), __hi128(__v));
-    }
-  else if constexpr (__i_to_i && __x_to_y && !__have_avx2)
-    { //{{{2
-      return __concat(__convert_x86<__vector_type_t<_Up, _M / 2>>(__v),
-		      __convert_x86<__vector_type_t<_Up, _M / 2>>(
-			__extract_part<1, _Np / _M * 2>(__v)));
-    }
-  else if constexpr (__i_to_i)
-    { //{{{2
+  if constexpr (__i_to_i && __y_to_x && !__have_avx2) //{{{2
+    return __convert_x86<_To>(__lo128(__v), __hi128(__v));
+  else if constexpr (__i_to_i && __x_to_y && !__have_avx2) //{{{2
+    return __concat(__convert_x86<__vector_type_t<_Up, _M / 2>>(__v),
+		    __convert_x86<__vector_type_t<_Up, _M / 2>>(
+		      __extract_part<1, _Np / _M * 2>(__v)));
+  else if constexpr (__i_to_i) //{{{2
+    {
       static_assert(__x_to_x || __have_avx2,
 		    "integral conversions with ymm registers require AVX2");
       static_assert(__have_avx512bw
@@ -193,7 +189,6 @@ __convert_x86(_V __v)
       static_assert((sizeof(__v) < 64 && sizeof(_To) < 64) || __have_avx512f,
 		    "integral conversions with ymm registers require AVX2");
     }
-
   if constexpr (is_floating_point_v<_Tp> == is_floating_point_v<_Up> && //{{{2
 		sizeof(_Tp) == sizeof(_Up))
     {
@@ -203,18 +198,14 @@ __convert_x86(_V __v)
       else
 	return __zero_extend(__vector_bitcast<_Up>(__v));
     }
-  else if constexpr (_Np < _M && sizeof(_To) > 16)
-    { // zero extend (eg. xmm -> ymm){{{2
-      return __zero_extend(
-	__convert_x86<__vector_type_t<
-	  _Up, (16 / sizeof(_Up) > _Np) ? 16 / sizeof(_Up) : _Np>>(__v));
-    }
-  else if constexpr (_Np > _M && sizeof(__v) > 16)
-    { // partial input (eg. ymm -> xmm){{{2
-      return __convert_x86<_To>(__extract_part<0, _Np / _M>(__v));
-    }
-  else if constexpr (__i64_to_i32)
-    { //{{{2
+  else if constexpr (_Np < _M && sizeof(_To) > 16) // zero extend (eg. xmm -> ymm){{{2
+    return __zero_extend(
+      __convert_x86<__vector_type_t<
+	_Up, (16 / sizeof(_Up) > _Np) ? 16 / sizeof(_Up) : _Np>>(__v));
+  else if constexpr (_Np > _M && sizeof(__v) > 16) // partial input (eg. ymm -> xmm){{{2
+    return __convert_x86<_To>(__extract_part<0, _Np / _M>(__v));
+  else if constexpr (__i64_to_i32) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi64_epi32(__intrin));
       else if constexpr (__x_to_x)
@@ -232,8 +223,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	return __intrin_bitcast<_To>(_mm512_cvtepi64_epi32(__intrin));
     }
-  else if constexpr (__i64_to_i16)
-    { //{{{2
+  else if constexpr (__i64_to_i16) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi64_epi16(__intrin));
       else if constexpr (__x_to_x && __have_avx512f)
@@ -266,8 +257,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_x)
 	return __intrin_bitcast<_To>(_mm512_cvtepi64_epi16(__intrin));
     }
-  else if constexpr (__i64_to_i8)
-    { //{{{2
+  else if constexpr (__i64_to_i8) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi64_epi8(__intrin));
       else if constexpr (__x_to_x && __have_avx512f)
@@ -281,8 +272,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_x)
 	return __intrin_bitcast<_To>(_mm512_cvtepi64_epi8(__intrin));
     }
-  else if constexpr (__i32_to_i64)
-    { //{{{2
+  else if constexpr (__i32_to_i64) //{{{2
+    {
       if constexpr (__have_sse4_1 && __x_to_x)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi32_epi64(__intrin)
@@ -303,8 +294,8 @@ __convert_x86(_V __v)
 				       ? _mm512_cvtepi32_epi64(__intrin)
 				       : _mm512_cvtepu32_epi64(__intrin));
     }
-  else if constexpr (__i32_to_i16)
-    { //{{{2
+  else if constexpr (__i32_to_i16) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi32_epi16(__intrin));
       else if constexpr (__x_to_x && __have_avx512f)
@@ -343,8 +334,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	return __intrin_bitcast<_To>(_mm512_cvtepi32_epi16(__intrin));
     }
-  else if constexpr (__i32_to_i8)
-    { //{{{2
+  else if constexpr (__i32_to_i8) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi32_epi8(__intrin));
       else if constexpr (__x_to_x && __have_avx512f)
@@ -377,8 +368,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_x)
 	return __intrin_bitcast<_To>(_mm512_cvtepi32_epi8(__intrin));
     }
-  else if constexpr (__i16_to_i64)
-    { //{{{2
+  else if constexpr (__i16_to_i64) //{{{2
+    {
       if constexpr (__x_to_x && __have_sse4_1)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi16_epi64(__intrin)
@@ -403,8 +394,8 @@ __convert_x86(_V __v)
 				       ? _mm512_cvtepi16_epi64(__intrin)
 				       : _mm512_cvtepu16_epi64(__intrin));
     }
-  else if constexpr (__i16_to_i32)
-    { //{{{2
+  else if constexpr (__i16_to_i32) //{{{2
+    {
       if constexpr (__x_to_x && __have_sse4_1)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi16_epi32(__intrin)
@@ -423,8 +414,8 @@ __convert_x86(_V __v)
 				       ? _mm512_cvtepi16_epi32(__intrin)
 				       : _mm512_cvtepu16_epi32(__intrin));
     }
-  else if constexpr (__i16_to_i8)
-    { //{{{2
+  else if constexpr (__i16_to_i8) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512bw_vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi16_epi8(__intrin));
       else if constexpr (__x_to_x && __have_avx512bw)
@@ -466,8 +457,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	__assert_unreachable<_Tp>();
     }
-  else if constexpr (__i8_to_i64)
-    { //{{{2
+  else if constexpr (__i8_to_i64) //{{{2
+    {
       if constexpr (__x_to_x && __have_sse4_1)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi8_epi64(__intrin)
@@ -506,8 +497,8 @@ __convert_x86(_V __v)
 				       ? _mm512_cvtepi8_epi64(__intrin)
 				       : _mm512_cvtepu8_epi64(__intrin));
     }
-  else if constexpr (__i8_to_i32)
-    { //{{{2
+  else if constexpr (__i8_to_i32) //{{{2
+    {
       if constexpr (__x_to_x && __have_sse4_1)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi8_epi32(__intrin)
@@ -531,8 +522,8 @@ __convert_x86(_V __v)
 				       ? _mm512_cvtepi8_epi32(__intrin)
 				       : _mm512_cvtepu8_epi32(__intrin));
     }
-  else if constexpr (__i8_to_i16)
-    { //{{{2
+  else if constexpr (__i8_to_i16) //{{{2
+    {
       if constexpr (__x_to_x && __have_sse4_1)
 	return __intrin_bitcast<_To>(is_signed_v<_Tp>
 				       ? _mm_cvtepi8_epi16(__intrin)
@@ -553,8 +544,8 @@ __convert_x86(_V __v)
       else if constexpr (__y_to_z)
 	__assert_unreachable<_Tp>();
     }
-  else if constexpr (__f32_to_s64)
-    { //{{{2
+  else if constexpr (__f32_to_s64) //{{{2
+    {
       if constexpr (__have_avx512dq_vl && __x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttps_epi64(__intrin));
       else if constexpr (__have_avx512dq_vl && __x_to_y)
@@ -563,8 +554,8 @@ __convert_x86(_V __v)
 	return __intrin_bitcast<_To>(_mm512_cvttps_epi64(__intrin));
       // else use scalar fallback
     }
-  else if constexpr (__f32_to_u64)
-    { //{{{2
+  else if constexpr (__f32_to_u64) //{{{2
+    {
       if constexpr (__have_avx512dq_vl && __x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttps_epu64(__intrin));
       else if constexpr (__have_avx512dq_vl && __x_to_y)
@@ -573,8 +564,8 @@ __convert_x86(_V __v)
 	return __intrin_bitcast<_To>(_mm512_cvttps_epu64(__intrin));
       // else use scalar fallback
     }
-  else if constexpr (__f32_to_s32)
-    { //{{{2
+  else if constexpr (__f32_to_s32) //{{{2
+    {
       if constexpr (__x_to_x || __y_to_y || __z_to_z)
 	{
 	  // go to fallback, it does the right thing
@@ -582,27 +573,9 @@ __convert_x86(_V __v)
       else
 	__assert_unreachable<_Tp>();
     }
-  else if constexpr (__f32_to_u32)
-    { //{{{2
-      // the __builtin_constant_p hack enables constant propagation
-      if (__builtin_constant_p(__v))
-	{
-	  if constexpr (_Np == 2)
-	    return __make_vector<_Up>(__v[0], __v[1]);
-	  else if constexpr (_Np == 4)
-	    return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3]);
-	  else if constexpr (_Np == 8)
-	    return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3], __v[4],
-				      __v[5], __v[6], __v[7]);
-	  else if constexpr (_Np == 16)
-	    return __make_vector<_Up>(__v[0], __v[1], __v[2], __v[3], __v[4],
-				      __v[5], __v[6], __v[7], __v[8], __v[9],
-				      __v[10], __v[11], __v[12], __v[13],
-				      __v[14], __v[15]);
-	  else
-	    __assert_unreachable<_Tp>();
-	}
-      else if constexpr (__have_avx512vl && __x_to_x)
+  else if constexpr (__f32_to_u32) //{{{2
+    {
+      if constexpr (__have_avx512vl && __x_to_x)
 	return __auto_bitcast(_mm_cvttps_epu32(__intrin));
       else if constexpr (__have_avx512f && __x_to_x)
 	return __auto_bitcast(
@@ -621,12 +594,10 @@ __convert_x86(_V __v)
       else
 	__assert_unreachable<_Tp>();
     }
-  else if constexpr (__f32_to_ibw)
-    { //{{{2
-      return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np>>(__v));
-    }
-  else if constexpr (__f64_to_s64)
-    { //{{{2
+  else if constexpr (__f32_to_ibw) //{{{2
+    return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _Np>>(__v));
+  else if constexpr (__f64_to_s64) //{{{2
+    {
       if constexpr (__have_avx512dq_vl && __x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttpd_epi64(__intrin));
       else if constexpr (__have_avx512dq_vl && __y_to_y)
@@ -635,8 +606,8 @@ __convert_x86(_V __v)
 	return __intrin_bitcast<_To>(_mm512_cvttpd_epi64(__intrin));
       // else use scalar fallback
     }
-  else if constexpr (__f64_to_u64)
-    { //{{{2
+  else if constexpr (__f64_to_u64) //{{{2
+    {
       if constexpr (__have_avx512dq_vl && __x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttpd_epu64(__intrin));
       else if constexpr (__have_avx512dq_vl && __y_to_y)
@@ -645,8 +616,8 @@ __convert_x86(_V __v)
 	return __intrin_bitcast<_To>(_mm512_cvttpd_epu64(__intrin));
       // else use scalar fallback
     }
-  else if constexpr (__f64_to_s32)
-    { //{{{2
+  else if constexpr (__f64_to_s32) //{{{2
+    {
       if constexpr (__x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttpd_epi32(__intrin));
       else if constexpr (__y_to_x)
@@ -654,8 +625,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	return __intrin_bitcast<_To>(_mm512_cvttpd_epi32(__intrin));
     }
-  else if constexpr (__f64_to_u32)
-    { //{{{2
+  else if constexpr (__f64_to_u32) //{{{2
+    {
       if constexpr (__have_avx512vl && __x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvttpd_epu32(__intrin));
       else if constexpr (__have_sse4_1 && __x_to_x)
@@ -679,13 +650,13 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	return __intrin_bitcast<_To>(_mm512_cvttpd_epu32(__intrin));
     }
-  else if constexpr (__f64_to_ibw)
-    { //{{{2
+  else if constexpr (__f64_to_ibw) //{{{2
+    {
       return __convert_x86<_To>(
 	__convert_x86<__vector_type_t<int, (_Np < 4 ? 4 : _Np)>>(__v));
     }
-  else if constexpr (__s64_to_f32)
-    { //{{{2
+  else if constexpr (__s64_to_f32) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512dq_vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi64_ps(__intrin));
       else if constexpr (__y_to_x && __have_avx512dq_vl)
@@ -696,8 +667,8 @@ __convert_x86(_V __v)
 	return __intrin_bitcast<_To>(
 	  _mm512_cvtpd_ps(__convert_x86<__vector_type_t<double, 8>>(__v)));
     }
-  else if constexpr (__u64_to_f32)
-    { //{{{2
+  else if constexpr (__u64_to_f32) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512dq_vl)
 	return __intrin_bitcast<_To>(_mm_cvtepu64_ps(__intrin));
       else if constexpr (__y_to_x && __have_avx512dq_vl)
@@ -714,12 +685,12 @@ __convert_x86(_V __v)
 	      __auto_bitcast(_mm512_cvtepi64_epi32(__intrin)))));
 	}
     }
-  else if constexpr (__s32_to_f32)
-    { //{{{2
+  else if constexpr (__s32_to_f32) //{{{2
+    {
       // use fallback (builtin conversion)
     }
-  else if constexpr (__u32_to_f32)
-    { //{{{2
+  else if constexpr (__u32_to_f32) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	{
 	  // use fallback
@@ -744,8 +715,8 @@ __convert_x86(_V __v)
 	       + _mm256_cvtepi32_ps(__to_intrin(__v & 0xffff));
       // else use fallback (builtin conversion)
     }
-  else if constexpr (__ibw_to_f32)
-    { //{{{2
+  else if constexpr (__ibw_to_f32) //{{{2
+    {
       if constexpr (_M <= 4 || __have_avx2)
 	return __convert_x86<_To>(__convert_x86<__vector_type_t<int, _M>>(__v));
       else
@@ -794,8 +765,8 @@ __convert_x86(_V __v)
 				    __vector_bitcast<int>(__b));
 	}
     }
-  else if constexpr (__s64_to_f64)
-    { //{{{2
+  else if constexpr (__s64_to_f64) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512dq_vl)
 	return __intrin_bitcast<_To>(_mm_cvtepi64_pd(__intrin));
       else if constexpr (__y_to_y && __have_avx512dq_vl)
@@ -810,8 +781,8 @@ __convert_x86(_V __v)
 	    + _mm512_cvtepu32_pd(_mm512_cvtepi64_epi32(__intrin)));
 	}
     }
-  else if constexpr (__u64_to_f64)
-    { //{{{2
+  else if constexpr (__u64_to_f64) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512dq_vl)
 	return __intrin_bitcast<_To>(_mm_cvtepu64_pd(__intrin));
       else if constexpr (__y_to_y && __have_avx512dq_vl)
@@ -826,8 +797,8 @@ __convert_x86(_V __v)
 	    + _mm512_cvtepu32_pd(_mm512_cvtepi64_epi32(__intrin)));
 	}
     }
-  else if constexpr (__s32_to_f64)
-    { //{{{2
+  else if constexpr (__s32_to_f64) //{{{2
+    {
       if constexpr (__x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvtepi32_pd(__intrin));
       else if constexpr (__x_to_y)
@@ -835,8 +806,8 @@ __convert_x86(_V __v)
       else if constexpr (__y_to_z)
 	return __intrin_bitcast<_To>(_mm512_cvtepi32_pd(__intrin));
     }
-  else if constexpr (__u32_to_f64)
-    { //{{{2
+  else if constexpr (__u32_to_f64) //{{{2
+    {
       if constexpr (__x_to_x && __have_avx512vl)
 	return __intrin_bitcast<_To>(_mm_cvtepu32_pd(__intrin));
       else if constexpr (__x_to_x && __have_avx512f)
@@ -856,13 +827,13 @@ __convert_x86(_V __v)
       else if constexpr (__y_to_z)
 	return __intrin_bitcast<_To>(_mm512_cvtepu32_pd(__intrin));
     }
-  else if constexpr (__ibw_to_f64)
-    { //{{{2
+  else if constexpr (__ibw_to_f64) //{{{2
+    {
       return __convert_x86<_To>(
 	__convert_x86<__vector_type_t<int, std::max(size_t(4), _M)>>(__v));
     }
-  else if constexpr (__f32_to_f64)
-    { //{{{2
+  else if constexpr (__f32_to_f64) //{{{2
+    {
       if constexpr (__x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvtps_pd(__intrin));
       else if constexpr (__x_to_y)
@@ -870,8 +841,8 @@ __convert_x86(_V __v)
       else if constexpr (__y_to_z)
 	return __intrin_bitcast<_To>(_mm512_cvtps_pd(__intrin));
     }
-  else if constexpr (__f64_to_f32)
-    { //{{{2
+  else if constexpr (__f64_to_f32) //{{{2
+    {
       if constexpr (__x_to_x)
 	return __intrin_bitcast<_To>(_mm_cvtpd_ps(__intrin));
       else if constexpr (__y_to_x)
@@ -879,10 +850,8 @@ __convert_x86(_V __v)
       else if constexpr (__z_to_y)
 	return __intrin_bitcast<_To>(_mm512_cvtpd_ps(__intrin));
     }
-  else
-    { //{{{2
-      __assert_unreachable<_Tp>();
-    }
+  else //{{{2
+    __assert_unreachable<_Tp>();
 
   // fallback:{{{2
   return __vector_convert<_To>(__v, make_index_sequence<std::min(_M, _Np)>());
@@ -1873,8 +1842,8 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
     = is_integral_v<_Up> && sizeof(_Up) == 1
       && is_floating_point_v<_Tp> && sizeof(_Tp) == 8;
 
-  if constexpr (__i_to_i)
-    { // assert ISA {{{2
+  if constexpr (__i_to_i) // assert ISA {{{2
+    {
       static_assert(__x_to_x || __have_avx2,
 		    "integral conversions with ymm registers require AVX2");
       static_assert(__have_avx512bw
@@ -1895,8 +1864,8 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
       return __convert_x86<_To>(__concat(__v0, __v1), __concat(__v2, __v3),
 				__concat(__v4, __v5), __concat(__v6, __v7));
     }
-  else
-    { //{{{2
+  else //{{{2
+    {
       // conversion using bit reinterpretation (or no conversion at all) should
       // all go through the concat branch above:
       static_assert(!(
@@ -1904,8 +1873,8 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
 	  _Tp> == std::is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
       static_assert(!(8 * _Np < _M && sizeof(_To) > 16),
 		    "zero extension should be impossible");
-      if constexpr (__i64_to_i8)
-	{ //{{{2
+      if constexpr (__i64_to_i8) //{{{2
+	{
 	  if constexpr (__x_to_x && __have_ssse3)
 	    {
 	      // unsure whether this is better than the variant below
@@ -1971,18 +1940,17 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
 							    __v7));
 	    }
 	}
-      else if constexpr (__f64_to_i8)
-	{ //{{{2
+      else if constexpr (__f64_to_i8) //{{{2
+	{
 	  return __convert_x86<_To>(
 	    __convert_x86<__vector_type_t<int, _Np * 2>>(__v0, __v1),
 	    __convert_x86<__vector_type_t<int, _Np * 2>>(__v2, __v3),
 	    __convert_x86<__vector_type_t<int, _Np * 2>>(__v4, __v5),
 	    __convert_x86<__vector_type_t<int, _Np * 2>>(__v6, __v7));
 	}
-      else
-	{ // unreachable {{{2
-	  __assert_unreachable<_Tp>();
-	} //}}}
+      else // unreachable {{{2
+	__assert_unreachable<_Tp>();
+      //}}}
 
       // fallback: {{{2
       if constexpr (sizeof(_To) >= 32)
