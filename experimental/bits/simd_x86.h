@@ -671,7 +671,11 @@ struct _CommonImplX86 : _CommonImplBuiltin
 	   _SimdWrapper<_Tp, _Np> __at1)
   {
     static_assert(is_same_v<_Tp, _Tp> && __have_avx512f);
-    if constexpr (sizeof(__at0) == 64
+    if (__k._M_is_constprop() && __at0._M_is_constprop()
+	&& __at1._M_is_constprop())
+      return __generate_from_n_evaluations<_Np, __vector_type_t<_Tp, _Np>>([&](
+	auto __i) constexpr { return __k[__i] ? __at1[__i] : __at0[__i]; });
+    else if constexpr (sizeof(__at0) == 64
 		  || (__have_avx512vl && sizeof(__at0) >= 16))
       return _S_blend_avx512(__k._M_data, __at0._M_data, __at1._M_data);
     else
