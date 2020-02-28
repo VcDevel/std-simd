@@ -1155,12 +1155,22 @@ public:
       {
 	using _Tp = typename _TVT::value_type;
 	constexpr size_t _Np = size<_Tp>;
-	return __make_dependent_t<_TV, _CommonImpl>::_S_blend(
-		 __implicit_mask<_Tp>(),
-		 _SimdWrapper<_Tp, _Np>(
-		   __vector_broadcast<_S_full_size<_Tp>>(_Tp(1))),
-		 _SimdWrapper<_Tp, _Np>(__x))
-	  ._M_data;
+	if constexpr (is_integral_v<typename _TVT::value_type>)
+	  return __x
+		 | __generate_vector<_Tp, _S_full_size<_Tp>>(
+		   [](auto __i) -> _Tp {
+		     if (__i < _Np)
+		       return 0;
+		     else
+		       return 1;
+		   });
+	else
+	  return __make_dependent_t<_TV, _CommonImpl>::_S_blend(
+		   __implicit_mask<_Tp>(),
+		   _SimdWrapper<_Tp, _Np>(
+		     __vector_broadcast<_S_full_size<_Tp>>(_Tp(1))),
+		   _SimdWrapper<_Tp, _Np>(__x))
+	    ._M_data;
       }
   }
 
