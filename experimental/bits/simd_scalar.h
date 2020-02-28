@@ -180,75 +180,83 @@ struct _SimdImplScalar
   }
 
   // __negate {{{2
-  template <typename _Tp> static inline bool __negate(_Tp __x) noexcept
+  template <typename _Tp>
+  static constexpr inline bool __negate(_Tp __x) noexcept
   {
     return !__x;
   }
 
   // __reduce {{{2
   template <typename _Tp, typename _BinaryOperation>
-  static inline _Tp __reduce(const simd<_Tp, simd_abi::scalar>& __x,
-			     _BinaryOperation&)
+  static constexpr inline _Tp __reduce(const simd<_Tp, simd_abi::scalar>& __x,
+				       _BinaryOperation&)
   {
     return __x._M_data;
   }
 
   // __min, __max {{{2
-  template <typename _Tp> static inline _Tp __min(const _Tp __a, const _Tp __b)
+  template <typename _Tp>
+  static constexpr inline _Tp __min(const _Tp __a, const _Tp __b)
   {
     return std::min(__a, __b);
   }
 
-  template <typename _Tp> static inline _Tp __max(const _Tp __a, const _Tp __b)
+  template <typename _Tp>
+  static constexpr inline _Tp __max(const _Tp __a, const _Tp __b)
   {
     return std::max(__a, __b);
   }
 
   // __complement {{{2
-  template <typename _Tp> static inline _Tp __complement(_Tp __x) noexcept
+  template <typename _Tp>
+  static constexpr inline _Tp __complement(_Tp __x) noexcept
   {
     return static_cast<_Tp>(~__x);
   }
 
   // __unary_minus {{{2
-  template <typename _Tp> static inline _Tp __unary_minus(_Tp __x) noexcept
+  template <typename _Tp>
+  static constexpr inline _Tp __unary_minus(_Tp __x) noexcept
   {
     return static_cast<_Tp>(-__x);
   }
 
   // arithmetic operators {{{2
-  template <typename _Tp> static inline _Tp __plus(_Tp __x, _Tp __y)
+  template <typename _Tp> static constexpr inline _Tp __plus(_Tp __x, _Tp __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x)
 			    + __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __minus(_Tp __x, _Tp __y)
+  template <typename _Tp> static constexpr inline _Tp __minus(_Tp __x, _Tp __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x)
 			    - __promote_preserving_unsigned(__y));
   }
 
   template <typename _Tp>
-  static inline constexpr _Tp __multiplies(_Tp __x, _Tp __y)
+  static constexpr inline _Tp __multiplies(_Tp __x, _Tp __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x)
 			    * __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __divides(_Tp __x, _Tp __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __divides(_Tp __x, _Tp __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x)
 			    / __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __modulus(_Tp __x, _Tp __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __modulus(_Tp __x, _Tp __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x)
 			    % __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __bit_and(_Tp __x, _Tp __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __bit_and(_Tp __x, _Tp __y)
   {
     if constexpr (is_floating_point_v<_Tp>)
       {
@@ -262,7 +270,7 @@ struct _SimdImplScalar
 			      & __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __bit_or(_Tp __x, _Tp __y)
+  template <typename _Tp> static constexpr inline _Tp __bit_or(_Tp __x, _Tp __y)
   {
     if constexpr (is_floating_point_v<_Tp>)
       {
@@ -276,7 +284,8 @@ struct _SimdImplScalar
 			      | __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __bit_xor(_Tp __x, _Tp __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __bit_xor(_Tp __x, _Tp __y)
   {
     if constexpr (is_floating_point_v<_Tp>)
       {
@@ -290,12 +299,14 @@ struct _SimdImplScalar
 			      ^ __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static inline _Tp __bit_shift_left(_Tp __x, int __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __bit_shift_left(_Tp __x, int __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x) << __y);
   }
 
-  template <typename _Tp> static inline _Tp __bit_shift_right(_Tp __x, int __y)
+  template <typename _Tp>
+  static constexpr inline _Tp __bit_shift_right(_Tp __x, int __y)
   {
     return static_cast<_Tp>(__promote_preserving_unsigned(__x) >> __y);
   }
@@ -543,67 +554,76 @@ struct _SimdImplScalar
   }
 
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static _ST<int> __fpclassify(_Tp __x)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static _ST<int> __fpclassify(_Tp __x)
   {
     return {std::fpclassify(__x)};
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isfinite(_Tp __x)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isfinite(_Tp __x)
   {
     return std::isfinite(__x);
   }
-  template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC static bool __isinf(_Tp __x)
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isinf(_Tp __x)
   {
     return std::isinf(__x);
   }
-  template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC static bool __isnan(_Tp __x)
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isnan(_Tp __x)
   {
     return std::isnan(__x);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isnormal(_Tp __x)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isnormal(_Tp __x)
   {
     return std::isnormal(__x);
   }
-  template <typename _Tp> _GLIBCXX_SIMD_INTRINSIC static bool __signbit(_Tp __x)
+  template <typename _Tp>
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __signbit(_Tp __x)
   {
     return std::signbit(__x);
   }
 
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isgreater(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isgreater(_Tp __x, _Tp __y)
   {
     return std::isgreater(__x, __y);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isgreaterequal(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isgreaterequal(_Tp __x, _Tp __y)
   {
     return std::isgreaterequal(__x, __y);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isless(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isless(_Tp __x, _Tp __y)
   {
     return std::isless(__x, __y);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __islessequal(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __islessequal(_Tp __x, _Tp __y)
   {
     return std::islessequal(__x, __y);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __islessgreater(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __islessgreater(_Tp __x, _Tp __y)
   {
     return std::islessgreater(__x, __y);
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool __isunordered(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __isunordered(_Tp __x, _Tp __y)
   {
     return std::isunordered(__x, __y);
   }
 
   // __increment & __decrement{{{2
-  template <typename _Tp> static inline void __increment(_Tp& __x) { ++__x; }
-  template <typename _Tp> static inline void __decrement(_Tp& __x) { --__x; }
+  template <typename _Tp> constexpr static inline void __increment(_Tp& __x)
+  {
+    ++__x;
+  }
+  template <typename _Tp> constexpr static inline void __decrement(_Tp& __x)
+  {
+    --__x;
+  }
 
   // compares {{{2
   template <typename _Tp>
@@ -629,7 +649,8 @@ struct _SimdImplScalar
 
   // smart_reference access {{{2
   template <typename _Tp, typename _Up>
-  static void __set(_Tp& __v, [[maybe_unused]] int __i, _Up&& __x) noexcept
+  constexpr static void __set(_Tp& __v, [[maybe_unused]] int __i,
+			      _Up&& __x) noexcept
   {
     _GLIBCXX_DEBUG_ASSERT(__i == 0);
     __v = static_cast<_Up&&>(__x);
@@ -637,8 +658,8 @@ struct _SimdImplScalar
 
   // __masked_assign {{{2
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static void __masked_assign(bool __k, _Tp& __lhs,
-						      _Tp __rhs)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static void
+  __masked_assign(bool __k, _Tp& __lhs, _Tp __rhs)
   {
     if (__k)
       __lhs = __rhs;
@@ -646,7 +667,7 @@ struct _SimdImplScalar
 
   // __masked_cassign {{{2
   template <typename _Op, typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static void
+  _GLIBCXX_SIMD_INTRINSIC constexpr static void
   __masked_cassign(const bool __k, _Tp& __lhs, const _Tp __rhs, _Op __op)
   {
     if (__k)
@@ -655,8 +676,8 @@ struct _SimdImplScalar
 
   // __masked_unary {{{2
   template <template <typename> class _Op, typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static _Tp __masked_unary(const bool __k,
-						    const _Tp __v)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static _Tp __masked_unary(const bool __k,
+							      const _Tp __v)
   {
     return static_cast<_Tp>(__k ? _Op<_Tp>{}(__v) : __v);
   }
@@ -714,7 +735,7 @@ struct _MaskImplScalar
   // }}}
   // __from_bitmask {{{2
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC static bool
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool
   __from_bitmask(_SanitizedBitMask<1> __bits, _TypeTag<_Tp>) noexcept
   {
     return __bits[0];
@@ -722,7 +743,7 @@ struct _MaskImplScalar
 
   // __masked_load {{{2
   template <typename _Fp>
-  _GLIBCXX_SIMD_INTRINSIC static bool
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool
   __masked_load(bool __merge, bool __mask, const bool* __mem, _Fp) noexcept
   {
     if (__mask)
@@ -756,7 +777,8 @@ struct _MaskImplScalar
   static constexpr bool __bit_xor(bool __x, bool __y) { return __x != __y; }
 
   // smart_reference access {{{2
-  static void __set(bool& __k, [[maybe_unused]] int __i, bool __x) noexcept
+  constexpr static void __set(bool& __k, [[maybe_unused]] int __i,
+			      bool __x) noexcept
   {
     _GLIBCXX_DEBUG_ASSERT(__i == 0);
     __k = __x;
@@ -773,7 +795,8 @@ struct _MaskImplScalar
   // }}}2
   // __all_of {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static bool __all_of(simd_mask<_Tp, _Abi> __k)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool
+  __all_of(simd_mask<_Tp, _Abi> __k)
   {
     return __k._M_data;
   }
@@ -781,7 +804,8 @@ struct _MaskImplScalar
   // }}}
   // __any_of {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static bool __any_of(simd_mask<_Tp, _Abi> __k)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool
+  __any_of(simd_mask<_Tp, _Abi> __k)
   {
     return __k._M_data;
   }
@@ -789,7 +813,8 @@ struct _MaskImplScalar
   // }}}
   // __none_of {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static bool __none_of(simd_mask<_Tp, _Abi> __k)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool
+  __none_of(simd_mask<_Tp, _Abi> __k)
   {
     return !__k._M_data;
   }
@@ -797,7 +822,7 @@ struct _MaskImplScalar
   // }}}
   // __some_of {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static bool __some_of(simd_mask<_Tp, _Abi>)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool __some_of(simd_mask<_Tp, _Abi>)
   {
     return false;
   }
@@ -805,7 +830,8 @@ struct _MaskImplScalar
   // }}}
   // __popcount {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static int __popcount(simd_mask<_Tp, _Abi> __k)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static int
+  __popcount(simd_mask<_Tp, _Abi> __k)
   {
     return __k._M_data;
   }
@@ -813,7 +839,8 @@ struct _MaskImplScalar
   // }}}
   // __find_first_set {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static int __find_first_set(simd_mask<_Tp, _Abi>)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static int
+    __find_first_set(simd_mask<_Tp, _Abi>)
   {
     return 0;
   }
@@ -821,7 +848,8 @@ struct _MaskImplScalar
   // }}}
   // __find_last_set {{{
   template <typename _Tp, typename _Abi>
-  _GLIBCXX_SIMD_INTRINSIC static int __find_last_set(simd_mask<_Tp, _Abi>)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static int
+    __find_last_set(simd_mask<_Tp, _Abi>)
   {
     return 0;
   }
