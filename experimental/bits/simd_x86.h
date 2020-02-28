@@ -1356,6 +1356,22 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	&& !__builtin_constant_p(__y._M_data))
       if constexpr (is_integral_v<_Tp> && sizeof(_Tp) <= 4)
 	{ // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
+	  // Note that using floating-point division is likely to raise the
+	  // *Inexact* exception flag and thus appears like an invalid "as-if"
+	  // transformation. However, C++ doesn't specify how the fpenv can be
+	  // observed and points to C. C says that function calls are assumed to
+	  // potentially raise fp exceptions, unless documented otherwise.
+	  // Consequently, operator/, which is a function call, may raise fp
+	  // exceptions.
+	  /*const struct _CsrGuard
+	  {
+	    const unsigned _M_data = _mm_getcsr();
+	    _CsrGuard()
+	    {
+	      _mm_setcsr(0x9f80); // turn off FP exceptions and flush-to-zero
+	    }
+	    ~_CsrGuard() { _mm_setcsr(_M_data); }
+	  } __csr;*/
 	  using _Float = conditional_t<sizeof(_Tp) == 4, double, float>;
 	  constexpr size_t __n_intermediate
 	    = std::min(_Np, (__have_avx512f ? 64 : __have_avx ? 32 : 16)
