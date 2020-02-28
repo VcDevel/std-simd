@@ -3173,7 +3173,7 @@ where(const simd_mask<_Tp, _Ap>& __k)
 // }}}1
 // reductions [simd.reductions] {{{1
 template <typename _Tp, typename _Abi, typename _BinaryOperation = std::plus<>>
-_GLIBCXX_SIMD_INTRINSIC _Tp
+_GLIBCXX_SIMD_INTRINSIC _GLIBCXX_SIMD_CONSTEXPR _Tp
 reduce(const simd<_Tp, _Abi>& __v,
        _BinaryOperation __binary_op = _BinaryOperation())
 {

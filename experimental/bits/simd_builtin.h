@@ -1790,8 +1790,8 @@ template <typename _Abi> struct _SimdImplBuiltin
   }
 
   template <typename _Tp, typename _BinaryOperation>
-  _GLIBCXX_SIMD_INTRINSIC static _Tp __reduce(simd<_Tp, _Abi> __x,
-					      _BinaryOperation&& __binary_op)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+  __reduce(simd<_Tp, _Abi> __x, _BinaryOperation&& __binary_op)
   {
     constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
     if constexpr (_Np == 1)

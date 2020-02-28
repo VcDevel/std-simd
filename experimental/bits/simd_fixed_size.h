@@ -1424,8 +1424,8 @@ template <int _Np> struct _SimdImplFixedSize
 
   // reductions {{{2
   template <typename _Tp, typename _BinaryOperation>
-  static inline _Tp __reduce(const _Simd<_Tp>& __x,
-			     const _BinaryOperation& __binary_op)
+  static constexpr inline _Tp __reduce(const _Simd<_Tp>& __x,
+				       const _BinaryOperation& __binary_op)
   {
     using _Tup = _SimdMember<_Tp>;
     const _Tup& __tup = __data(__x);
