@@ -36,7 +36,7 @@ template <typename _From, typename _To>
 struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::scalar,
 		      std::enable_if_t<!std::is_same_v<_From, _To>>>
 {
-  _GLIBCXX_SIMD_INTRINSIC _To operator()(_From __a) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr _To operator()(_From __a) const noexcept
   {
     return static_cast<_To>(__a);
   }
@@ -51,7 +51,8 @@ struct _SimdConverter<_From, _Abi, _To, simd_abi::scalar,
   using _Arg = typename _Abi::template __traits<_From>::_SimdMember;
   static constexpr size_t _S_n = _Arg::_S_width;
 
-  _GLIBCXX_SIMD_INTRINSIC std::array<_To, _S_n> __all(_Arg __a) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr std::array<_To, _S_n>
+  __all(_Arg __a) const noexcept
   {
     return __call_with_subscripts(
       __a, make_index_sequence<_S_n>(),
@@ -94,14 +95,14 @@ struct _SimdConverter<
   using _Ret = typename _ATo::template __traits<_To>::_SimdMember;
   using _V = __vector_type_t<_To, simd_size_v<_To, _ATo>>;
 
-  _GLIBCXX_SIMD_INTRINSIC auto __all(_Arg __a) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr auto __all(_Arg __a) const noexcept
   {
     return __convert_all<_V>(__a);
   }
 
   template <typename... _More>
-  _GLIBCXX_SIMD_INTRINSIC _Ret operator()(_Arg __a,
-					  _More... __more) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr _Ret
+  operator()(_Arg __a, _More... __more) const noexcept
   {
     return __convert<_V>(__a, __more...);
   }
@@ -113,7 +114,8 @@ template <typename _From, typename _To>
 struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::fixed_size<1>,
 		      void>
 {
-  _SimdTuple<_To, simd_abi::scalar> operator()(_From __x) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple<_To, simd_abi::scalar>
+  operator()(_From __x) const noexcept
   {
     return {static_cast<_To>(__x)};
   }
@@ -124,7 +126,7 @@ template <typename _From, typename _To>
 struct _SimdConverter<_From, simd_abi::fixed_size<1>, _To, simd_abi::scalar,
 		      void>
 {
-  _GLIBCXX_SIMD_INTRINSIC _To
+  _GLIBCXX_SIMD_INTRINSIC constexpr _To
   operator()(_SimdTuple<_From, simd_abi::scalar> __x) const noexcept
   {
     return {static_cast<_To>(__x.first)};
@@ -140,7 +142,8 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
   using _Ret = __fixed_size_storage_t<_To, _Np>;
   using _Arg = __fixed_size_storage_t<_From, _Np>;
 
-  _GLIBCXX_SIMD_INTRINSIC _Ret operator()(const _Arg& __x) const noexcept
+  _GLIBCXX_SIMD_INTRINSIC constexpr _Ret
+  operator()(const _Arg& __x) const noexcept
   {
     if constexpr (std::is_same_v<_From, _To>)
       return __x;
@@ -299,7 +302,7 @@ struct _SimdConverter<_From, _Ap, _To, simd_abi::fixed_size<_Np>,
     _Np == simd_size_v<_From, _Ap>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
-  _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_To, _Np>
+  _GLIBCXX_SIMD_INTRINSIC constexpr __fixed_size_storage_t<_To, _Np>
   operator()(typename _SimdTraits<_From, _Ap>::_SimdMember __x) const noexcept
   {
     _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
@@ -319,7 +322,7 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To, _Ap,
     _Np == simd_size_v<_To, _Ap>,
     "_SimdConverter to fixed_size only works for equal element counts");
 
-  _GLIBCXX_SIMD_INTRINSIC typename _SimdTraits<_To, _Ap>::_SimdMember
+  _GLIBCXX_SIMD_INTRINSIC constexpr typename _SimdTraits<_To, _Ap>::_SimdMember
   operator()(__fixed_size_storage_t<_From, _Np> __x) const noexcept
   {
     _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,

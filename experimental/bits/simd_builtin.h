@@ -528,7 +528,7 @@ __vector_convert(_From... __xs)
 // }}}
 // __convert function{{{
 template <typename _To, typename _From, typename... _More>
-_GLIBCXX_SIMD_INTRINSIC auto
+_GLIBCXX_SIMD_INTRINSIC constexpr auto
 __convert(_From __v0, _More... __vs)
 {
   if constexpr (__is_vectorizable_v<_From>)
