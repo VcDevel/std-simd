@@ -1976,6 +1976,19 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
 	} //}}}2
     }
 } //}}}
+// 16-arg __convert_x86 {{{1
+template <typename _To, typename _V, typename _Traits>
+_GLIBCXX_SIMD_INTRINSIC _To
+__convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
+	      _V __v7, _V __v8, _V __v9, _V __v10, _V __v11, _V __v12, _V __v13,
+	      _V __v14, _V __v15)
+{
+  // concat => use 8-arg __convert_x86 {{{2
+  return __convert_x86<_To>(__concat(__v0, __v1), __concat(__v2, __v3),
+			    __concat(__v4, __v5), __concat(__v6, __v7),
+			    __concat(__v8, __v9), __concat(__v10, __v11),
+			    __concat(__v12, __v13), __concat(__v14, __v15));
+} //}}}
 
 #endif // __cplusplus >= 201703L
 #endif // _GLIBCXX_EXPERIMENTAL_SIMD_X86_CONVERSIONS_H

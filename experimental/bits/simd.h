@@ -1503,6 +1503,10 @@ _To __convert_x86(_Tp, _Tp, _Tp, _Tp);
 
 template <typename _To, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
 _To __convert_x86(_Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp);
+
+template <typename _To, typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_To __convert_x86(_Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp, _Tp,
+		  _Tp, _Tp, _Tp, _Tp);
 #endif // _GLIBCXX_SIMD_WORKAROUND_PR85048
 
 //}}}
