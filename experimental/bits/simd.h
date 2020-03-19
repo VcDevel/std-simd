@@ -4446,29 +4446,41 @@ find_last_set(const simd_mask<_Tp, _Abi>& __k)
     return _Abi::_MaskImpl::__find_last_set(__k);
 }
 
-_GLIBCXX_SIMD_CONSTEXPR bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 all_of(_ExactBool __x) noexcept
 {
   return __x;
 }
-_GLIBCXX_SIMD_CONSTEXPR bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 any_of(_ExactBool __x) noexcept
 {
   return __x;
 }
-_GLIBCXX_SIMD_CONSTEXPR bool
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
 none_of(_ExactBool __x) noexcept
 {
   return !__x;
 }
-_GLIBCXX_SIMD_CONSTEXPR bool some_of(_ExactBool) noexcept { return false; }
-_GLIBCXX_SIMD_CONSTEXPR int
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR bool
+  some_of(_ExactBool) noexcept
+{
+  return false;
+}
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
 popcount(_ExactBool __x) noexcept
 {
   return __x;
 }
-_GLIBCXX_SIMD_CONSTEXPR int find_first_set(_ExactBool) { return 0; }
-_GLIBCXX_SIMD_CONSTEXPR int find_last_set(_ExactBool) { return 0; }
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
+  find_first_set(_ExactBool)
+{
+  return 0;
+}
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR int
+  find_last_set(_ExactBool)
+{
+  return 0;
+}
 
 // }}}
 
