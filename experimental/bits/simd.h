@@ -3481,11 +3481,12 @@ split(const simd<typename _V::value_type, _Ap>& __x)
     {
       return {simd_cast<_V>(__x)};
     }
-  else if constexpr (__is_fixed_size_abi_v<_Ap> &&
-                         (std::is_same_v<typename _V::abi_type, simd_abi::scalar> ||
-                          (__is_fixed_size_abi_v<typename _V::abi_type> &&
-                           sizeof(_V) == sizeof(_Tp) * _V::size()  // _V doesn't have padding
-                           )))
+  else if constexpr (
+      __is_fixed_size_abi_v<_Ap>
+      && (std::is_same_v<typename _V::abi_type, simd_abi::scalar>
+	|| (__is_fixed_size_abi_v<typename _V::abi_type>
+	  && sizeof(_V) == sizeof(_Tp) * _V::size() // _V doesn't have padding
+	  )))
     {
       // fixed_size -> fixed_size (w/o padding) or scalar
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
