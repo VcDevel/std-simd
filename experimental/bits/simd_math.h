@@ -420,7 +420,7 @@ __extract_exponent_bits(const simd<float, _Abi>& __v)
 {
   using namespace std::experimental::__proposed;
   using namespace std::experimental::__proposed::float_bitwise_operators;
-  constexpr simd<float, _Abi> __exponent_mask
+  _GLIBCXX_SIMD_CONSTEXPR simd<float, _Abi> __exponent_mask
     = std::numeric_limits<float>::infinity(); // 0x7f800000
   return __bit_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v
 							   & __exponent_mask);
@@ -731,9 +731,9 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
       constexpr int __exp_adjust = sizeof(_Tp) == 4 ? 0x7e : 0x3fe;
       constexpr int __exp_offset = sizeof(_Tp) == 4 ? 0x70 : 0x200;
       constexpr _Tp __subnorm_scale = sizeof(_Tp) == 4 ? 0x1p112 : 0x1p512;
-      constexpr _V __exponent_mask
+      _GLIBCXX_SIMD_CONSTEXPR _V __exponent_mask
 	= _Limits::infinity(); // 0x7f800000 or 0x7ff0000000000000
-      constexpr _V __p5_1_exponent
+      _GLIBCXX_SIMD_CONSTEXPR _V __p5_1_exponent
 	= _Tp(sizeof(_Tp) == 4 ? -0x1.fffffep-1 : -0x1.fffffffffffffp-1);
 
       _V __mant = __p5_1_exponent & (__exponent_mask | __x);
@@ -1015,7 +1015,7 @@ __hypot(_VV __x, _VV __y)
       _V __lo = min(__absy, __absx); // no error
 
       // round __hi down to the next power-of-2:
-      constexpr _V __inf(_Limits::infinity());
+      _GLIBCXX_SIMD_CONSTEXPR _V __inf(_Limits::infinity());
 
       if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))
 				  && all_of(isnormal(__y))))
@@ -1026,7 +1026,8 @@ __hypot(_VV __x, _VV __y)
 	  // becomes 0 (should be min/2 instead) and thus loses the information
 	  // from __lo.
 	  const _V __scale = (__hi_exp ^ __inf) * _Tp(.5);
-	  constexpr _V __mant_mask = _Limits::min() - _Limits::denorm_min();
+	  _GLIBCXX_SIMD_CONSTEXPR _V __mant_mask
+	    = _Limits::min() - _Limits::denorm_min();
 	  const _V __h1 = (__hi & __mant_mask) | _V(1);
 	  const _V __l1 = __lo * __scale;
 	  return __hi_exp * sqrt(__h1 * __h1 + __l1 * __l1);
@@ -1142,7 +1143,7 @@ __hypot(_VV __x, _VV __y, _VV __z)
       else
 	{
 	  // round __hi down to the next power-of-2:
-	  constexpr _V __inf(_Limits::infinity());
+	  _GLIBCXX_SIMD_CONSTEXPR _V __inf(_Limits::infinity());
 
 	  if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))
 				      && all_of(isnormal(__y))
@@ -1155,7 +1156,8 @@ __hypot(_VV __x, _VV __y, _VV __z)
 	      // becomes 0 (should be min/2 instead) and thus loses the
 	      // information from __lo.
 	      const _V __scale = (__hi_exp ^ __inf) * _Tp(.5);
-	      constexpr _V __mant_mask = _Limits::min() - _Limits::denorm_min();
+	      _GLIBCXX_SIMD_CONSTEXPR _V __mant_mask
+		= _Limits::min() - _Limits::denorm_min();
 	      const _V __h1 = (__hi & __mant_mask) | _V(1);
 	      __l0 *= __scale;
 	      __l1 *= __scale;
