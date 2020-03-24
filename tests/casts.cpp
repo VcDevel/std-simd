@@ -63,7 +63,8 @@ TEST_TYPES(V, split_concat, all_test_types)
 
   if constexpr (V::size() >= 4)
     {
-      const V a([](auto i) -> T { return i; });
+      const V a
+	= vir::test::make_value_unknown(V([](auto i) -> T { return i; }));
       constexpr auto N0 = V::size() / 4u;
       constexpr auto N1 = V::size() - 2 * N0;
       using V0
