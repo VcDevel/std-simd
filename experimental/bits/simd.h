@@ -3481,6 +3481,15 @@ split(const simd<typename _V::value_type, _Ap>& __x)
     {
       return {simd_cast<_V>(__x)};
     }
+  else if (__x._M_is_constprop())
+    {
+      return __generate_from_n_evaluations<Parts, std::array<_V, Parts>>([&](
+	auto __i) constexpr {
+	return _V([&](auto __j) constexpr {
+	  return __x[__i * _V::size() + __j];
+	});
+      });
+    }
   else if constexpr (
       __is_fixed_size_abi_v<_Ap>
       && (std::is_same_v<typename _V::abi_type, simd_abi::scalar>
@@ -3595,7 +3604,14 @@ _GLIBCXX_SIMD_ALWAYS_INLINE
   constexpr size_t _N0 = _SL::template __at<0>();
   using _V = __deduced_simd<_Tp, _N0>;
 
-  if constexpr (_Np == _N0)
+  if (__x._M_is_constprop())
+    return __generate_from_n_evaluations<sizeof...(_Sizes), _Tuple>([&](
+      auto __i) constexpr {
+      using _Vi = __deduced_simd<_Tp, _SL::__at(__i)>;
+      constexpr size_t __offset = _SL::__before(__i);
+      return _Vi([&](auto __j) constexpr { return __x[__offset + __j]; });
+    });
+  else if constexpr (_Np == _N0)
     {
       static_assert(sizeof...(_Sizes) == 1);
       return {simd_cast<_V>(__x)};
@@ -3693,23 +3709,44 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
 __subscript_in_pack(const simd<_Tp, _Ap>& __x, const simd<_Tp, _As>&... __xs)
 {
   if constexpr (_I < simd_size_v<_Tp, _Ap>)
-    {
-      return __x[_I];
-    }
+    return __x[_I];
   else
-    {
-      return __subscript_in_pack<_I - simd_size_v<_Tp, _Ap>>(__xs...);
-    }
+    return __subscript_in_pack<_I - simd_size_v<_Tp, _Ap>>(__xs...);
 }
-// }}}
 
+// }}}
+// __store_pack_of_simd {{{
+template <typename _Tp, typename _A0, typename... _As>
+_GLIBCXX_SIMD_INTRINSIC void
+__store_pack_of_simd(char* __mem, const simd<_Tp, _A0>& __x0,
+		     const simd<_Tp, _As>&... __xs)
+{
+  constexpr size_t __n_bytes = sizeof(_Tp) * simd_size_v<_Tp, _A0>;
+  __builtin_memcpy(__mem, &__data(__x0), __n_bytes);
+  if constexpr (sizeof...(__xs) > 0)
+    __store_pack_of_simd(__mem + __n_bytes, __xs...);
+}
+
+// }}}
 // concat(simd...) {{{
 template <typename _Tp, typename... _As>
+inline _GLIBCXX_SIMD_CONSTEXPR
 simd<_Tp, simd_abi::deduce_t<_Tp, (simd_size_v<_Tp, _As> + ...)>>
 concat(const simd<_Tp, _As>&... __xs)
 {
-  return simd<_Tp, simd_abi::deduce_t<_Tp, (simd_size_v<_Tp, _As> + ...)>>([&](
-    auto __i) constexpr { return __subscript_in_pack<__i>(__xs...); });
+  using _Rp = __deduced_simd<_Tp, (simd_size_v<_Tp, _As> + ...)>;
+  if constexpr(sizeof...(__xs) == 1)
+    return simd_cast<_Rp>(__xs...);
+  else if ((... && __xs._M_is_constprop()))
+    return simd<_Tp,
+		simd_abi::deduce_t<_Tp, (simd_size_v<_Tp, _As> + ...)>>([&](
+      auto __i) constexpr { return __subscript_in_pack<__i>(__xs...); });
+  else
+    {
+      _Rp __r{};
+      __store_pack_of_simd(reinterpret_cast<char*>(&__data(__r)), __xs...);
+      return __r;
+    }
 }
 
 // }}}

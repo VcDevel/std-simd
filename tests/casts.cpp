@@ -37,9 +37,23 @@ template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 
 using std::experimental::simd_cast;
 using std::experimental::static_simd_cast;
+using yesno = vir::Typelist<std::true_type, std::false_type>;
 
-TEST_TYPES(V, split_concat, all_test_types)
+template <typename V_CP, typename F>
+auto
+gen(const F& fun)
 {
+  using V = typename V_CP::template at<0>;
+  constexpr bool ConstProp = V_CP::template at<1>::value;
+  if constexpr (ConstProp)
+    return V(fun);
+  else
+    return vir::test::make_value_unknown(V(fun));
+}
+
+TEST_TYPES(V_CP, split_concat, outer_product<all_test_types, yesno>)
+{
+  using V = typename V_CP::template at<0>;
   using T = typename V::value_type;
   if constexpr (V::size() * 3 <= std::experimental::simd_abi::max_fixed_size<T>)
     {
@@ -63,8 +77,7 @@ TEST_TYPES(V, split_concat, all_test_types)
 
   if constexpr (V::size() >= 4)
     {
-      const V a
-	= vir::test::make_value_unknown(V([](auto i) -> T { return i; }));
+      const V a = gen<V_CP>([](auto i) -> T { return i; });
       constexpr auto N0 = V::size() / 4u;
       constexpr auto N1 = V::size() - 2 * N0;
       using V0
@@ -119,7 +132,7 @@ TEST_TYPES(V, split_concat, all_test_types)
 
   if constexpr (V::size() % 3 == 0)
     {
-      const V a([](auto i) -> T { return i; });
+      const V a = gen<V_CP>([](auto i) -> T { return i; });
       constexpr auto N0 = V::size() / 3;
       using V0
 	= std::experimental::simd<T,
@@ -164,7 +177,7 @@ TEST_TYPES(V, split_concat, all_test_types)
       using V2 = simd<T, deduce_t<T, 2>>;
       using V3 = simd<T, deduce_t<T, V::size() / 2>>;
 
-      V a([](auto i) -> T { return i; });
+      const V a = gen<V_CP>([](auto i) -> T { return i; });
 
       std::array<V2, V::size() / 2> v2s = std::experimental::split<V2>(a);
       int offset = 0;

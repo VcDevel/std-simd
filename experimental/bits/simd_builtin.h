@@ -223,6 +223,9 @@ _GLIBCXX_SIMD_INTRINSIC
 
       // static_assert(__return_size * _Total == _Np, "_Np must be divisible by
       // _Total");
+      if (__x._M_is_constprop())
+	return __generate_from_n_evaluations<__return_size, _R>(
+	  [&](auto __i) { return __x[__values_to_skip + __i]; });
       if constexpr (_Index == 0 && _Total == 1)
 	return __x;
       else if constexpr (_Index == 0)
