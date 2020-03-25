@@ -3713,6 +3713,18 @@ concat(const simd<_Tp, _As>&... __xs)
 }
 
 // }}}
+// concat(array<simd>) {{{
+template <typename _Tp, typename _Abi, size_t _Np>
+_GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR
+__deduced_simd<_Tp, simd_size_v<_Tp, _Abi> * _Np>
+concat(const std::array<simd<_Tp, _Abi>, _Np>& __x)
+{
+  return __call_with_subscripts<_Np>(__x, [](const auto&... __xs) {
+    return concat(__xs...);
+  });
+}
+
+// }}}
 
 // _SmartReference {{{
 template <typename _Up, typename _Accessor = _Up,

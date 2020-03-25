@@ -158,11 +158,11 @@ TEST_TYPES(V, split_concat, all_test_types)
 
   if constexpr ((V::size() & 1) == 0)
     {
-      using V2
-	= std::experimental::simd<T,
-				  std::experimental::simd_abi::deduce_t<T, 2>>;
-      using V3 = std::experimental::simd<
-	T, std::experimental::simd_abi::deduce_t<T, V::size() / 2>>;
+      using std::experimental::simd;
+      using std::experimental::simd_abi::deduce_t;
+      using V0 = simd<T, deduce_t<T, V::size()>>;
+      using V2 = simd<T, deduce_t<T, 2>>;
+      using V3 = simd<T, deduce_t<T, V::size() / 2>>;
 
       V a([](auto i) -> T { return i; });
 
@@ -173,10 +173,12 @@ TEST_TYPES(V, split_concat, all_test_types)
 	  COMPARE(test, V2([&](auto i) -> T { return i + offset; }));
 	  offset += 2;
 	}
+      COMPARE(concat(v2s), simd_cast<V0>(a));
 
       std::array<V3, 2> v3s = std::experimental::split<V3>(a);
       COMPARE(v3s[0], V3([](auto i) -> T { return i; }));
       COMPARE(v3s[1], V3([](auto i) -> T { return i + V3::size(); }));
+      COMPARE(concat(v3s), simd_cast<V0>(a));
     }
 }
 
