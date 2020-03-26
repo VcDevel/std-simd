@@ -31,100 +31,109 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vir/metahelpers.h>
 
 // more operator objects {{{1
-struct assignment {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() = std::declval<B>()) operator()(A &&a,
-                                                                         B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) = static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) = static_cast<B&&>(b);
-    }
+struct assignment
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() = std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) = static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) = static_cast<B&&>(b);
+  }
 };
 
-struct bit_shift_left {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() << std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) << static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) << static_cast<B&&>(b);
-    }
+struct bit_shift_left
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() << std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) << static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) << static_cast<B&&>(b);
+  }
 };
 
-struct bit_shift_right {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() >> std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) >> static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) >> static_cast<B&&>(b);
-    }
+struct bit_shift_right
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() >> std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) >> static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) >> static_cast<B&&>(b);
+  }
 };
 
-struct assign_modulus {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() %= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) %= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) %= static_cast<B&&>(b);
-    }
+struct assign_modulus
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() %= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) %= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) %= static_cast<B&&>(b);
+  }
 };
 
-struct assign_bit_and {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() &= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) &= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) &= static_cast<B&&>(b);
-    }
+struct assign_bit_and
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() &= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) &= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) &= static_cast<B&&>(b);
+  }
 };
 
-struct assign_bit_or {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() |= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) |= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) |= static_cast<B&&>(b);
-    }
+struct assign_bit_or
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() |= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) |= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) |= static_cast<B&&>(b);
+  }
 };
 
-struct assign_bit_xor {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() ^= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) ^= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) ^= static_cast<B&&>(b);
-    }
+struct assign_bit_xor
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() ^= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) ^= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) ^= static_cast<B&&>(b);
+  }
 };
 
-struct assign_bit_shift_left {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() <<= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) <<= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) <<= static_cast<B&&>(b);
-    }
+struct assign_bit_shift_left
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() <<= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) <<= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) <<= static_cast<B&&>(b);
+  }
 };
 
-struct assign_bit_shift_right {
-    template <class A, class B>
-    constexpr decltype(std::declval<A>() >>= std::declval<B>()) operator()(A &&a,
-                                                                          B &&b) const
-        noexcept(noexcept(static_cast<A&&>(a) >>= static_cast<B&&>(b)))
-    {
-        return static_cast<A&&>(a) >>= static_cast<B&&>(b);
-    }
+struct assign_bit_shift_right
+{
+  template <class A, class B>
+  constexpr decltype(std::declval<A>() >>= std::declval<B>())
+  operator()(A&& a, B&& b) const
+    noexcept(noexcept(static_cast<A&&>(a) >>= static_cast<B&&>(b)))
+  {
+    return static_cast<A&&>(a) >>= static_cast<B&&>(b);
+  }
 };
 
 // operator_is_substitution_failure {{{1
 template <class A, class B, class Op = std::plus<>>
-constexpr bool is_substitution_failure =
-    vir::test::operator_is_substitution_failure<A, B, Op>();
+constexpr bool is_substitution_failure
+  = vir::test::operator_is_substitution_failure<A, B, Op>();
 
 // sfinae_is_callable{{{1
 using vir::test::sfinae_is_callable;
@@ -135,4 +144,4 @@ using vir::test::has_less_bits;
 //}}}1
 
 #endif  // VC_TESTS_METAHELPERS_H_
-// vim: foldmethod=marker
+	// vim: foldmethod=marker

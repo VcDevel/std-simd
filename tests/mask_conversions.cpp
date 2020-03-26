@@ -34,21 +34,24 @@ template <class... Ts> using base_template = stdx::simd_mask<Ts...>;
 #include "testtypes.h"
 
 // type iteration in a function {{{1
-template <class... Ts, class F> void call_with_types(F &&f, vir::Typelist<Ts...> = {})
+template <class... Ts, class F>
+void
+call_with_types(F&& f, vir::Typelist<Ts...> = {})
 {
-    [](std::initializer_list<int>) {}({(f(Ts()), 0)...});
+  [](std::initializer_list<int>) {}({(f(Ts()), 0)...});
 }
 
-template <class List, class F> void call_with_typelist(F &&f)
+template <class List, class F>
+void
+call_with_typelist(F&& f)
 {
-    call_with_types(static_cast<F&&>(f), List());
+  call_with_types(static_cast<F&&>(f), List());
 }
 
-template <typename T, typename V, typename = void>
-struct rebind_or_max_fixed
+template <typename T, typename V, typename = void> struct rebind_or_max_fixed
 {
-  using type = stdx::
-    rebind_simd_t<T, stdx::resize_simd_t<stdx::simd_abi::max_fixed_size<T>, V>>;
+  using type = stdx::rebind_simd_t<
+    T, stdx::resize_simd_t<stdx::simd_abi::max_fixed_size<T>, V>>;
 };
 template <typename T, typename V>
 struct rebind_or_max_fixed<T, V, std::void_t<stdx::rebind_simd_t<T, V>>>
@@ -56,51 +59,58 @@ struct rebind_or_max_fixed<T, V, std::void_t<stdx::rebind_simd_t<T, V>>>
   using type = stdx::rebind_simd_t<T, V>;
 };
 
-TEST_TYPES(FromTo, conversions,  //{{{1
-           outer_product<all_test_types, all_arithmetic_types>)
+TEST_TYPES(FromTo, conversions, //{{{1
+	   outer_product<all_test_types, all_arithmetic_types>)
 {
-    using FromM = typename FromTo::template at<0>;
-    using To = typename FromTo::template at<1>;
-    call_with_typelist<vir::make_unique_typelist<
-        typename rebind_or_max_fixed<To, FromM>::type, stdx::native_simd_mask<To>,
-        stdx::simd_mask<To>, stdx::simd_mask<To, stdx::simd_abi::scalar>>>([](auto _b) {
-        using ToM = decltype(_b);
-        using ToV = typename ToM::simd_type;
+  using FromM = typename FromTo::template at<0>;
+  using To = typename FromTo::template at<1>;
+  call_with_typelist<vir::make_unique_typelist<
+    typename rebind_or_max_fixed<To, FromM>::type, stdx::native_simd_mask<To>,
+    stdx::simd_mask<To>, stdx::simd_mask<To, stdx::simd_abi::scalar>>>(
+    [](auto _b) {
+      using ToM = decltype(_b);
+      using ToV = typename ToM::simd_type;
 
-        using stdx::static_simd_cast;
-        using stdx::simd_cast;
-        using stdx::__proposed::resizing_simd_cast;
+      using stdx::static_simd_cast;
+      using stdx::simd_cast;
+      using stdx::__proposed::resizing_simd_cast;
 
-        auto x = resizing_simd_cast<ToM>(FromM());
-        COMPARE(typeid(x), typeid(ToM));
-        COMPARE(x, ToM()) << '\n'
-                        << vir::typeToString<FromM>() << " -> "
-                        << vir::typeToString<ToM>();
+      auto x = resizing_simd_cast<ToM>(FromM());
+      COMPARE(typeid(x), typeid(ToM));
+      COMPARE(x, ToM()) << '\n'
+			<< vir::typeToString<FromM>() << " -> "
+			<< vir::typeToString<ToM>();
 
-        x = resizing_simd_cast<ToM>(FromM(true));
-        const ToM ref = ToV([](auto i) { return i; }) < int(FromM::size());
-        COMPARE(x, ref) << "converted from: " << FromM(true) << '\n'
-                        << vir::typeToString<FromM>() << " -> "
-                        << vir::typeToString<ToM>();
+      x = resizing_simd_cast<ToM>(FromM(true));
+      const ToM ref = ToV([](auto i) { return i; }) < int(FromM::size());
+      COMPARE(x, ref) << "converted from: " << FromM(true) << '\n'
+		      << vir::typeToString<FromM>() << " -> "
+		      << vir::typeToString<ToM>();
 
-        const ullong all_bits = ~ullong() >> (64 - FromM::size());
-        for (ullong bit_pos = 1; bit_pos /*until overflow*/; bit_pos *= 2) {
-            for (ullong bits : {bit_pos & all_bits, ~bit_pos & all_bits}) {
-                const auto from = FromM::__from_bitset(bits);
-                const auto to = resizing_simd_cast<ToM>(from);
-                COMPARE(to, ToM::__from_bitset(bits))
-                    << "\nfrom: " << from << "\nbits: " << std::hex << bits << std::dec
-                    << '\n'
-                    << vir::typeToString<FromM>() << " -> " << vir::typeToString<ToM>();
-                for (std::size_t i = 0; i < ToM::size(); ++i) {
-                    COMPARE(to[i], (bits >> i) & 1)
-                        << "\nfrom: " << from << "\nto: " << to << "\nbits: " << std::hex
-                        << bits << std::dec << "\ni: " << i << '\n'
-                        << vir::typeToString<FromM>() << " -> "
-                        << vir::typeToString<ToM>();
-                }
-            }
-        }
-        ADD_PASS() << vir::typeToString<FromM>() << " -> " << vir::typeToString<ToM>();
+      const ullong all_bits = ~ullong() >> (64 - FromM::size());
+      for (ullong bit_pos = 1; bit_pos /*until overflow*/; bit_pos *= 2)
+	{
+	  for (ullong bits : {bit_pos & all_bits, ~bit_pos & all_bits})
+	    {
+	      const auto from = FromM::__from_bitset(bits);
+	      const auto to = resizing_simd_cast<ToM>(from);
+	      COMPARE(to, ToM::__from_bitset(bits))
+		<< "\nfrom: " << from << "\nbits: " << std::hex << bits
+		<< std::dec << '\n'
+		<< vir::typeToString<FromM>() << " -> "
+		<< vir::typeToString<ToM>();
+	      for (std::size_t i = 0; i < ToM::size(); ++i)
+		{
+		  COMPARE(to[i], (bits >> i) & 1)
+		    << "\nfrom: " << from << "\nto: " << to
+		    << "\nbits: " << std::hex << bits << std::dec
+		    << "\ni: " << i << '\n'
+		    << vir::typeToString<FromM>() << " -> "
+		    << vir::typeToString<ToM>();
+		}
+	    }
+	}
+      ADD_PASS() << vir::typeToString<FromM>() << " -> "
+		 << vir::typeToString<ToM>();
     });
 }

@@ -45,13 +45,13 @@ TEST_TYPES(V, resizing_simd_cast, all_test_types)
   using T = typename V::value_type;
   using M = typename V::mask_type;
   stdx::__execute_n_times<stdx::simd_abi::max_fixed_size<T>>([](auto ii) {
-    CONSTEXPR_ V   seq([](int i) { return i; });
-    CONSTEXPR_ M   kseq = V([](int i) { return i & 1; }) == 1;
-    constexpr int N    = ii + 1;
-    using V0           = stdx::__deduced_simd<T, N>;
-    using V1           = stdx::fixed_size_simd<T, N>;
-    using M0           = typename V0::mask_type;
-    using M1           = typename V1::mask_type;
+    CONSTEXPR_ V seq([](int i) { return i; });
+    CONSTEXPR_ M kseq = V([](int i) { return i & 1; }) == 1;
+    constexpr int N = ii + 1;
+    using V0 = stdx::__deduced_simd<T, N>;
+    using V1 = stdx::fixed_size_simd<T, N>;
+    using M0 = typename V0::mask_type;
+    using M1 = typename V1::mask_type;
     const auto v0 = resizing_simd_cast<V0>(seq);
     const auto v1 = resizing_simd_cast<V1>(seq);
     const auto m0 = resizing_simd_cast<M0>(kseq);
