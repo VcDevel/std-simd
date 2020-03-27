@@ -2578,8 +2578,7 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __broadcast(bool __x)
   {
-    using _UV = __vector_type_t<__int_for_sizeof_t<_Tp>, size<_Tp>>;
-    return __vector_bitcast<_Tp>(__x ? _Abi::__masked(~_UV()) : _UV());
+    return __x ? _Abi::template __implicit_mask<_Tp>() : _MaskMember<_Tp>();
   }
 
   // }}}
@@ -2720,7 +2719,10 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_not(const _SimdWrapper<_Tp, _Np>& __x)
   {
-    return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
+    if constexpr(_Abi::_S_is_partial)
+      return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
+    else
+      return __not(__x._M_data);
   }
 
   template <typename _Tp, size_t _Np>

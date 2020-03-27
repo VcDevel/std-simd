@@ -4265,8 +4265,7 @@ public:
   _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR friend simd_mask
   operator!=(const simd_mask& __x, const simd_mask& __y)
   {
-    return {__private_init,
-	    _Abi::__masked(_Impl::__bit_xor(__x._M_data, __y._M_data))};
+    return {__private_init, _Impl::__bit_xor(__x._M_data, __y._M_data)};
   }
 
   // }}}
