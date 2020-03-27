@@ -503,13 +503,14 @@ TEST_TYPES(V, deduce_from_list, all_test_types)
 	{
 	  COMPARE(V::size(), (std::experimental::simd_size_v<T, W>) )
 	    << vir::typeToString<W>();
-	  COMPARE(typeid(W), typeid(std::experimental::simd_abi::
+	  using ExpectedAbi = std::experimental::simd_abi::
 #if _GLIBCXX_SIMD_X86INTRIN
-				      _Avx512
+	    _Avx512
 #else
-				      _VecBuiltin
+	    _VecBuiltin
 #endif
-				    <V::size() * sizeof(T)>));
+	    <V::size() * sizeof(T)>;
+	  COMPARE_TYPES(W, ExpectedAbi);
 	}
 #else
       COMPARE(typeid(A), typeid(W));
