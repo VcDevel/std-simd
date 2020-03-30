@@ -57,12 +57,11 @@ test_values(const std::initializer_list<typename V::value_type>& inputs,
 {
   for (auto it = inputs.begin(); it + V::size() <= inputs.end();
        it += V::size())
-    {
-      [](auto...) {
-      }((fun_pack(V(&it[0], std::experimental::element_aligned)), 0)...);
-    }
-  [](auto...) {
-  }((fun_pack(epilogue_load<V>(inputs.begin(), inputs.size())), 0)...);
+    [[maybe_unused]] int tmp[]
+      = {(fun_pack(V(&it[0], std::experimental::element_aligned)), 0)...};
+  if (inputs.size() % V::size() > 0)
+    [[maybe_unused]] int tmp[]
+      = {(fun_pack(epilogue_load<V>(inputs.begin(), inputs.size())), 0)...};
 }
 
 template <class V> struct RandomValues
@@ -89,16 +88,12 @@ test_values(const std::initializer_list<typename V::value_type>& inputs,
   auto&& rnd_v = [&]() {
     V tmp;
     for (std::size_t i = 0; i < V::size(); ++i)
-      {
-	tmp[i] = dist(g_mt_gen);
-      }
+      tmp[i] = dist(g_mt_gen);
     return tmp;
   };
 
   for (size_t i = 0; i < (random.count + V::size() - 1) / V::size(); ++i)
-    {
-      [](auto...) {}((fun_pack(rnd_v()), 0)...);
-    }
+    [[maybe_unused]] int tmp[] = {(fun_pack(rnd_v()), 0)...};
 }
 
 template <class V, class... F>
@@ -110,15 +105,15 @@ test_values_2arg(const std::initializer_list<typename V::value_type>& inputs,
     {
       for (auto it = inputs.begin(); it + V::size() <= inputs.end();
 	   it += V::size())
-	{
-	  [](auto...) {
-	  }((fun_pack(V(&it[0], std::experimental::element_aligned),
-		      V(*scalar_it)),
-	     0)...);
-	}
-      [](auto...) {}((fun_pack(epilogue_load<V>(inputs.begin(), inputs.size()),
-			       V(*scalar_it)),
-		      0)...);
+	[[maybe_unused]] int tmp[]
+	  = {(fun_pack(V(&it[0], std::experimental::element_aligned),
+		       V(*scalar_it)),
+	      0)...};
+      if (inputs.size() % V::size() > 0)
+	[[maybe_unused]] int tmp[]
+	  = {(fun_pack(epilogue_load<V>(inputs.begin(), inputs.size()),
+		       V(*scalar_it)),
+	      0)...};
     }
 }
 
@@ -137,16 +132,12 @@ test_values_2arg(const std::initializer_list<typename V::value_type>& inputs,
   auto&& rnd_v = [&]() {
     V tmp;
     for (std::size_t i = 0; i < V::size(); ++i)
-      {
-	tmp[i] = dist(g_mt_gen);
-      }
+      tmp[i] = dist(g_mt_gen);
     return tmp;
   };
 
   for (size_t i = 0; i < (random.count + V::size() - 1) / V::size(); ++i)
-    {
-      [](auto...) {}((fun_pack(rnd_v(), rnd_v()), 0)...);
-    }
+    [[maybe_unused]] int tmp[] = {(fun_pack(rnd_v(), rnd_v()), 0)...};
 }
 
 template <class V, class... F>
@@ -162,16 +153,15 @@ test_values_3arg(const std::initializer_list<typename V::value_type>& inputs,
 	{
 	  for (auto it = inputs.begin(); it + V::size() <= inputs.end();
 	       it += V::size())
-	    {
-	      [](auto...) {
-	      }((fun_pack(V(&it[0], std::experimental::element_aligned),
-			  V(*scalar_it1), V(*scalar_it2)),
-		 0)...);
-	    }
-	  [](auto...) {
-	  }((fun_pack(epilogue_load<V>(inputs.begin(), inputs.size()),
-		      V(*scalar_it1), V(*scalar_it2)),
-	     0)...);
+	    [[maybe_unused]] int tmp[]
+	      = {(fun_pack(V(&it[0], std::experimental::element_aligned),
+			   V(*scalar_it1), V(*scalar_it2)),
+		  0)...};
+	  if (inputs.size() % V::size() > 0)
+	    [[maybe_unused]] int tmp[]
+	      = {(fun_pack(epilogue_load<V>(inputs.begin(), inputs.size()),
+			   V(*scalar_it1), V(*scalar_it2)),
+		  0)...};
 	}
     }
 }
@@ -191,16 +181,12 @@ test_values_3arg(const std::initializer_list<typename V::value_type>& inputs,
   auto&& rnd_v = [&]() {
     V tmp;
     for (std::size_t i = 0; i < V::size(); ++i)
-      {
-	tmp[i] = dist(g_mt_gen);
-      }
+      tmp[i] = dist(g_mt_gen);
     return tmp;
   };
 
   for (size_t i = 0; i < (random.count + V::size() - 1) / V::size(); ++i)
-    {
-      [](auto...) {}((fun_pack(rnd_v(), rnd_v(), rnd_v()), 0)...);
-    }
+    [[maybe_unused]] int tmp[] = {(fun_pack(rnd_v(), rnd_v(), rnd_v()), 0)...};
 }
 
 #define MAKE_TESTER_2(name_, reference_)                                       \
