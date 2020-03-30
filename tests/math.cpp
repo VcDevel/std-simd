@@ -105,6 +105,18 @@ TEST_TYPES(V, abs, all_test_types) //{{{1
     }
 }
 
+template <typename F>
+auto
+verify_no_fp_exceptions(F&& fun)
+{
+  std::feclearexcept(FE_ALL_EXCEPT);
+  auto r = fun();
+  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
+  return r;
+}
+
+#define NOFPEXCEPT(...) verify_no_fp_exceptions([&]() { return __VA_ARGS__; })
+
 TEST_TYPES(V, fpclassify, real_test_types) //{{{1
 {
   using limits = std::numeric_limits<typename V::value_type>;
@@ -120,39 +132,30 @@ TEST_TYPES(V, fpclassify, real_test_types) //{{{1
     },
     [](const V input) {
       using intv = std::experimental::fixed_size_simd<int, V::size()>;
-      std::feclearexcept(FE_ALL_EXCEPT);
-      COMPARE(isfinite(input),
+      COMPARE(NOFPEXCEPT(isfinite(input)),
 	      !V([&](auto i) { return std::isfinite(input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE(isinf(input),
+      COMPARE(NOFPEXCEPT(isinf(input)),
 	      !V([&](auto i) { return std::isinf(input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE(isnan(input),
+      COMPARE(NOFPEXCEPT(isnan(input)),
 	      !V([&](auto i) { return std::isnan(input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE(isnormal(input),
+      COMPARE(NOFPEXCEPT(isnormal(input)),
 	      !V([&](auto i) { return std::isnormal(input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE(signbit(input),
+      COMPARE(NOFPEXCEPT(signbit(input)),
 	      !V([&](auto i) { return std::signbit(input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE((isunordered(input, V())),
+      COMPARE(NOFPEXCEPT(isunordered(input, V())),
 	      !V([&](auto i) { return std::isunordered(input[i], 0) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE((isunordered(V(), input)),
+      COMPARE(NOFPEXCEPT(isunordered(V(), input)),
 	      !V([&](auto i) { return std::isunordered(0, input[i]) ? 0 : 1; }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-      COMPARE(fpclassify(input),
+      COMPARE(NOFPEXCEPT(fpclassify(input)),
 	      intv([&](auto i) { return std::fpclassify(input[i]); }))
 	<< input;
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
     });
 }
 
@@ -711,75 +714,58 @@ TEST_TYPES(V, test2Arg, real_test_types) //{{{1
 
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
-  test_values_2arg<V>(
-    {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
-     limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
-    {10000, -limits::max() / 2, limits::max() / 2}, MAKE_TESTER(pow),
-    make_tester("fmod",
-		[](auto a, auto b) {
-		  using namespace std;
-		  return fmod(a, b);
-		}),
-    make_tester("remainder",
-		[](auto a, auto b) {
-		  using namespace std;
-		  return remainder(a, b);
-		}),
-    make_tester("copysign",
-		[](auto a, auto b) {
-		  using namespace std;
-		  return copysign(a, b);
-		}),
-    MAKE_TESTER(nextafter),
-    // MAKE_TESTER(nexttoward),
-    MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
-    make_tester("isgreater",
-		[](auto a, auto b) {
-		  using namespace std;
-		  std::feclearexcept(FE_ALL_EXCEPT);
-		  const auto r = isgreater(a, b);
-		  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-		  return r;
-		}),
-    make_tester("isgreaterequal",
-		[](auto a, auto b) {
-		  using namespace std;
-		  std::feclearexcept(FE_ALL_EXCEPT);
-		  const auto r = isgreaterequal(a, b);
-		  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-		  return r;
-		}),
-    make_tester("isless",
-		[](auto a, auto b) {
-		  using namespace std;
-		  std::feclearexcept(FE_ALL_EXCEPT);
-		  const auto r = isless(a, b);
-		  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-		  return r;
-		}),
-    make_tester("islessequal",
-		[](auto a, auto b) {
-		  using namespace std;
-		  std::feclearexcept(FE_ALL_EXCEPT);
-		  const auto r = islessequal(a, b);
-		  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-		  return r;
-		}),
-    make_tester("islessgreater",
-		[](auto a, auto b) {
-		  using namespace std;
-		  std::feclearexcept(FE_ALL_EXCEPT);
-		  const auto r = islessgreater(a, b);
-		  COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0);
-		  return r;
-		}),
-    make_tester("isunordered", [](auto a, auto b) {
-      using namespace std;
-      std::feclearexcept(FE_ALL_EXCEPT);
-      const auto r = isunordered(a, b);
-      COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << a << b;
-      return r;
-    }));
+  test_values_2arg<V>({limits::quiet_NaN(), limits::infinity(),
+		       -limits::infinity(), +0., -0., limits::denorm_min(),
+		       limits::min(), limits::max(), limits::min() / 3},
+		      {10000, -limits::max() / 2, limits::max() / 2},
+		      MAKE_TESTER(pow),
+		      make_tester("fmod",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return fmod(a, b);
+				  }),
+		      make_tester("remainder",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return remainder(a, b);
+				  }),
+		      make_tester("copysign",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return copysign(a, b);
+				  }),
+		      MAKE_TESTER(nextafter),
+		      // MAKE_TESTER(nexttoward),
+		      MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
+		      make_tester("isgreater",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return NOFPEXCEPT(isgreater(a, b));
+				  }),
+		      make_tester("isgreaterequal",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return NOFPEXCEPT(isgreaterequal(a, b));
+				  }),
+		      make_tester("isless",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return NOFPEXCEPT(isless(a, b));
+				  }),
+		      make_tester("islessequal",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return NOFPEXCEPT(islessequal(a, b));
+				  }),
+		      make_tester("islessgreater",
+				  [](auto a, auto b) {
+				    using namespace std;
+				    return NOFPEXCEPT(islessgreater(a, b));
+				  }),
+		      make_tester("isunordered", [](auto a, auto b) {
+			using namespace std;
+			return NOFPEXCEPT(isunordered(a, b));
+		      }));
 }
 
 TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
