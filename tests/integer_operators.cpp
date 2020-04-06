@@ -174,8 +174,8 @@ TEST_TYPES(V, operators, all_test_types) //{{{1
 	// - negative LHS is implementation defined
 	// - negative RHS or RHS >= #bits is UB
 	// - no other UB
-	COMPARE(NOINLINE(V(~T()) >> V(0)), V(~T()));
-	COMPARE(NOINLINE(V(~T()) >> V(make_value_unknown(0))), V(~T()));
+	COMPARE(V(~T()) >> V(0), V(~T()));
+	COMPARE(V(~T()) >> V(make_value_unknown(0)), V(~T()));
 	for (int s = 1; s < nbits; ++s)
 	  {
 	    COMPARE(V(~T()) >> V(s), V(T(~T()) >> s)) << "s: " << s;

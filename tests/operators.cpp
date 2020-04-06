@@ -293,6 +293,7 @@ TEST_TYPES(V, operators, all_test_types) //{{{1
     COMPARE(--x, from0);
     COMPARE(x, from0);
   }
+  // }}}2
 }
 
 // vim: foldmethod=marker

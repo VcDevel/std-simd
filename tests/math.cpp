@@ -372,8 +372,9 @@ TEST_TYPES(V, frexp, real_test_types) //{{{1
     });
 }
 
-TEST_TYPES(V, sin, real_test_types) //{{{1
+TEST_TYPES(V, sincos, real_test_types) //{{{1
 {
+  using std::cos;
   using std::sin;
   using T = typename V::value_type;
 
@@ -382,25 +383,11 @@ TEST_TYPES(V, sin, real_test_types) //{{{1
 
   const auto& testdata = referenceData<function::sincos, T>();
   std::experimental::experimental::simd_view<V>(testdata).for_each(
-    [&](const V input, const V expected, const V) {
-      FUZZY_COMPARE(sin(input), expected) << " input = " << input;
-      FUZZY_COMPARE(sin(-input), -expected) << " input = " << input;
-    });
-}
-
-TEST_TYPES(V, cos, real_test_types) //{{{1
-{
-  using std::cos;
-  using T = typename V::value_type;
-
-  vir::test::setFuzzyness<float>(2);
-  vir::test::setFuzzyness<double>(1);
-
-  const auto& testdata = referenceData<function::sincos, T>();
-  std::experimental::experimental::simd_view<V>(testdata).for_each(
-    [&](const V input, const V, const V expected) {
-      FUZZY_COMPARE(cos(input), expected) << " input = " << input;
-      FUZZY_COMPARE(cos(-input), expected) << " input = " << input;
+    [&](const V input, const V expected_sin, const V expected_cos) {
+      FUZZY_COMPARE(sin(input), expected_sin) << " input = " << input;
+      FUZZY_COMPARE(sin(-input), -expected_sin) << " input = " << input;
+      FUZZY_COMPARE(cos(input), expected_cos) << " input = " << input;
+      FUZZY_COMPARE(cos(-input), expected_cos) << " input = " << input;
     });
 }
 
@@ -659,6 +646,41 @@ TEST_TYPES(V, test1Arg, real_test_types) //{{{1
 		 MAKE_TESTER(llrint), MAKE_TESTER(ilogb));
 }
 
+#define MAKE_TESTER_NOFPEXCEPT(name_)                                          \
+  [&](const auto... inputs) {                                                  \
+    const auto totest = name_(inputs...);                                      \
+    using R = std::remove_const_t<decltype(totest)>;                           \
+    auto&& expected = [&](const auto&... vs) -> const R {                      \
+      R tmp = {};                                                              \
+      for (std::size_t i = 0; i < R::size(); ++i)                              \
+	{                                                                      \
+	  tmp[i] = std::name_(vs[i]...);                                       \
+	}                                                                      \
+      return tmp;                                                              \
+    };                                                                         \
+    const R expect1 = expected(inputs...);                                     \
+    std::feclearexcept(FE_ALL_EXCEPT);                                         \
+    if constexpr (std::is_floating_point_v<typename R::value_type>)            \
+      {                                                                        \
+	((COMPARE(isnan(totest), isnan(expect1)) << #name_ "(")                \
+	 << ... << inputs)                                                     \
+	  << ") = " << totest << " != " << expect1;                            \
+	const R expect2 = expected(iif(isnan(expect1), 0, inputs)...);         \
+	((FUZZY_COMPARE(name_(iif(isnan(expect1), 0, inputs)...), expect2)     \
+	  << "\nclean = ")                                                     \
+	 << ... << iif(isnan(expect1), 0, inputs));                            \
+      }                                                                        \
+    else                                                                       \
+      {                                                                        \
+	((COMPARE(name_(inputs...), expect1) << "\n" #name_ "(")               \
+	 << ... << inputs)                                                     \
+	  << ")";                                                              \
+      }                                                                        \
+    ((COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << "\n" #name_ "(")         \
+     << ... << inputs)                                                         \
+      << ")";                                                                  \
+  }
+
 TEST_TYPES(V, test2Arg, real_test_types) //{{{1
 {
   using T = typename V::value_type;
@@ -666,10 +688,11 @@ TEST_TYPES(V, test2Arg, real_test_types) //{{{1
 
   vir::test::setFuzzyness<float>(1);
   vir::test::setFuzzyness<double>(1);
+  vir::test::setFuzzyness<long double>(1);
   test_values_2arg<V>({limits::quiet_NaN(), limits::infinity(),
 		       -limits::infinity(), +0., -0., limits::denorm_min(),
 		       limits::min(), limits::max(), limits::min() / 3},
-		      {100000, -limits::max(), limits::max()},
+		      {100000, -limits::max() / 2, limits::max() / 2},
 		      MAKE_TESTER(hypot));
   COMPARE(hypot(V(limits::max()), V(limits::max())), V(limits::infinity()));
   COMPARE(hypot(V(limits::min()), V(limits::min())),
@@ -681,91 +704,19 @@ TEST_TYPES(V, test2Arg, real_test_types) //{{{1
   VERIFY((sfinae_is_callable<V, typename V::value_type>(
     [](auto a, auto b) -> decltype(hypot(a, b)) { return {}; })));
 
-  auto&& make_tester = [](const char* name, auto fn) {
-    return [=](const auto... inputs) {
-      const auto totest = fn(inputs...);
-      using R = std::remove_const_t<decltype(totest)>;
-      auto&& expected = [&](const auto&... vs) -> const R {
-	R tmp = {};
-	for (std::size_t i = 0; i < R::size(); ++i)
-	  {
-	    tmp[i] = fn(vs[i]...);
-	  }
-	return tmp;
-      };
-      const R expect1 = expected(inputs...);
-      if constexpr (std::is_floating_point_v<typename R::value_type>)
-	{
-	  ((COMPARE(isnan(totest), isnan(expect1)) << name << "(")
-	   << ... << inputs)
-	    << ") = " << totest << " != " << expect1;
-	  ((FUZZY_COMPARE(fn(iif(isnan(expect1), 0, inputs)...),
-			  expected(iif(isnan(expect1), 0, inputs)...))
-	    << "\nclean = ")
-	   << ... << iif(isnan(expect1), 0, inputs));
-	}
-      else
-	{
-	  COMPARE(fn(inputs...), expect1)
-	    .on_failure('\n', name, '(', inputs..., ')');
-	}
-    };
-  };
-
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
-  test_values_2arg<V>({limits::quiet_NaN(), limits::infinity(),
-		       -limits::infinity(), +0., -0., limits::denorm_min(),
-		       limits::min(), limits::max(), limits::min() / 3},
-		      {10000, -limits::max() / 2, limits::max() / 2},
-		      MAKE_TESTER(pow),
-		      make_tester("fmod",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return fmod(a, b);
-				  }),
-		      make_tester("remainder",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return remainder(a, b);
-				  }),
-		      make_tester("copysign",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return copysign(a, b);
-				  }),
-		      MAKE_TESTER(nextafter),
-		      // MAKE_TESTER(nexttoward),
-		      MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
-		      make_tester("isgreater",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return NOFPEXCEPT(isgreater(a, b));
-				  }),
-		      make_tester("isgreaterequal",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return NOFPEXCEPT(isgreaterequal(a, b));
-				  }),
-		      make_tester("isless",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return NOFPEXCEPT(isless(a, b));
-				  }),
-		      make_tester("islessequal",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return NOFPEXCEPT(islessequal(a, b));
-				  }),
-		      make_tester("islessgreater",
-				  [](auto a, auto b) {
-				    using namespace std;
-				    return NOFPEXCEPT(islessgreater(a, b));
-				  }),
-		      make_tester("isunordered", [](auto a, auto b) {
-			using namespace std;
-			return NOFPEXCEPT(isunordered(a, b));
-		      }));
+  vir::test::setFuzzyness<long double>(0);
+  test_values_2arg<V>(
+    {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
+     limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
+    {10000, -limits::max() / 2, limits::max() / 2}, MAKE_TESTER(pow),
+    MAKE_TESTER(fmod), MAKE_TESTER(remainder), MAKE_TESTER_NOFPEXCEPT(copysign),
+    MAKE_TESTER(nextafter), // MAKE_TESTER(nexttoward),
+    MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
+    MAKE_TESTER_NOFPEXCEPT(isgreater), MAKE_TESTER_NOFPEXCEPT(isgreaterequal),
+    MAKE_TESTER_NOFPEXCEPT(isless), MAKE_TESTER_NOFPEXCEPT(islessequal),
+    MAKE_TESTER_NOFPEXCEPT(islessgreater), MAKE_TESTER_NOFPEXCEPT(isunordered));
 }
 
 TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1

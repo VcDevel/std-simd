@@ -42,6 +42,8 @@ using ldouble = long double;
 using wchar = wchar_t;
 using char16 = char16_t;
 using char32 = char32_t;
+// type with sizeof(char) but different signedness
+using xchar = std::conditional_t<std::is_unsigned_v<char>, schar, uchar>;
 
 namespace stdx = std::experimental;
 namespace simd_abi = std::experimental::simd_abi;
@@ -107,6 +109,7 @@ using vdouble = stdx::native_simd<double>;
 using vldouble = stdx::native_simd<long double>;
 
 using vchar = stdx::native_simd<char>;
+using vxchar = stdx::native_simd<xchar>;
 using vwchar = stdx::native_simd<wchar_t>;
 using vchar16 = stdx::native_simd<char16_t>;
 using vchar32 = stdx::native_simd<char32_t>;

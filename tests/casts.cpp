@@ -39,12 +39,10 @@ using std::experimental::simd_cast;
 using std::experimental::static_simd_cast;
 using yesno = vir::Typelist<std::true_type, std::false_type>;
 
-template <typename V_CP, typename F>
+template <typename V, bool ConstProp, typename F>
 auto
 gen(const F& fun)
 {
-  using V = typename V_CP::template at<0>;
-  constexpr bool ConstProp = V_CP::template at<1>::value;
   if constexpr (ConstProp)
     return V(fun);
   else
@@ -54,6 +52,7 @@ gen(const F& fun)
 TEST_TYPES(V_CP, split_concat, outer_product<all_test_types, yesno>)
 {
   using V = typename V_CP::template at<0>;
+  constexpr bool ConstProp = V_CP::template at<1>::value;
   using T = typename V::value_type;
   if constexpr (V::size() * 3 <= std::experimental::simd_abi::max_fixed_size<T>)
     {
@@ -77,7 +76,7 @@ TEST_TYPES(V_CP, split_concat, outer_product<all_test_types, yesno>)
 
   if constexpr (V::size() >= 4)
     {
-      const V a = gen<V_CP>([](auto i) -> T { return i; });
+      const V a = gen<V, ConstProp>([](auto i) -> T { return i; });
       constexpr auto N0 = V::size() / 4u;
       constexpr auto N1 = V::size() - 2 * N0;
       using V0
@@ -132,7 +131,7 @@ TEST_TYPES(V_CP, split_concat, outer_product<all_test_types, yesno>)
 
   if constexpr (V::size() % 3 == 0)
     {
-      const V a = gen<V_CP>([](auto i) -> T { return i; });
+      const V a = gen<V, ConstProp>([](auto i) -> T { return i; });
       constexpr auto N0 = V::size() / 3;
       using V0
 	= std::experimental::simd<T,
@@ -177,7 +176,7 @@ TEST_TYPES(V_CP, split_concat, outer_product<all_test_types, yesno>)
       using V2 = simd<T, deduce_t<T, 2>>;
       using V3 = simd<T, deduce_t<T, V::size() / 2>>;
 
-      const V a = gen<V_CP>([](auto i) -> T { return i; });
+      const V a = gen<V, ConstProp>([](auto i) -> T { return i; });
 
       std::array<V2, V::size() / 2> v2s = std::experimental::split<V2>(a);
       int offset = 0;
@@ -213,11 +212,11 @@ template <class V, class To> struct gen_seq_t
   using From = typename V::value_type;
   const size_t N = cvt_input_data<From, To>.size();
   size_t offset = 0;
-  void operator++() { offset += V::size(); }
-  explicit operator bool() const { return offset < N; }
-  From operator()(size_t i) const
+  constexpr void operator++() { offset += V::size(); }
+  explicit constexpr operator bool() const { return offset < N; }
+  template <class I> constexpr From operator()(I) const
   {
-    i += offset;
+    size_t i = I::value + offset;
     return i < N ? cvt_input_data<From, To>[i] : From(i);
   }
 };
@@ -233,7 +232,7 @@ TEST_TYPES(V_To, casts, outer_product<all_test_types, arithmetic_types>)
   using To = typename V_To::template at<1>;
   using From = typename V::value_type;
   constexpr auto N = V::size();
-  if constexpr (N <= stdx::simd_abi::max_fixed_size<To>)
+  if constexpr (N <= std::experimental::simd_abi::max_fixed_size<To>)
     {
       using W = std::experimental::fixed_size_simd<To, N>;
 
@@ -263,7 +262,8 @@ TEST_TYPES(V_To, casts, outer_product<all_test_types, arithmetic_types>)
 	    {
 	      const V seq(gen_seq);
 	      COMPARE(simd_cast<V>(seq), seq);
-	      COMPARE(simd_cast<W>(seq), W(gen_cast<To, N>(seq)));
+	      COMPARE(simd_cast<W>(seq), W(gen_cast<To, N>(seq)))
+		<< "seq = " << seq;
 	      auto test = simd_cast<To>(seq);
 	      // decltype(test) is not W if
 	      // a) V::abi_type is not fixed_size and
@@ -297,15 +297,20 @@ TEST_TYPES(V_To, casts, outer_product<all_test_types, arithmetic_types>)
     }
 }
 
-TEST(splits)
+TEST_TYPES(V, splits, all_test_types)
 {
+  using M = typename V::mask_type;
   using namespace std::experimental::parallelism_v2;
-  native_simd_mask<float> k(true);
-  VERIFY(all_of(k)) << k;
-  const auto parts = split<simd_mask<float>>(k);
-  for (auto k2 : parts)
+  using T = typename V::value_type;
+  if constexpr (V::size() / simd_size_v<T> * simd_size_v<T> == V::size())
     {
-      VERIFY(all_of(k2)) << k2;
-      COMPARE(typeid(k2), typeid(simd_mask<float>));
+      M k(true);
+      VERIFY(all_of(k)) << k;
+      const auto parts = split<simd_mask<T>>(k);
+      for (auto k2 : parts)
+	{
+	  VERIFY(all_of(k2)) << k2;
+	  COMPARE(typeid(k2), typeid(simd_mask<T>));
+	}
     }
 }

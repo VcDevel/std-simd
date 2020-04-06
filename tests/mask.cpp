@@ -334,6 +334,21 @@ TEST_TYPES(M, load_store, all_test_types) //{{{1
     }
 }
 
+// operator_conversions helpers {{{1
+template <typename M0, typename M1>
+constexpr bool
+bit_and_is_illformed()
+{
+  return is_substitution_failure<M0, M1, std::bit_and<>>;
+}
+
+template <typename M0, typename M1>
+void
+test_binary_op_cvt()
+{
+  COMPARE((bit_and_is_illformed<M0, M1>()), !(std::is_same_v<M0, M1>) );
+}
+
 TEST_TYPES(M, operator_conversions, current_native_mask_test_types) //{{{1
 {
   // binary ops without conversions work
@@ -343,74 +358,58 @@ TEST_TYPES(M, operator_conversions, current_native_mask_test_types) //{{{1
   using std::experimental::fixed_size_simd_mask;
   using std::experimental::native_simd_mask;
   using std::experimental::simd_mask;
-  auto&& sfinae_test = [](auto x) {
-    return is_substitution_failure<M, decltype(x), std::bit_and<>>;
-  };
-  VERIFY(sfinae_test(bool()));
+  test_binary_op_cvt<M, bool>();
 
-  {
-    auto&& is
-      = [](auto x) { return std::is_same<M, simd_mask<decltype(x)>>::value; };
-    COMPARE(!is(ldouble()), sfinae_test(simd_mask<ldouble>()));
-    COMPARE(!is(double()), sfinae_test(simd_mask<double>()));
-    COMPARE(!is(float()), sfinae_test(simd_mask<float>()));
-    COMPARE(!is(ullong()), sfinae_test(simd_mask<ullong>()));
-    COMPARE(!is(llong()), sfinae_test(simd_mask<llong>()));
-    COMPARE(!is(ulong()), sfinae_test(simd_mask<ulong>()));
-    COMPARE(!is(long()), sfinae_test(simd_mask<long>()));
-    COMPARE(!is(uint()), sfinae_test(simd_mask<uint>()));
-    COMPARE(!is(int()), sfinae_test(simd_mask<int>()));
-    COMPARE(!is(ushort()), sfinae_test(simd_mask<ushort>()));
-    COMPARE(!is(short()), sfinae_test(simd_mask<short>()));
-    COMPARE(!is(uchar()), sfinae_test(simd_mask<uchar>()));
-    COMPARE(!is(schar()), sfinae_test(simd_mask<schar>()));
-  }
+  test_binary_op_cvt<M, simd_mask<ldouble>>();
+  test_binary_op_cvt<M, simd_mask<double>>();
+  test_binary_op_cvt<M, simd_mask<float>>();
+  test_binary_op_cvt<M, simd_mask<ullong>>();
+  test_binary_op_cvt<M, simd_mask<llong>>();
+  test_binary_op_cvt<M, simd_mask<ulong>>();
+  test_binary_op_cvt<M, simd_mask<long>>();
+  test_binary_op_cvt<M, simd_mask<uint>>();
+  test_binary_op_cvt<M, simd_mask<int>>();
+  test_binary_op_cvt<M, simd_mask<ushort>>();
+  test_binary_op_cvt<M, simd_mask<short>>();
+  test_binary_op_cvt<M, simd_mask<uchar>>();
+  test_binary_op_cvt<M, simd_mask<schar>>();
+  test_binary_op_cvt<M, simd_mask<wchar>>();
+  test_binary_op_cvt<M, simd_mask<char16>>();
+  test_binary_op_cvt<M, simd_mask<char32>>();
 
-  VERIFY(sfinae_test(fixed_size_simd_mask<ldouble, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<double, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<float, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<ullong, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<llong, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<ulong, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<long, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<uint, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<int, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<ushort, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<short, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<uchar, 2>()));
-  VERIFY(sfinae_test(fixed_size_simd_mask<schar, 2>()));
+  test_binary_op_cvt<M, native_simd_mask<ldouble>>();
+  test_binary_op_cvt<M, native_simd_mask<double>>();
+  test_binary_op_cvt<M, native_simd_mask<float>>();
+  test_binary_op_cvt<M, native_simd_mask<ullong>>();
+  test_binary_op_cvt<M, native_simd_mask<llong>>();
+  test_binary_op_cvt<M, native_simd_mask<ulong>>();
+  test_binary_op_cvt<M, native_simd_mask<long>>();
+  test_binary_op_cvt<M, native_simd_mask<uint>>();
+  test_binary_op_cvt<M, native_simd_mask<int>>();
+  test_binary_op_cvt<M, native_simd_mask<ushort>>();
+  test_binary_op_cvt<M, native_simd_mask<short>>();
+  test_binary_op_cvt<M, native_simd_mask<uchar>>();
+  test_binary_op_cvt<M, native_simd_mask<schar>>();
+  test_binary_op_cvt<M, native_simd_mask<wchar>>();
+  test_binary_op_cvt<M, native_simd_mask<char16>>();
+  test_binary_op_cvt<M, native_simd_mask<char32>>();
 
-  {
-    auto&& is = [](auto x) {
-      return std::is_same<M, native_simd_mask<decltype(x)>>::value;
-    };
-    if (!is(ldouble()))
-      VERIFY(sfinae_test(native_simd_mask<ldouble>()));
-    if (!is(double()))
-      VERIFY(sfinae_test(native_simd_mask<double>()));
-    if (!is(float()))
-      VERIFY(sfinae_test(native_simd_mask<float>()));
-    if (!is(ullong()))
-      VERIFY(sfinae_test(native_simd_mask<ullong>()));
-    if (!is(llong()))
-      VERIFY(sfinae_test(native_simd_mask<llong>()));
-    if (!is(ulong()))
-      VERIFY(sfinae_test(native_simd_mask<ulong>()));
-    if (!is(long()))
-      VERIFY(sfinae_test(native_simd_mask<long>()));
-    if (!is(uint()))
-      VERIFY(sfinae_test(native_simd_mask<uint>()));
-    if (!is(int()))
-      VERIFY(sfinae_test(native_simd_mask<int>()));
-    if (!is(ushort()))
-      VERIFY(sfinae_test(native_simd_mask<ushort>()));
-    if (!is(short()))
-      VERIFY(sfinae_test(native_simd_mask<short>()));
-    if (!is(uchar()))
-      VERIFY(sfinae_test(native_simd_mask<uchar>()));
-    if (!is(schar()))
-      VERIFY(sfinae_test(native_simd_mask<schar>()));
-  }
+  test_binary_op_cvt<M, fixed_size_simd_mask<ldouble, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<double, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<float, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<ullong, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<llong, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<ulong, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<long, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<uint, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<int, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<ushort, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<short, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<uchar, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<schar, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<wchar, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<char16, 2>>();
+  test_binary_op_cvt<M, fixed_size_simd_mask<char32, 2>>();
 }
 
 TEST_TYPES(M, reductions, all_test_types) //{{{1

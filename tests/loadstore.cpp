@@ -62,7 +62,7 @@ TEST_TYPES(VU, load_store, outer_product<all_test_types, MemTypes>)
   constexpr stride_aligned_t stride_aligned = {};
   constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<V, U>;
   constexpr auto overaligned = std::experimental::overaligned<alignment>;
-  const V indexes_from_0 = gen({0, 1, 2, 3}, 4);
+  const V indexes_from_0([](auto i) { return i; });
   for (std::size_t i = 0; i < V::size(); ++i)
     {
       COMPARE(indexes_from_0[i], T(i));
