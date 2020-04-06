@@ -666,6 +666,7 @@ template <typename _From, typename _To, bool = (sizeof(_From) < sizeof(_To))>
 struct __converts_to_higher_integer_rank : public true_type
 {
 };
+// this may fail for char -> short if sizeof(char) == sizeof(short)
 template <typename _From, typename _To>
 struct __converts_to_higher_integer_rank<_From, _To, false>
   : public std::is_same<decltype(std::declval<_From>() + std::declval<_To>()),
@@ -3560,7 +3561,7 @@ split(const simd_mask<typename _V::simd_type::value_type, _Ap>& __x)
     }
   else if constexpr (_Parts == 1)
     {
-      return {static_simd_cast<_V>(__x)};
+      return {__proposed::static_simd_cast<_V>(__x)};
     }
   else if constexpr (_Parts == 2 && __is_sse_abi<typename _V::abi_type>()
 		     && __is_avx_abi<_Ap>())
