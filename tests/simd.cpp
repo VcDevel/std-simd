@@ -1238,14 +1238,10 @@ TEST_TYPES(V, reductions, all_test_types) //{{{1
     for (int repeat = 0; repeat < 100; ++repeat)
       {
 	const V x([&](int) { return dist(g_mt_gen); });
-	FUZZY_COMPARE(reduce(x), [x]() {
-	  T acc = x[0];
-	  for (size_t i = 1; i < V::size(); ++i)
-	    {
-	      acc += x[i];
-	    }
-	  return acc;
-	}());
+	T acc = x[0];
+	for (size_t i = 1; i < V::size(); ++i)
+	  acc += x[i];
+	FUZZY_COMPARE(reduce(x), acc);
       }
   }
 }
