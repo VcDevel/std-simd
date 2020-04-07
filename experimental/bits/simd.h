@@ -99,19 +99,7 @@ template <int _UsedBytes = 32> using _Avx = _VecBuiltin<_UsedBytes>;
 template <int _UsedBytes = 64> using _Avx512 = _VecBltnBtmsk<_UsedBytes>;
 template <int _UsedBytes = 16> using _Neon = _VecBuiltin<_UsedBytes>;
 
-template <int _Np, typename _Abi> struct _Combine;
-
 // implementation-defined:
-template <int _NRegisters> using __sse_x = _Combine<_NRegisters, _Sse<>>;
-template <int _NRegisters> using __avx_x = _Combine<_NRegisters, _Avx<>>;
-template <int _NRegisters> using __avx512_x = _Combine<_NRegisters, _Avx512<>>;
-template <int _NRegisters> using __neon_x = _Combine<_NRegisters, _Neon<>>;
-
-template <typename _Tp, int _Np> using __sse_n = _Sse<sizeof(_Tp) * _Np>;
-template <typename _Tp, int _Np> using __avx_n = _Avx<sizeof(_Tp) * _Np>;
-template <typename _Tp, int _Np> using __avx512_n = _Avx512<sizeof(_Tp) * _Np>;
-template <typename _Tp, int _Np> using __neon_n = _Neon<sizeof(_Tp) * _Np>;
-
 using __sse = _Sse<>;
 using __avx = _Avx<>;
 using __avx512 = _Avx512<>;
@@ -389,28 +377,6 @@ __is_neon_abi()
 {
   constexpr auto _Bytes = __abi_bytes_v<_Abi>;
   return _Bytes <= 16 && std::is_same_v<simd_abi::_VecBuiltin<_Bytes>, _Abi>;
-}
-
-// }}}
-// __is_combined_abi{{{
-template <template <int, typename> class _Combine, int _Np, typename _Abi>
-constexpr bool
-__is_combined_abi(_Combine<_Np, _Abi>*)
-{
-  return std::is_same_v<_Combine<_Np, _Abi>, simd_abi::_Combine<_Np, _Abi>>;
-}
-template <typename _Abi>
-constexpr bool
-__is_combined_abi(_Abi*)
-{
-  return false;
-}
-
-template <typename _Abi>
-constexpr bool
-__is_combined_abi()
-{
-  return __is_combined_abi(static_cast<_Abi*>(nullptr));
 }
 
 // }}}
@@ -3990,11 +3956,6 @@ struct _AbiList<_A0, _Rest...>
 	using _B = typename __full_abi<_A0, _Bytes, _Tp>::type;
 	if constexpr (_B::template _S_is_valid_v<
 			_Tp> && _B::template size<_Tp> <= _Np)
-#if 0
-	  if constexpr ((_Np / _B::template size<_Tp>) > 1)
-	    return simd_abi::_Combine<_Np / _B::template size<_Tp>, _B>{};
-	  else
-#endif
 	  return _B{};
 	else
 	  return typename _AbiList<_Rest...>::template _BestAbi<_Tp, _Np>{};
