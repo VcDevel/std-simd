@@ -648,7 +648,11 @@ TEST_TYPES(V, test1Arg, real_test_types) //{{{1
 
 #define MAKE_TESTER_NOFPEXCEPT(name_)                                          \
   [&](const auto... inputs) {                                                  \
+    std::feclearexcept(FE_ALL_EXCEPT);                                         \
     const auto totest = name_(inputs...);                                      \
+    ((COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << "\n" #name_ "(")         \
+     << ... << inputs)                                                         \
+      << ")";                                                                  \
     using R = std::remove_const_t<decltype(totest)>;                           \
     auto&& expected = [&](const auto&... vs) -> const R {                      \
       R tmp = {};                                                              \
@@ -659,26 +663,24 @@ TEST_TYPES(V, test1Arg, real_test_types) //{{{1
       return tmp;                                                              \
     };                                                                         \
     const R expect1 = expected(inputs...);                                     \
-    std::feclearexcept(FE_ALL_EXCEPT);                                         \
     if constexpr (std::is_floating_point_v<typename R::value_type>)            \
       {                                                                        \
 	((COMPARE(isnan(totest), isnan(expect1)) << #name_ "(")                \
 	 << ... << inputs)                                                     \
 	  << ") = " << totest << " != " << expect1;                            \
 	const R expect2 = expected(iif(isnan(expect1), 0, inputs)...);         \
+	((COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << "\n" #name_ "(")     \
+	 << ... << inputs)                                                     \
+	  << ")";                                                              \
 	((FUZZY_COMPARE(name_(iif(isnan(expect1), 0, inputs)...), expect2)     \
 	  << "\nclean = ")                                                     \
 	 << ... << iif(isnan(expect1), 0, inputs));                            \
       }                                                                        \
     else                                                                       \
       {                                                                        \
-	((COMPARE(name_(inputs...), expect1) << "\n" #name_ "(")               \
-	 << ... << inputs)                                                     \
+	((COMPARE(totest, expect1) << "\n" #name_ "(") << ... << inputs)       \
 	  << ")";                                                              \
       }                                                                        \
-    ((COMPARE(std::fetestexcept(FE_ALL_EXCEPT), 0) << "\n" #name_ "(")         \
-     << ... << inputs)                                                         \
-      << ")";                                                                  \
   }
 
 TEST_TYPES(V, test2Arg, real_test_types) //{{{1
