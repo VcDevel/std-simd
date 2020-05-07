@@ -4225,7 +4225,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	    __m128i __a = {};
 	    __builtin_memcpy(&__a, __mem, 16);
 	    const auto __b = _mm512_cvtepi8_epi32(__a);
-	    __builtin_memcpy(&__a, __mem + 16, size<_Tp> - 16);
+	    __builtin_memcpy(&__a, static_cast<const char*>(__mem) + 16, size<_Tp> - 16);
 	    const auto __c = _mm512_cvtepi8_epi32(__a);
 	    return _mm512_test_epi32_mask(__b, __b)
 		   | (_mm512_test_epi32_mask(__c, __c) << 16);
@@ -4235,11 +4235,11 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	    __m128i __a = {};
 	    __builtin_memcpy(&__a, __mem, 16);
 	    const auto __b = _mm512_cvtepi8_epi32(__a);
-	    __builtin_memcpy(&__a, __mem + 16, 16);
+	    __builtin_memcpy(&__a, static_cast<const char*>(__mem) + 16, 16);
 	    const auto __c = _mm512_cvtepi8_epi32(__a);
 	    if constexpr (size<_Tp> <= 48)
 	      {
-		__builtin_memcpy(&__a, __mem + 32, size<_Tp> - 32);
+		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 32, size<_Tp> - 32);
 		const auto __d = _mm512_cvtepi8_epi32(__a);
 		return _mm512_test_epi32_mask(__b, __b)
 		       | (_mm512_test_epi32_mask(__c, __c) << 16)
@@ -4247,9 +4247,9 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	      }
 	    else
 	      {
-		__builtin_memcpy(&__a, __mem + 16, 32);
+		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 16, 32);
 		const auto __d = _mm512_cvtepi8_epi32(__a);
-		__builtin_memcpy(&__a, __mem + 32, size<_Tp> - 48);
+		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 32, size<_Tp> - 48);
 		const auto __e = _mm512_cvtepi8_epi32(__a);
 		return _mm512_test_epi32_mask(__b, __b)
 		       | (_mm512_test_epi32_mask(__c, __c) << 16)

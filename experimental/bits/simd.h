@@ -2074,7 +2074,7 @@ struct __intrinsic_type<
   static constexpr std::size_t _VBytes
     = _Bytes <= 16 ? 16 : _Bytes <= 32 ? 32 : 64;
   using type [[__gnu__::__vector_size__(_VBytes)]]
-  = std::conditional_t<std::is_integral_v<_Tp>, long long int, _Tp>;
+  = std::conditional_t<std::is_integral_v<std::remove_reference_t<_Tp>>, long long int, std::remove_reference_t<_Tp>>;
 };
 #endif // _GLIBCXX_SIMD_HAVE_SSE
 
