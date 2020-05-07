@@ -4247,7 +4247,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 	      }
 	    else
 	      {
-		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 16, 32);
+		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 16, 16);
 		const auto __d = _mm512_cvtepi8_epi32(__a);
 		__builtin_memcpy(&__a, static_cast<const char*>(__mem) + 32, size<_Tp> - 48);
 		const auto __e = _mm512_cvtepi8_epi32(__a);

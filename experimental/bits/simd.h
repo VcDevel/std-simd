@@ -387,7 +387,12 @@ __is_neon_abi()
 
 // }}}
 // __make_dependent_t {{{
-template <typename, typename _Up> using __make_dependent_t = _Up;
+template <typename, typename _Up> struct __make_dependent
+{
+  using type = _Up;
+};
+template <typename _Tp, typename _Up>
+using __make_dependent_t = typename __make_dependent<_Tp, _Up>::type;
 
 // }}}
 // ^^^ ---- type traits ---- ^^^
