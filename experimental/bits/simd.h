@@ -59,6 +59,12 @@ using __m512d [[__gnu__::__vector_size__(64)]] = double;
 using __m512i [[__gnu__::__vector_size__(64)]] = long long;
 #endif
 
+#if __clang__
+template<typename T> auto __builtin_ia32_ps256_ps   (T x) { return __builtin_shufflevector(x, _mm_setzero_ps()   , 0, 1, 2, 3, 4, 4, 4, 4); }
+template<typename T> auto __builtin_ia32_ps512_ps   (T x) { return __builtin_shufflevector(x, _mm_setzero_ps()   , 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4); }
+template<typename T> auto __builtin_ia32_ps512_256ps(T x) { return __builtin_shufflevector(x, _mm256_setzero_ps(), 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8); }
+#endif
+
 // __next_power_of_2{{{
 /**
  * \internal
@@ -178,7 +184,7 @@ using __value_type_or_identity_t
 // }}}
 // __is_vectorizable {{{
 template <typename _Tp>
-struct __is_vectorizable : public std::is_arithmetic<_Tp>
+struct __is_vectorizable : public std::is_arithmetic<std::remove_reference_t<_Tp>>
 {
 };
 template <> struct __is_vectorizable<bool> : public false_type
@@ -1039,7 +1045,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
 		  "not implemented for bitmasks larger than one ullong");
     if constexpr (_NewSize == 1) // must sanitize because the return _Tp is bool
       return _SanitizedBitMask<1>{
-	{static_cast<bool>(_M_bits[0] & (_Tp(1) << _DropLsb))}};
+	(static_cast<bool>(_M_bits[0] & (_Tp(1) << _DropLsb)))};
     else
       return _BitMask<_NewSize,
 		      ((_NewSize + _DropLsb == sizeof(_Tp) * CHAR_BIT
@@ -1285,7 +1291,7 @@ struct __vector_type_n<_Tp, _Np,
   static constexpr size_t _Bytes = _Np * sizeof(_Tp) < __min_vector_size<_Tp>
 				     ? __min_vector_size<_Tp>
 				     : __next_power_of_2(_Np * sizeof(_Tp));
-  using type [[__gnu__::__vector_size__(_Bytes)]] = _Tp;
+  using type [[__gnu__::__vector_size__(_Bytes)]] = std::remove_reference_t<_Tp>;
 };
 
 template <typename _Tp, size_t _Bytes, size_t = _Bytes % sizeof(_Tp)>
@@ -3559,8 +3565,7 @@ split(const simd_mask<typename _V::simd_type::value_type, _Ap>& __x)
 
 // }}}
 // split<_Sizes...>(simd) {{{
-template <size_t... _Sizes, typename _Tp, typename _Ap,
-	  typename = enable_if_t<((_Sizes + ...) == simd<_Tp, _Ap>::size())>>
+template <size_t... _Sizes, typename _Tp, typename _Ap, typename>
 _GLIBCXX_SIMD_ALWAYS_INLINE
   std::tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...>
   split(const simd<_Tp, _Ap>& __x)

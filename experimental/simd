@@ -41,7 +41,9 @@
 #pragma GCC diagnostic push
 // Many [[gnu::vector_size(N)]] types might lead to a -Wpsabi warning which is
 // irrelevant as those functions never appear on ABI borders
+#if !__clang__
 #pragma GCC diagnostic ignored "-Wpsabi"
+#endif
 
 // If __OPTIMIZE__ is not defined some intrinsics are defined as macros, making
 // use of C casts internally. This requires us to disable the warning as it

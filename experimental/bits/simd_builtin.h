@@ -624,7 +624,7 @@ __convert_all(_From __v)
 	    return __vector_bitcast<_FromT, decltype(__n)::value>(__vv);
 	  };
 	  [[maybe_unused]] const auto __vi = __to_intrin(__v);
-	  auto&& __make_array = [](std::initializer_list<auto> __xs) {
+	  auto&& __make_array = [](auto __xs) {
 	    return __call_with_subscripts(
 	      __xs.begin(), std::make_index_sequence<_Np>(),
 	      [](auto... __ys) { return _R{__vector_bitcast<_ToT>(__ys)...}; });
