@@ -37,16 +37,17 @@
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 // _S_allbits{{{
 template <typename _V>
-static inline _GLIBCXX_CONSTEXPR_SIMD _V _S_allbits
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_allbits
   = reinterpret_cast<_V>(~__vector_type_t<char, sizeof(_V) / sizeof(char)>());
 
 // }}}
 // _S_signmask, _S_absmask{{{
 template <typename _V, typename = _VectorTraits<_V>>
-static inline _GLIBCXX_CONSTEXPR_SIMD _V _S_signmask = __xor(_V() + 1, _V() - 1);
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_signmask = __xor(_V() + 1, _V() - 1);
+//__andnot(_S_signmask<_V>, _S_allbits<_V>) does not work in Clang for unknown reason
 template <typename _V, typename = _VectorTraits<_V>>
-static inline _GLIBCXX_CONSTEXPR_SIMD _V _S_absmask
-  = __andnot(_S_signmask<_V>, _S_allbits<_V>);
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_absmask
+  = __andnot(_S_signmask<_V>, reinterpret_cast<_V>(~__vector_type_t<char, sizeof(_V) / sizeof(char)>()));
 
 //}}}
 // __vector_permute<Indices...>{{{

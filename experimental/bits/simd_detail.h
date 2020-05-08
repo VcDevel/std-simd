@@ -309,9 +309,9 @@
 // }}}
 
 #if __clang__
-#define _GLIBCXX_CONSTEXPR_SIMD
+#define _GLIBCXX_SIMD_USE_CONSTEXPR const
 #else
-#define _GLIBCXX_CONSTEXPR_SIMD constexpr
+#define _GLIBCXX_SIMD_USE_CONSTEXPR constexpr
 #endif
 
 #endif // __cplusplus >= 201703L
