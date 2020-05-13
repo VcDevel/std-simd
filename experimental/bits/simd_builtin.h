@@ -2116,7 +2116,7 @@ template <typename _Abi> struct _SimdImplBuiltin
     const _V __absx = __and(__x, _S_absmask<_V>);
     static_assert(CHAR_BIT * sizeof(1ull)
 		  >= std::numeric_limits<value_type>::digits);
-    constexpr _V __shifter_abs
+    _GLIBCXX_SIMD_USE_CONSTEXPR _V __shifter_abs
       = _V() + (1ull << (std::numeric_limits<value_type>::digits - 1));
     const _V __shifter = __or(__and(_S_signmask<_V>, __x), __shifter_abs);
     _V __shifted = __x + __shifter;

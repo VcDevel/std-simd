@@ -1350,7 +1350,7 @@ template <typename _Tp>
 struct _VectorTraitsImpl<_Tp, enable_if_t<__is_vector_type_v<_Tp>>>
 {
   using type = _Tp;
-  using value_type = decltype(std::declval<_Tp>()[0]);
+  using value_type = std::remove_reference_t<decltype(std::declval<_Tp>()[0])>;
   static constexpr int _S_width = sizeof(_Tp) / sizeof(value_type);
   using _Wrapper = _SimdWrapper<value_type, _S_width>;
   template <typename _Up, int _W = _S_width>
@@ -1610,11 +1610,16 @@ __or(_Tp __a, _Tp __b) noexcept
 
 // }}}
 // __and{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__and(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
+template <typename _Tp>
+constexpr auto __test_and_operator(int) -> decltype(_Tp() & _Tp(), std::true_type{});
+
+template <typename _Tp>
+constexpr std::false_type __test_and_operator(...);
+
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_and_operator<_Tp>(0))::value, _Tp>
+__and(_Tp __a, typename _TVT::type __b) noexcept
 {
-  static_assert(sizeof...(_Dummy) == 0);
   using _Up = typename _TVT::value_type;
   using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
   return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
