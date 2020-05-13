@@ -1570,11 +1570,16 @@ __generate_vector(_Gp&& __gen)
 
 // }}}
 // __xor{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__xor(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
+template <typename _Tp>
+constexpr auto __test_xor_operator(int) -> decltype(_Tp() ^ _Tp(), std::true_type{});
+
+template <typename _Tp>
+constexpr std::false_type __test_xor_operator(...);
+
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_xor_operator<_Tp>(0))::value, _Tp>
+__xor(_Tp __a, typename _TVT::type __b) noexcept
 {
-  static_assert(sizeof...(_Dummy) == 0);
   using _Up = typename _TVT::value_type;
   using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
   return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
@@ -1590,11 +1595,16 @@ __xor(_Tp __a, _Tp __b) noexcept
 
 // }}}
 // __or{{{
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__or(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
+template <typename _Tp>
+constexpr auto __test_or_operator(int) -> decltype(_Tp() | _Tp(), std::true_type{});
+
+template <typename _Tp>
+constexpr std::false_type __test_or_operator(...);
+
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_or_operator<_Tp>(0))::value, _Tp>
+__or(_Tp __a, typename _TVT::type __b) noexcept
 {
-  static_assert(sizeof...(_Dummy) == 0);
   using _Up = typename _TVT::value_type;
   using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
   return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
@@ -1696,11 +1706,16 @@ static constexpr struct
 } _S_x86_andnot;
 #endif // _GLIBCXX_SIMD_X86INTRIN && !__clang__
 
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>, typename... _Dummy>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__andnot(_Tp __a, typename _TVT::type __b, _Dummy...) noexcept
+template <typename _Tp>
+constexpr auto __test_and_not_operators(int) -> decltype(~_Tp() & _Tp(), std::true_type{});
+
+template <typename _Tp>
+constexpr std::false_type __test_and_not_operators(...);
+
+template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
+_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_and_not_operators<_Tp>(0))::value, _Tp>
+__andnot(_Tp __a, typename _TVT::type __b) noexcept
 {
-  static_assert(sizeof...(_Dummy) == 0);
 #if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
   if constexpr (sizeof(_Tp) >= 16)
     {
