@@ -308,7 +308,7 @@
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE66 1
 // }}}
 
-#if __clang__
+#if defined __clang__
 #define _GLIBCXX_SIMD_USE_CONSTEXPR const
 #else
 #define _GLIBCXX_SIMD_USE_CONSTEXPR constexpr
