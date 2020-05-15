@@ -59,7 +59,7 @@ using __m512d [[__gnu__::__vector_size__(64)]] = double;
 using __m512i [[__gnu__::__vector_size__(64)]] = long long;
 #endif
 
-#if __clang__
+#if defined __clang__
 template<typename T> auto __builtin_ia32_ps256_ps   (T x) { return __builtin_shufflevector(x, _mm_setzero_ps()   , 0, 1, 2, 3, 4, 4, 4, 4); }
 template<typename T> auto __builtin_ia32_ps512_ps   (T x) { return __builtin_shufflevector(x, _mm_setzero_ps()   , 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4); }
 template<typename T> auto __builtin_ia32_ps512_256ps(T x) { return __builtin_shufflevector(x, _mm256_setzero_ps(), 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8); }
