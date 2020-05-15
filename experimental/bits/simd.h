@@ -1570,77 +1570,77 @@ __generate_vector(_Gp&& __gen)
 
 // }}}
 // __xor{{{
-template <typename _Tp>
-constexpr auto __test_xor_operator(int) -> decltype(_Tp() ^ _Tp(), std::true_type{});
-
-template <typename _Tp>
-constexpr std::false_type __test_xor_operator(...);
-
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_xor_operator<_Tp>(0))::value, _Tp>
-__xor(_Tp __a, typename _TVT::type __b) noexcept
+template <typename _TW>
+_GLIBCXX_SIMD_INTRINSIC constexpr _TW
+__xor(_TW __a, _TW __b) noexcept
 {
-  using _Up = typename _TVT::value_type;
-  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
-  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
-			       ^ __vector_bitcast<_Ip>(__b));
-}
-
-template <typename _Tp, typename = decltype(_Tp() ^ _Tp())>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__xor(_Tp __a, _Tp __b) noexcept
-{
-  return __a ^ __b;
+  if constexpr (__is_vector_type_v<_TW> || __is_simd_wrapper_v<_TW>)
+    {
+      using _TVT = _VectorTraits<_TW>;
+      using _Tp = typename _TVT::value_type;
+      if constexpr (std::is_floating_point_v<_Tp>)
+	{
+	  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+	  return __vector_bitcast<_Tp>(__vector_bitcast<_Ip>(__a)
+				       ^ __vector_bitcast<_Ip>(__b));
+	}
+      else if constexpr (__is_vector_type_v<_TW>)
+	return __a ^ __b;
+      else
+	return __a._M_data ^ __b._M_data;
+    }
+  else
+    return __a ^ __b;
 }
 
 // }}}
 // __or{{{
-template <typename _Tp>
-constexpr auto __test_or_operator(int) -> decltype(_Tp() | _Tp(), std::true_type{});
-
-template <typename _Tp>
-constexpr std::false_type __test_or_operator(...);
-
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_or_operator<_Tp>(0))::value, _Tp>
-__or(_Tp __a, typename _TVT::type __b) noexcept
+template <typename _TW>
+_GLIBCXX_SIMD_INTRINSIC constexpr _TW
+__or(_TW __a, _TW __b) noexcept
 {
-  using _Up = typename _TVT::value_type;
-  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
-  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
-			       | __vector_bitcast<_Ip>(__b));
-}
-
-template <typename _Tp, typename = decltype(_Tp() | _Tp())>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__or(_Tp __a, _Tp __b) noexcept
-{
-  return __a | __b;
+  if constexpr (__is_vector_type_v<_TW> || __is_simd_wrapper_v<_TW>)
+    {
+      using _TVT = _VectorTraits<_TW>;
+      using _Tp = typename _TVT::value_type;
+      if constexpr (std::is_floating_point_v<_Tp>)
+	{
+	  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+	  return __vector_bitcast<_Tp>(__vector_bitcast<_Ip>(__a)
+				       | __vector_bitcast<_Ip>(__b));
+	}
+      else if constexpr (__is_vector_type_v<_TW>)
+	return __a | __b;
+      else
+	return __a._M_data | __b._M_data;
+    }
+  else
+    return __a | __b;
 }
 
 // }}}
 // __and{{{
-template <typename _Tp>
-constexpr auto __test_and_operator(int) -> decltype(_Tp() & _Tp(), std::true_type{});
-
-template <typename _Tp>
-constexpr std::false_type __test_and_operator(...);
-
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_and_operator<_Tp>(0))::value, _Tp>
-__and(_Tp __a, typename _TVT::type __b) noexcept
+template <typename _TW>
+_GLIBCXX_SIMD_INTRINSIC constexpr _TW
+__and(_TW __a, _TW __b) noexcept
 {
-  using _Up = typename _TVT::value_type;
-  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
-  return __vector_bitcast<_Up>(__vector_bitcast<_Ip>(__a)
-			       & __vector_bitcast<_Ip>(__b));
-}
-
-template <typename _Tp, typename = decltype(_Tp() & _Tp())>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__and(_Tp __a, _Tp __b) noexcept
-{
-  return __a & __b;
+  if constexpr (__is_vector_type_v<_TW> || __is_simd_wrapper_v<_TW>)
+    {
+      using _TVT = _VectorTraits<_TW>;
+      using _Tp = typename _TVT::value_type;
+      if constexpr (std::is_floating_point_v<_Tp>)
+	{
+	  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+	  return __vector_bitcast<_Tp>(__vector_bitcast<_Ip>(__a)
+				       & __vector_bitcast<_Ip>(__b));
+	}
+      else if constexpr (__is_vector_type_v<_TW>)
+	return __a & __b;
+      else
+	return __a._M_data & __b._M_data;
+    }
+  else
+    return __a & __b;
 }
 
 // }}}
@@ -1706,43 +1706,37 @@ static constexpr struct
 } _S_x86_andnot;
 #endif // _GLIBCXX_SIMD_X86INTRIN && !__clang__
 
-template <typename _Tp>
-constexpr auto __test_and_not_operators(int) -> decltype(~_Tp() & _Tp(), std::true_type{});
-
-template <typename _Tp>
-constexpr std::false_type __test_and_not_operators(...);
-
-template <typename _Tp, typename _TVT = _VectorTraits<_Tp>>
-_GLIBCXX_SIMD_INTRINSIC constexpr std::enable_if_t<!decltype(__test_and_not_operators<_Tp>(0))::value, _Tp>
-__andnot(_Tp __a, typename _TVT::type __b) noexcept
+template <typename _TW>
+_GLIBCXX_SIMD_INTRINSIC constexpr _TW
+__andnot(_TW __a, _TW __b) noexcept
 {
-#if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
-  if constexpr (sizeof(_Tp) >= 16)
+  if constexpr (__is_vector_type_v<_TW> || __is_simd_wrapper_v<_TW>)
     {
-      const auto __ai = __to_intrin(__a);
-      const auto __bi = __to_intrin(__b);
-      if (!__builtin_is_constant_evaluated()
-	  && !(__builtin_constant_p(__ai) && __builtin_constant_p(__bi)))
+      using _TVT = _VectorTraits<_TW>;
+      using _Tp = typename _TVT::value_type;
+      using _TV = typename _TVT::type;
+#if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
+      if constexpr (sizeof(_TW) >= 16)
 	{
-	  const auto __r = _S_x86_andnot(__ai, __bi);
-	  if constexpr (is_convertible_v<decltype(__r), _Tp>)
-	    return __r;
-	  else
-	    return reinterpret_cast<_Tp>(__r);
+	  const auto __ai = __to_intrin(__a);
+	  const auto __bi = __to_intrin(__b);
+	  if (!__builtin_is_constant_evaluated()
+	      && !(__builtin_constant_p(__ai) && __builtin_constant_p(__bi)))
+	    {
+	      const auto __r = _S_x86_andnot(__ai, __bi);
+	      if constexpr (is_convertible_v<decltype(__r), _TW>)
+		return __r;
+	      else
+		return reinterpret_cast<_TV>(__r);
+	    }
 	}
-    }
 #endif // _GLIBCXX_SIMD_X86INTRIN
-  using _Up = typename _TVT::value_type;
-  using _Ip = make_unsigned_t<__int_for_sizeof_t<_Up>>;
-  return __vector_bitcast<_Up>(~__vector_bitcast<_Ip>(__a)
-			       & __vector_bitcast<_Ip>(__b));
-}
-
-template <typename _Tp, typename = decltype(~_Tp() & _Tp())>
-_GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-__andnot(_Tp __a, _Tp __b) noexcept
-{
-  return ~__a & __b;
+      using _Ip = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+      return __vector_bitcast<_Tp>(~__vector_bitcast<_Ip>(__a)
+				   & __vector_bitcast<_Ip>(__b));
+    }
+  else
+    return ~__a & __b;
 }
 
 // }}}

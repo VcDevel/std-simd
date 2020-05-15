@@ -1660,19 +1660,19 @@ template <typename _Abi> struct _SimdImplBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_and(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __and(__x._M_data, __y._M_data);
+    return __and(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_or(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __or(__x._M_data, __y._M_data);
+    return __or(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_xor(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __xor(__x._M_data, __y._M_data);
+    return __xor(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _Np>
@@ -2721,7 +2721,7 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   __bit_not(const _SimdWrapper<_Tp, _Np>& __x)
   {
     if constexpr(_Abi::_S_is_partial)
-      return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
+      return __andnot(__x, _Abi::template __implicit_mask<_Tp>());
     else
       return __not(__x._M_data);
   }
@@ -2795,13 +2795,9 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     if (__builtin_constant_p(__rhs))
       {
 	if (__rhs == false)
-	  {
-	    __lhs = __andnot(__k._M_data, __lhs._M_data);
-	  }
+	    __lhs = __andnot(__k, __lhs);
 	else
-	  {
-	    __lhs = __or(__k._M_data, __lhs._M_data);
-	  }
+	    __lhs = __or(__k, __lhs);
 	return;
       }
     __lhs
