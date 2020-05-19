@@ -567,6 +567,16 @@ __convert(_From __v0, _More... __vs)
 
 // }}}
 // __convert_all{{{
+template< std::size_t _Np, typename _ToT, typename _R >
+struct __make_array_impl {
+  template< typename T >
+  auto operator() ( std::initializer_list<T> __xs ) {
+    return __call_with_subscripts(
+      __xs.begin(), std::make_index_sequence<_Np>(),
+      [](auto... __ys) { return _R{__vector_bitcast<_ToT>(__ys)...}; });
+  }
+};
+
 // Converts __v into std::array<_To, N>, where N is _NParts if non-zero or
 // otherwise deduced from _To such that N * #elements(_To) <= #elements(__v).
 // Note: this function may return less than all converted elements
@@ -625,11 +635,8 @@ __convert_all(_From __v)
 	    return __vector_bitcast<_FromT, decltype(__n)::value>(__vv);
 	  };
 	  [[maybe_unused]] const auto __vi = __to_intrin(__v);
-	  auto&& __make_array = [](auto __xs) {
-	    return __call_with_subscripts(
-	      __xs.begin(), std::make_index_sequence<_Np>(),
-	      [](auto... __ys) { return _R{__vector_bitcast<_ToT>(__ys)...}; });
-	  };
+
+      auto&& __make_array = __make_array_impl<_Np, _ToT, _R>{};
 
 	  if constexpr (_Np == 0)
 	    return _R{};
