@@ -308,6 +308,12 @@
 #define _GLIBCXX_SIMD_FIX_P2TS_ISSUE66 1
 // }}}
 
+#if defined __clang__
+#define _GLIBCXX_SIMD_USE_CONSTEXPR const
+#else
+#define _GLIBCXX_SIMD_USE_CONSTEXPR constexpr
+#endif
+
 #endif // __cplusplus >= 201703L
 #endif // _GLIBCXX_EXPERIMENTAL_SIMD_DETAIL_H_
 

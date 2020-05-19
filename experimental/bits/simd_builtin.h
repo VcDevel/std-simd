@@ -37,16 +37,17 @@
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 // _S_allbits{{{
 template <typename _V>
-static inline constexpr _V _S_allbits
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_allbits
   = reinterpret_cast<_V>(~__vector_type_t<char, sizeof(_V) / sizeof(char)>());
 
 // }}}
 // _S_signmask, _S_absmask{{{
 template <typename _V, typename = _VectorTraits<_V>>
-static inline constexpr _V _S_signmask = __xor(_V() + 1, _V() - 1);
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_signmask = __xor(_V() + 1, _V() - 1);
+//__andnot(_S_signmask<_V>, _S_allbits<_V>) does not work in Clang for unknown reason
 template <typename _V, typename = _VectorTraits<_V>>
-static inline constexpr _V _S_absmask
-  = __andnot(_S_signmask<_V>, _S_allbits<_V>);
+static inline _GLIBCXX_SIMD_USE_CONSTEXPR _V _S_absmask
+  = __andnot(_S_signmask<_V>, reinterpret_cast<_V>(~__vector_type_t<char, sizeof(_V) / sizeof(char)>()));
 
 //}}}
 // __vector_permute<Indices...>{{{
@@ -566,6 +567,16 @@ __convert(_From __v0, _More... __vs)
 
 // }}}
 // __convert_all{{{
+template< std::size_t _Np, typename _ToT, typename _R >
+struct __make_array_impl {
+  template< typename T >
+  auto operator() ( std::initializer_list<T> __xs ) {
+    return __call_with_subscripts(
+      __xs.begin(), std::make_index_sequence<_Np>(),
+      [](auto... __ys) { return _R{__vector_bitcast<_ToT>(__ys)...}; });
+  }
+};
+
 // Converts __v into std::array<_To, N>, where N is _NParts if non-zero or
 // otherwise deduced from _To such that N * #elements(_To) <= #elements(__v).
 // Note: this function may return less than all converted elements
@@ -624,11 +635,8 @@ __convert_all(_From __v)
 	    return __vector_bitcast<_FromT, decltype(__n)::value>(__vv);
 	  };
 	  [[maybe_unused]] const auto __vi = __to_intrin(__v);
-	  auto&& __make_array = [](std::initializer_list<auto> __xs) {
-	    return __call_with_subscripts(
-	      __xs.begin(), std::make_index_sequence<_Np>(),
-	      [](auto... __ys) { return _R{__vector_bitcast<_ToT>(__ys)...}; });
-	  };
+
+      auto&& __make_array = __make_array_impl<_Np, _ToT, _R>{};
 
 	  if constexpr (_Np == 0)
 	    return _R{};
@@ -1659,19 +1667,19 @@ template <typename _Abi> struct _SimdImplBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_and(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __and(__x._M_data, __y._M_data);
+    return __and(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_or(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __or(__x._M_data, __y._M_data);
+    return __or(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
   __bit_xor(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
   {
-    return __xor(__x._M_data, __y._M_data);
+    return __xor(__x, __y);
   }
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static _SimdWrapper<_Tp, _Np>
@@ -1750,7 +1758,11 @@ template <typename _Abi> struct _SimdImplBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __negate(_SimdWrapper<_Tp, _Np> __x) noexcept
   {
+#if !defined __clang__
     return __vector_bitcast<_Tp>(!__x._M_data);
+#else
+    return __vector_bitcast<_Tp>(__x._M_data == decltype(__x._M_data){});
+#endif
   }
 
   // __min, __max, __minmax {{{2
@@ -2115,7 +2127,7 @@ template <typename _Abi> struct _SimdImplBuiltin
     const _V __absx = __and(__x, _S_absmask<_V>);
     static_assert(CHAR_BIT * sizeof(1ull)
 		  >= std::numeric_limits<value_type>::digits);
-    constexpr _V __shifter_abs
+    _GLIBCXX_SIMD_USE_CONSTEXPR _V __shifter_abs
       = _V() + (1ull << (std::numeric_limits<value_type>::digits - 1));
     const _V __shifter = __or(__and(_S_signmask<_V>, __x), __shifter_abs);
     _V __shifted = __x + __shifter;
@@ -2720,7 +2732,7 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   __bit_not(const _SimdWrapper<_Tp, _Np>& __x)
   {
     if constexpr(_Abi::_S_is_partial)
-      return __andnot(__x._M_data, _Abi::template __implicit_mask<_Tp>());
+      return __andnot(__x, _Abi::template __implicit_mask<_Tp>());
     else
       return __not(__x._M_data);
   }
@@ -2794,13 +2806,9 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
     if (__builtin_constant_p(__rhs))
       {
 	if (__rhs == false)
-	  {
-	    __lhs = __andnot(__k._M_data, __lhs._M_data);
-	  }
+	    __lhs = __andnot(__k, __lhs);
 	else
-	  {
-	    __lhs = __or(__k._M_data, __lhs._M_data);
-	  }
+	    __lhs = __or(__k, __lhs);
 	return;
       }
     __lhs

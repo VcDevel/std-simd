@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 }}}*/
 
 //#define UNITTEST_ONLY_XTEST 1
+#include <cstddef>
 #include "unittest.h"
 #include "metahelpers.h"
 
@@ -45,6 +46,8 @@ using vir::filter_list;
 using vir::Template;
 using vir::Template1;
 using vir::Typelist;
+
+using std::nullptr_t;
 
 struct dummy
 {
