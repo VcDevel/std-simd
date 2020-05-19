@@ -1758,7 +1758,11 @@ template <typename _Abi> struct _SimdImplBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
   __negate(_SimdWrapper<_Tp, _Np> __x) noexcept
   {
+#if !defined __clang__
     return __vector_bitcast<_Tp>(!__x._M_data);
+#else
+    return __vector_bitcast<_Tp>(__x._M_data == decltype(__x._M_data){});
+#endif
   }
 
   // __min, __max, __minmax {{{2
