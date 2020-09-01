@@ -611,8 +611,7 @@ __convert_all(_From __v)
 	  };
 	  [[maybe_unused]] const auto __vi = __to_intrin(__v);
 	  auto&& __make_array =
-	    []<typename _ToConvert>(_ToConvert __x0,
-				    [[maybe_unused]] _ToConvert __x1) {
+	    [](auto __x0, [[maybe_unused]] auto __x1) {
 	      if constexpr (_Np == 1)
 		return _R{__intrin_bitcast<_To>(__x0)};
 	      else
