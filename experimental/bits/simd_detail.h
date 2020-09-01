@@ -220,14 +220,22 @@
 #define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
 #define _GLIBCXX_SIMD_INTRINSIC                                                \
   [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
-#define _GLIBCXX_SIMD_CONST __attribute__((__const__))
 #define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]] inline
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)
+
 #if defined __STRICT_ANSI__ && __STRICT_ANSI__
 #define _GLIBCXX_SIMD_CONSTEXPR
+#define _GLIBCXX_SIMD_USE_CONSTEXPR_API const
 #else
 #define _GLIBCXX_SIMD_CONSTEXPR constexpr
+#define _GLIBCXX_SIMD_USE_CONSTEXPR_API constexpr
+#endif
+
+#if defined __clang__
+#define _GLIBCXX_SIMD_USE_CONSTEXPR const
+#else
+#define _GLIBCXX_SIMD_USE_CONSTEXPR constexpr
 #endif
 
 #define _GLIBCXX_SIMD_LIST_BINARY(__macro) __macro(|) __macro(&) __macro(^)
