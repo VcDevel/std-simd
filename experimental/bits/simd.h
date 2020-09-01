@@ -574,7 +574,8 @@ using __make_dependent_t = typename __make_dependent<_Tp, _Up>::type;
 // __invoke_ub{{{
 template <typename... _Args>
 [[noreturn]] _GLIBCXX_SIMD_ALWAYS_INLINE void
-__invoke_ub(const char* __msg, const _Args&... __args)
+  __invoke_ub([[maybe_unused]] const char* __msg,
+	      [[maybe_unused]] const _Args&... __args)
 {
 #ifdef _GLIBCXX_DEBUG_UB
   __builtin_fprintf(stderr, __msg, __args...);
@@ -2586,7 +2587,7 @@ __vectorized_sizeof()
     }
 
   return sizeof(_Tp);
-};
+}
 
 // }}}
 namespace simd_abi {
