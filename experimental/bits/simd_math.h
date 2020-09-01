@@ -673,7 +673,6 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
     }
   else if constexpr (__have_avx512f)
     {
-      using _IV = __samesize<int, simd<_Tp, _Abi>>;
       constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
       constexpr size_t _NI = _Np < 4 ? 4 : _Np;
       const auto __v = __data(__x);
