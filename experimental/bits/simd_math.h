@@ -698,7 +698,6 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
       using namespace std::experimental::__proposed;
       using namespace std::experimental::__float_bitwise_operators;
 
-      constexpr int __exp_shift = sizeof(_Tp) == 4 ? 23 : 20;
       constexpr int __exp_adjust = sizeof(_Tp) == 4 ? 0x7e : 0x3fe;
       constexpr int __exp_offset = sizeof(_Tp) == 4 ? 0x70 : 0x200;
       constexpr _Tp __subnorm_scale = sizeof(_Tp) == 4 ? 0x1p112 : 0x1p512;
