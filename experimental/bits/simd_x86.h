@@ -3660,17 +3660,18 @@ struct _MaskImplX86Mixin
     using _TW = _SimdWrapper<_Tp, _Np>;
     using _UW = _SimdWrapper<_Up, _ToN>;
     using _UI = __intrinsic_type_t<_Up, _ToN>;
-    if constexpr (sizeof(_Up) == sizeof(_Tp) && sizeof(_TW) == sizeof(_UW))
+    if constexpr (is_same_v<_Tp, bool>) // bits -> vector
+      return _S_to_maskvector<_Up, _ToN>(
+	_BitMask<_Np>(__x._M_data)._M_sanitized());
+    // vector -> vector bitcast
+    else if constexpr (sizeof(_Up) == sizeof(_Tp) && sizeof(_TW) == sizeof(_UW))
       if constexpr (_ToN <= _Np)
 	return __wrapper_bitcast<_Up, _ToN>(__x);
       else
-	return simd_abi::deduce_t<_Up, _ToN>::_S_masked(
+	return simd_abi::_VecBuiltin<sizeof(_UW)>::_S_masked(
 	  __wrapper_bitcast<_Up, _ToN>(__x));
-    else if constexpr (is_same_v<_Tp, bool>) // bits -> vector
-      return _S_to_maskvector<_Up, _ToN>(
-	_BitMask<_Np>(__x._M_data)._M_sanitized());
-    else
-      { // vector -> vector {{{
+    else // vector -> vector {{{
+      {
 	if (__x._M_is_constprop() || __builtin_is_constant_evaluated())
 	  {
 	    const auto __y = __vector_bitcast<__int_for_sizeof_t<_Tp>>(__x);
