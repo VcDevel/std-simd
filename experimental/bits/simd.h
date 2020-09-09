@@ -4894,7 +4894,7 @@ public:
 	"The behavior is undefined if the right operand of a shift operation "
 	"is negative. [expr.shift]\nA shift by %d was requested",
 	__y);
-    if (__y >= sizeof(std::declval<_Tp>() << __y) * __CHAR_BIT__)
+    if (size_t(__y) >= sizeof(std::declval<_Tp>() << __y) * __CHAR_BIT__)
       __invoke_ub(
 	"The behavior is undefined if the right operand of a shift operation "
 	"is greater than or equal to the width of the promoted left operand. "
@@ -4912,7 +4912,7 @@ public:
 	"The behavior is undefined if the right operand of a shift operation "
 	"is negative. [expr.shift]\nA shift by %d was requested",
 	__y);
-    if (__y >= sizeof(std::declval<_Tp>() << __y) * __CHAR_BIT__)
+    if (size_t(__y) >= sizeof(std::declval<_Tp>() << __y) * __CHAR_BIT__)
       __invoke_ub(
 	"The behavior is undefined if the right operand of a shift operation "
 	"is greater than or equal to the width of the promoted left operand. "
