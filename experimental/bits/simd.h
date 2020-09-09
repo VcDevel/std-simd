@@ -3696,7 +3696,7 @@ __extract_center(_SimdWrapper<_Tp, _Np> __x)
 
 template <typename _Tp, typename _A0, typename... _As>
 _GLIBCXX_SIMD_INTRINSIC
-  _SimdWrapper<_Tp, _SimdTuple<_Tp, _A0, _As...>::size() / 2>
+  _SimdWrapper<_Tp, _SimdTuple<_Tp, _A0, _As...>::_S_size() / 2>
   __extract_center(const _SimdTuple<_Tp, _A0, _As...>& __x)
 {
   if constexpr (sizeof...(_As) == 0)
