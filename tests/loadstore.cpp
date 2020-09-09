@@ -73,7 +73,6 @@ TEST_TYPES(VU, load_store, outer_product<all_test_types, MemTypes>)
 
   constexpr auto mem_size
     = test_values.size() > 3 * V::size() ? test_values.size() : 3 * V::size();
-#pragma GCC diagnostic ignored "-Wattributes"
   alignas(std::experimental::memory_alignment_v<V, U> * 2) U mem[mem_size] = {};
   alignas(std::experimental::memory_alignment_v<V, T> * 2) T reference[mem_size]
     = {};

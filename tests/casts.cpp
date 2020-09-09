@@ -250,11 +250,12 @@ TEST_TYPES(V_To, casts, outer_product<all_test_types, arithmetic_types>)
       using is_simd_cast_allowed
 	= decltype(vir::test::sfinae_is_callable_t<const V&>(foo<To>()));
 
-      COMPARE(
-	is_simd_cast_allowed::value,
-	std::numeric_limits<From>::digits <= std::numeric_limits<To>::digits
-	  && std::numeric_limits<From>::max() <= std::numeric_limits<To>::max()
-	  && !(std::is_signed<From>::value && std::is_unsigned<To>::value));
+      COMPARE(is_simd_cast_allowed::value,
+	      std::__digits<From>::value <= std::__digits<To>::value
+		&& std::__finite_max<From>::value
+		     <= std::__finite_max<To>::value
+		&& !(std::is_signed<From>::value
+		     && std::is_unsigned<To>::value));
 
       if constexpr (is_simd_cast_allowed::value)
 	{

@@ -53,10 +53,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 template <typename To, typename From>
 constexpr bool
-is_conversion_undefined_impl(From x, std::true_type)
+  is_conversion_undefined_impl(From x, std::true_type)
 {
-  return x > static_cast<long double>(std::numeric_limits<To>::max())
-	 || x < static_cast<long double>(std::numeric_limits<To>::min());
+  return x > static_cast<long double>(std::__finite_max_v<To>)
+	 || x < static_cast<long double>(std::__finite_min_v<To>);
 }
 
 template <typename To, typename From>
@@ -67,7 +67,7 @@ constexpr bool is_conversion_undefined_impl(From, std::false_type)
 
 template <typename To, typename From>
 constexpr bool
-is_conversion_undefined(From x)
+  is_conversion_undefined(From x)
 {
   static_assert(std::is_arithmetic<From>::value,
 		"this overload is only meant for builtin arithmetic types");
@@ -81,12 +81,12 @@ is_conversion_undefined(From x)
 
 static_assert(is_conversion_undefined<uint>(float(0x100000000LL)),
 	      "testing my expectations of is_conversion_undefined");
-static_assert(!is_conversion_undefined<float>(llong(0x100000000LL)),
+static_assert(!is_conversion_undefined<float>(0x100000000LL),
 	      "testing my expectations of is_conversion_undefined");
 
 template <typename To, typename T, typename A>
 inline std::experimental::simd_mask<T, A>
-is_conversion_undefined(const std::experimental::simd<T, A>& x)
+  is_conversion_undefined(const std::experimental::simd<T, A>& x)
 {
   std::experimental::simd_mask<T, A> k = false;
   for (std::size_t i = 0; i < x.size(); ++i)
@@ -97,39 +97,39 @@ is_conversion_undefined(const std::experimental::simd<T, A>& x)
 // operators helpers  //{{{1
 template <class T>
 constexpr T
-genHalfBits()
+  genHalfBits()
 {
-  return std::numeric_limits<T>::max() >> (std::numeric_limits<T>::digits / 2);
+  return std::__finite_max_v<T> >> (std::__digits_v<T> / 2);
 }
 template <>
 constexpr long double
-genHalfBits<long double>()
+  genHalfBits<long double>()
 {
   return 0;
 }
 template <>
 constexpr double
-genHalfBits<double>()
+  genHalfBits<double>()
 {
   return 0;
 }
 template <>
 constexpr float
-genHalfBits<float>()
+  genHalfBits<float>()
 {
   return 0;
 }
 
 template <class U, class T, class UU>
 constexpr U
-avoid_ub(UU x)
+  avoid_ub(UU x)
 {
   return is_conversion_undefined<T>(U(x)) ? U(0) : U(x);
 }
 
 template <class U, class T, class UU>
 constexpr U
-avoid_ub2(UU x)
+  avoid_ub2(UU x)
 {
   return is_conversion_undefined<U>(x) ? U(0) : avoid_ub<U, T>(x);
 }
@@ -161,10 +161,10 @@ static const std::array<U, 53> cvt_input_data = {{
   avoid_ub<U, T>(-0x100011111LL),
   avoid_ub<U, T>(-0x100111111LL),
   avoid_ub<U, T>(-0x101111111LL),
-  avoid_ub<U, T>(std::numeric_limits<U>::min()),
-  avoid_ub<U, T>(std::numeric_limits<U>::min() + 1),
-  avoid_ub<U, T>(std::numeric_limits<U>::lowest()),
-  avoid_ub<U, T>(std::numeric_limits<U>::lowest() + 1),
+  avoid_ub<U, T>(std::__norm_min_v<U>),
+  avoid_ub<U, T>(std::__norm_min_v<U> + 1),
+  avoid_ub<U, T>(std::__finite_min_v<U>),
+  avoid_ub<U, T>(std::__finite_min_v<U> + 1),
   avoid_ub<U, T>(-1),
   avoid_ub<U, T>(-10),
   avoid_ub<U, T>(-100),
@@ -175,27 +175,21 @@ static const std::array<U, 53> cvt_input_data = {{
   avoid_ub<U, T>(genHalfBits<U>() - 1),
   avoid_ub<U, T>(genHalfBits<U>()),
   avoid_ub<U, T>(genHalfBits<U>() + 1),
-  avoid_ub<U, T>(std::numeric_limits<U>::max() - 1),
-  avoid_ub<U, T>(std::numeric_limits<U>::max()),
-  avoid_ub<U, T>(std::numeric_limits<U>::max() - 0xff),
-  avoid_ub<U, T>(std::numeric_limits<U>::max() - 0xff),
-  avoid_ub<U, T>(std::numeric_limits<U>::max() - 0x55),
-  avoid_ub<U, T>(-(std::numeric_limits<U>::min() + 1)),
-  avoid_ub<U, T>(-std::numeric_limits<U>::max()),
-  avoid_ub<U, T>(std::numeric_limits<U>::max()
-		 / std::pow(2., sizeof(T) * 6 - 1)),
-  avoid_ub2<U, T>(-std::numeric_limits<U>::max()
-		  / std::pow(2., sizeof(T) * 6 - 1)),
-  avoid_ub<U, T>(std::numeric_limits<U>::max()
-		 / std::pow(2., sizeof(T) * 4 - 1)),
-  avoid_ub2<U, T>(-std::numeric_limits<U>::max()
-		  / std::pow(2., sizeof(T) * 4 - 1)),
-  avoid_ub<U, T>(std::numeric_limits<U>::max()
-		 / std::pow(2., sizeof(T) * 2 - 1)),
-  avoid_ub2<U, T>(-std::numeric_limits<U>::max()
-		  / std::pow(2., sizeof(T) * 2 - 1)),
-  avoid_ub<U, T>(std::numeric_limits<T>::max() - 1),
-  avoid_ub<U, T>(std::numeric_limits<T>::max() * 0.75),
+  avoid_ub<U, T>(std::__finite_max_v<U> - 1),
+  avoid_ub<U, T>(std::__finite_max_v<U>),
+  avoid_ub<U, T>(std::__finite_max_v<U> - 0xff),
+  avoid_ub<U, T>(std::__finite_max_v<U> - 0xff),
+  avoid_ub<U, T>(std::__finite_max_v<U> - 0x55),
+  avoid_ub<U, T>(-(std::__finite_min_v<U> + 1)),
+  avoid_ub<U, T>(-std::__finite_max_v<U>),
+  avoid_ub<U, T>(std::__finite_max_v<U> / std::pow(2., sizeof(T) * 6 - 1)),
+  avoid_ub2<U, T>(-std::__finite_max_v<U> / std::pow(2., sizeof(T) * 6 - 1)),
+  avoid_ub<U, T>(std::__finite_max_v<U> / std::pow(2., sizeof(T) * 4 - 1)),
+  avoid_ub2<U, T>(-std::__finite_max_v<U> / std::pow(2., sizeof(T) * 4 - 1)),
+  avoid_ub<U, T>(std::__finite_max_v<U> / std::pow(2., sizeof(T) * 2 - 1)),
+  avoid_ub2<U, T>(-std::__finite_max_v<U> / std::pow(2., sizeof(T) * 2 - 1)),
+  avoid_ub<U, T>(std::__finite_max_v<T> - 1),
+  avoid_ub<U, T>(std::__finite_max_v<T> * 0.75),
 }};
 
 template <class T, class U> struct cvt_inputs

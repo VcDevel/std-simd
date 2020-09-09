@@ -90,10 +90,10 @@ TEST_TYPES(V, abs, all_test_types) //{{{1
     {
       using std::abs;
       using T = typename V::value_type;
-      using L = std::numeric_limits<T>;
-      test_values<V>({L::max(), L::lowest(), L::min(), -L::max() / 2, T(), -T(),
-		      T(-1), T(-2)},
-		     {100, L::lowest(), L::max()}, [](V input) {
+      test_values<V>({std::__finite_max_v<T>, std::__norm_min_v<T>,
+		      -std::__norm_min_v<T>, std::__finite_min_v<T>,
+		      std::__finite_min_v<T> / 2, T(), -T(), T(-1), T(-2)},
+		     {1000}, [](V input) {
 		       const V expected(
 			 [&](auto i) { return T(std::abs(T(input[i]))); });
 		       COMPARE(abs(input), expected) << "input: " << input;
@@ -119,19 +119,23 @@ verify_no_fp_exceptions(F&& fun)
 
 TEST_TYPES(V, fpclassify, real_test_types) //{{{1
 {
-  using limits = std::numeric_limits<typename V::value_type>;
+  using T = typename V::value_type;
+  using intv = std::experimental::fixed_size_simd<int, V::size()>;
+  constexpr T inf = std::__infinity_v<T>;
+  constexpr T denorm_min = std::__infinity_v<T>;
+  constexpr T nan = std::__quiet_NaN_v<T>;
+  constexpr T max = std::__finite_max_v<T>;
+  constexpr T norm_min = std::__norm_min_v<T>;
   test_values<V>(
-    {0., -0., 1., -1., limits::infinity(), -limits::infinity(), limits::max(),
-     -limits::max(), limits::min(), limits::min() * 0.9, -limits::min(),
-     -limits::min() * 0.9, limits::denorm_min(), -limits::denorm_min(),
-     limits::quiet_NaN()
-#ifdef __SUPPORT_SNAN__
-       ,
-     limits::signaling_NaN()
+    {
+      0., 1., -1.,
+#if __GCC_IEC_559 >= 2
+	-0., inf, -inf, denorm_min, -denorm_min, nan, norm_min * 0.9,
+	-norm_min * 0.9,
 #endif
+	max, -max, norm_min, -norm_min
     },
     [](const V input) {
-      using intv = std::experimental::fixed_size_simd<int, V::size()>;
       COMPARE(NOFPEXCEPT(isfinite(input)),
 	      !V([&](auto i) { return std::isfinite(input[i]) ? 0 : 1; }))
 	<< input;
@@ -157,11 +161,41 @@ TEST_TYPES(V, fpclassify, real_test_types) //{{{1
 	      intv([&](auto i) { return std::fpclassify(input[i]); }))
 	<< input;
     });
+#ifdef __SUPPORT_SNAN__
+  const V snan = std::__signaling_NaN_v<T>;
+  COMPARE(isfinite(snan),
+	  !V([&](auto i) { return std::isfinite(snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(isinf(snan), !V([&](auto i) { return std::isinf(snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(isnan(snan), !V([&](auto i) { return std::isnan(snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(isnormal(snan),
+	  !V([&](auto i) { return std::isnormal(snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(signbit(snan),
+	  !V([&](auto i) { return std::signbit(snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(isunordered(snan, V()),
+	  !V([&](auto i) { return std::isunordered(snan[i], 0) ? 0 : 1; }))
+    << snan;
+  COMPARE(isunordered(V(), snan),
+	  !V([&](auto i) { return std::isunordered(0, snan[i]) ? 0 : 1; }))
+    << snan;
+  COMPARE(fpclassify(snan),
+	  intv([&](auto i) { return std::fpclassify(snan[i]); }))
+    << snan;
+#endif
 }
 
 TEST_TYPES(V, trunc_ceil_floor, real_test_types) //{{{1
 {
-  using limits = std::numeric_limits<typename V::value_type>;
+  using T = typename V::value_type;
+  constexpr T inf = std::__infinity_v<T>;
+  constexpr T denorm_min = std::__denorm_min_v<T>;
+  constexpr T norm_min = std::__norm_min_v<T>;
+  constexpr T max = std::__finite_max_v<T>;
+  constexpr T min = std::__finite_min_v<T>;
   test_values<V>(
     {2.1,
      2.0,
@@ -186,25 +220,26 @@ TEST_TYPES(V, trunc_ceil_floor, real_test_types) //{{{1
      -0.99,
      -0.5,
      -0.499,
-     -0.,
      3 << 21,
      3 << 22,
      3 << 23,
      -(3 << 21),
      -(3 << 22),
      -(3 << 23),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::denorm_min(),
-     limits::max(),
-     limits::min(),
-     limits::min() * 0.9,
-     limits::lowest(),
-     -limits::denorm_min(),
-     -limits::max(),
-     -limits::min(),
-     -limits::min() * 0.9,
-     -limits::lowest()},
+#ifdef __STDC_IEC_559__
+     -0.,
+     inf,
+     -inf,
+     denorm_min,
+     norm_min * 0.9,
+     -denorm_min,
+     -norm_min * 0.9,
+#endif
+     max,
+     norm_min,
+     min,
+     -norm_min
+     },
     [](const V input) {
       const V expected([&](auto i) { return std::trunc(input[i]); });
       COMPARE(trunc(input), expected) << input;
@@ -218,8 +253,13 @@ TEST_TYPES(V, trunc_ceil_floor, real_test_types) //{{{1
       COMPARE(floor(input), expected) << input;
     });
 
+#ifdef __STDC_IEC_559__
   test_values<V>(
-    {limits::quiet_NaN(), limits::signaling_NaN()},
+    {
+#ifdef __SUPPORT_SNAN__
+      std::__signaling_NaN_v<T>,
+#endif
+      std::__quiet_NaN_v<T>},
     [](const V input) {
       const V expected([&](auto i) { return std::trunc(input[i]); });
       COMPARE(isnan(trunc(input)), isnan(expected)) << input;
@@ -232,127 +272,54 @@ TEST_TYPES(V, trunc_ceil_floor, real_test_types) //{{{1
       const V expected([&](auto i) { return std::floor(input[i]); });
       COMPARE(isnan(floor(input)), isnan(expected)) << input;
     });
+#endif
 }
 
 TEST_TYPES(V, frexp, real_test_types) //{{{1
 {
   using int_v = std::experimental::fixed_size_simd<int, V::size()>;
-  using limits = std::numeric_limits<typename V::value_type>;
-  test_values<V>({0,
-		  0.25,
-		  0.5,
-		  1,
-		  3,
-		  4,
-		  6,
-		  7,
-		  8,
-		  9,
-		  10,
-		  11,
-		  12,
-		  13,
-		  14,
-		  15,
-		  16,
-		  17,
-		  18,
-		  19,
-		  20,
-		  21,
-		  22,
-		  23,
-		  24,
-		  25,
-		  26,
-		  27,
-		  28,
-		  29,
-		  32,
-		  31,
-		  -0.,
-		  -0.25,
-		  -0.5,
-		  -1,
-		  -3,
-		  -4,
-		  -6,
-		  -7,
-		  -8,
-		  -9,
-		  -10,
-		  -11,
-		  -12,
-		  -13,
-		  -14,
-		  -15,
-		  -16,
-		  -17,
-		  -18,
-		  -19,
-		  -20,
-		  -21,
-		  -22,
-		  -23,
-		  -24,
-		  -25,
-		  -26,
-		  -27,
-		  -28,
-		  -29,
-		  -32,
-		  -31,
-		  limits::max(),
-		  -limits::max(),
-		  limits::max() * 0.123f,
-		  -limits::max() * 0.123f,
-		  limits::denorm_min(),
-		  -limits::denorm_min(),
-		  limits::min() / 2,
-		  -limits::min() / 2},
-		 [](const V input) {
-		   V expectedFraction;
-		   const int_v expectedExponent([&](auto i) {
-		     int exp;
-		     expectedFraction[i] = std::frexp(input[i], &exp);
-		     return exp;
-		   });
-		   int_v exponent = {};
-		   const V fraction = frexp(input, &exponent);
-		   COMPARE(fraction, expectedFraction)
-		     << ", input = " << input
-		     << ", delta: " << fraction - expectedFraction;
-		   COMPARE(exponent, expectedExponent)
-		     << "\ninput: " << input << ", fraction: " << fraction;
-		 });
+  using T = typename V::value_type;
+  constexpr auto denorm_min = std::__denorm_min_v<T>;
+  constexpr auto norm_min = std::__norm_min_v<T>;
+  constexpr auto min = std::__finite_min_v<T>;
+  constexpr auto max = std::__finite_max_v<T>;
+  constexpr auto nan = std::__quiet_NaN_v<T>;
+  constexpr auto inf = std::__infinity_v<T>;
+  test_values<V>(
+    {
+      0, 0.25, 0.5, 1, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+	20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 31, -0., -0.25, -0.5, -1,
+	-3, -4, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16, -17, -18,
+	-19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -29, -32, -31,
+#if __GCC_IEC_559 >= 2
+	denorm_min, -denorm_min, norm_min / 2, -norm_min / 2,
+#endif
+	max, -max, max * 0.123f, -max * 0.123f
+    },
+    [](const V input) {
+      V expectedFraction;
+      const int_v expectedExponent([&](auto i) {
+	int exp;
+	expectedFraction[i] = std::frexp(input[i], &exp);
+	return exp;
+      });
+      int_v exponent = {};
+      const V fraction = frexp(input, &exponent);
+      COMPARE(fraction, expectedFraction)
+	<< ", input = " << input << ", delta: " << fraction - expectedFraction;
+      COMPARE(exponent, expectedExponent)
+	<< "\ninput: " << input << ", fraction: " << fraction;
+    });
+#ifdef __STDC_IEC_559__
   test_values<V>(
     // If x is a NaN, a NaN is returned, and the value of *exp is unspecified.
     //
     // If x is positive  infinity  (negative  infinity),  positive  infinity
     // (negative infinity) is returned, and the value of *exp is unspecified.
-    {limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     limits::denorm_min(),
-     limits::denorm_min() * 1.72,
-     -limits::denorm_min(),
-     -limits::denorm_min() * 1.72,
-     0.,
-     -0.,
-     1,
-     -1},
+    // This behavior is only guaranteed with C's Annex F when __STDC_IEC_559__
+    // is defined.
+    {nan, inf, -inf, denorm_min, denorm_min * 1.72, -denorm_min,
+     -denorm_min * 1.72, 0., -0., 1, -1},
     [](const V input) {
       const V expectedFraction([&](auto i) {
 	int exp;
@@ -370,6 +337,7 @@ TEST_TYPES(V, frexp, real_test_types) //{{{1
 	<< fraction << ", input = " << input
 	<< ", delta: " << fraction - expectedFraction;
     });
+#endif
 }
 
 TEST_TYPES(V, sincos, real_test_types) //{{{1
@@ -528,14 +496,17 @@ TEST_TYPES(V, trig, real_test_types) //{{{1
   vir::test::setFuzzyness<float>(1);
   vir::test::setFuzzyness<double>(1);
 
-  using limits = std::numeric_limits<typename V::value_type>;
-  test_values<V>({limits::quiet_NaN(), limits::infinity(), -limits::infinity(),
-		  +0., -0., limits::denorm_min(), limits::min(), limits::max(),
-		  limits::min() / 3},
-		 {10000, -limits::max() / 2, limits::max() / 2},
-		 MAKE_TESTER(acos), MAKE_TESTER(tan), MAKE_TESTER(acosh),
-		 MAKE_TESTER(asinh), MAKE_TESTER(atanh), MAKE_TESTER(cosh),
-		 MAKE_TESTER(sinh), MAKE_TESTER(tanh));
+  using T = typename V::value_type;
+  test_values<V>(
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>, std::__infinity_v<T>, -std::__infinity_v<T>, -0.,
+      std::__denorm_min_v<T>, std::__norm_min_v<T> / 3,
+#endif
+      +0., std::__norm_min_v<T>, std::__finite_max_v<T>},
+    {10000}, MAKE_TESTER(acos), MAKE_TESTER(tan), MAKE_TESTER(acosh),
+    MAKE_TESTER(asinh), MAKE_TESTER(atanh), MAKE_TESTER(cosh),
+    MAKE_TESTER(sinh), MAKE_TESTER(tanh));
 }
 
 TEST_TYPES(V, logarithms, real_test_types) //{{{1
@@ -543,7 +514,13 @@ TEST_TYPES(V, logarithms, real_test_types) //{{{1
   vir::test::setFuzzyness<float>(1);
   vir::test::setFuzzyness<double>(1);
 
-  using limits = std::numeric_limits<typename V::value_type>;
+  using T = typename V::value_type;
+  constexpr T nan = std::__quiet_NaN_v<T>;
+  constexpr T inf = std::__infinity_v<T>;
+  constexpr T denorm_min = std::__denorm_min_v<T>;
+  constexpr T norm_min = std::__norm_min_v<T>;
+  constexpr T min = std::__finite_min_v<T>;
+  constexpr T max = std::__finite_max_v<T>;
   test_values<V>({1,
 		  2,
 		  4,
@@ -565,20 +542,28 @@ TEST_TYPES(V, logarithms, real_test_types) //{{{1
 		  33,
 		  63,
 		  65,
-		  limits::quiet_NaN(),
-		  limits::infinity(),
-		  -limits::infinity(),
-		  +0.,
-		  -0.,
-		  limits::denorm_min(),
-		  limits::min(),
-		  limits::max(),
-		  limits::min() / 3,
-		  -limits::denorm_min(),
-		  -limits::min(),
-		  -limits::max(),
-		  -limits::min() / 3},
-		 {10000, -limits::max() / 2, limits::max() / 2},
+#ifdef __STDC_IEC_559__
+		  nan,
+		  inf,
+		  -inf,
+		  denorm_min,
+		  -denorm_min,
+		  norm_min / 3,
+		  -norm_min / 3,
+		  -T(),
+		  -norm_min,
+		  min,
+		  T(),
+#endif
+		  norm_min,
+		  max},
+		 {10000,
+#ifdef __STDC_IEC_559__
+		  min / 2,
+#else
+		  norm_min,
+#endif
+		  max / 2},
 		 MAKE_TESTER(log), MAKE_TESTER(log10), MAKE_TESTER(log1p),
 		 MAKE_TESTER(log2), MAKE_TESTER(logb));
 }
@@ -601,49 +586,75 @@ TEST_TYPES(V, test1Arg, real_test_types) //{{{1
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
 
-  using limits = std::numeric_limits<typename V::value_type>;
-  test_values<V>({limits::infinity(),
-		  -limits::infinity(),
-		  +0.,
-		  -0.,
-		  0.5,
-		  -0.5,
-		  1.5,
-		  -1.5,
-		  2.5,
-		  -2.5,
-		  0x1.fffffffffffffp52,
-		  -0x1.fffffffffffffp52,
-		  0x1.ffffffffffffep52,
-		  -0x1.ffffffffffffep52,
-		  0x1.ffffffffffffdp52,
-		  -0x1.ffffffffffffdp52,
-		  0x1.fffffep21,
-		  -0x1.fffffep21,
-		  0x1.fffffcp21,
-		  -0x1.fffffcp21,
-		  0x1.fffffep22,
-		  -0x1.fffffep22,
-		  0x1.fffffcp22,
-		  -0x1.fffffcp22,
-		  0x1.fffffep23,
-		  -0x1.fffffep23,
-		  0x1.fffffcp23,
-		  -0x1.fffffcp23,
-		  0x1.8p23,
-		  -0x1.8p23,
-		  limits::quiet_NaN(),
-		  limits::denorm_min(),
-		  limits::min(),
-		  limits::max(),
-		  limits::min() / 3},
-		 {10000, -limits::max() / 2, limits::max() / 2},
-		 MAKE_TESTER(sqrt), MAKE_TESTER(erf), MAKE_TESTER(erfc),
+  using T = typename V::value_type;
+  constexpr T inf = std::__infinity_v<T>;
+  constexpr T nan = std::__quiet_NaN_v<T>;
+  constexpr T denorm_min = std::__denorm_min_v<T>;
+  constexpr T norm_min = std::__norm_min_v<T>;
+  constexpr T max = std::__finite_max_v<T>;
+  constexpr T after_one = 1 + std::__epsilon_v<T>;
+  constexpr T before_one = (2 - std::__epsilon_v<T>) / 2;
+  const std::initializer_list<T>
+    input_values = {+0.,
+		    0.5,
+		    -0.5,
+		    before_one,
+		    -before_one,
+		    after_one,
+		    -after_one,
+		    1.5,
+		    -1.5,
+		    2 * before_one,
+		    -2 * before_one,
+		    2 * after_one,
+		    -2 * after_one,
+		    2.5,
+		    -2.5,
+		    0x1.fffffffffffffp52,
+		    -0x1.fffffffffffffp52,
+		    0x1.ffffffffffffep52,
+		    -0x1.ffffffffffffep52,
+		    0x1.ffffffffffffdp52,
+		    -0x1.ffffffffffffdp52,
+		    0x1.fffffep21,
+		    -0x1.fffffep21,
+		    0x1.fffffcp21,
+		    -0x1.fffffcp21,
+		    0x1.fffffep22,
+		    -0x1.fffffep22,
+		    0x1.fffffcp22,
+		    -0x1.fffffcp22,
+		    0x1.fffffep23,
+		    -0x1.fffffep23,
+		    0x1.fffffcp23,
+		    -0x1.fffffcp23,
+		    0x1.8p23,
+		    -0x1.8p23,
+		    inf,
+		    -inf,
+		    -0.,
+		    nan,
+		    denorm_min,
+		    norm_min / 3,
+		    norm_min,
+		    max};
+  test_values<V>(input_values, {10000}, MAKE_TESTER(erf), MAKE_TESTER(erfc),
 		 MAKE_TESTER(tgamma), MAKE_TESTER(lgamma), MAKE_TESTER(ceil),
 		 MAKE_TESTER(floor), MAKE_TESTER(trunc), MAKE_TESTER(round),
 		 MAKE_TESTER(lround), MAKE_TESTER(llround),
 		 MAKE_TESTER(nearbyint), MAKE_TESTER(rint), MAKE_TESTER(lrint),
 		 MAKE_TESTER(llrint), MAKE_TESTER(ilogb));
+
+  // sqrt(x) on x87 is precise in 80 bits, but the subsequent rounding can be
+  // wrong (up to 1 ULP)
+#if __FLT_EVAL_METHOD__ == 1
+  vir::test::setFuzzyness<float>(1);
+  vir::test::setFuzzyness<double>(0);
+#elif __FLT_EVAL_METHOD__ == 2
+  vir::test::setFuzzyness<float>(1);
+  vir::test::setFuzzyness<double>(1);
+#endif
+  test_values<V>(input_values, {10000}, MAKE_TESTER(sqrt));
 }
 
 #define MAKE_TESTER_NOFPEXCEPT(name_)                                          \
@@ -686,19 +697,33 @@ TEST_TYPES(V, test1Arg, real_test_types) //{{{1
 TEST_TYPES(V, test2Arg, real_test_types) //{{{1
 {
   using T = typename V::value_type;
-  using limits = std::numeric_limits<T>;
 
   vir::test::setFuzzyness<float>(1);
   vir::test::setFuzzyness<double>(1);
   vir::test::setFuzzyness<long double>(1);
-  test_values_2arg<V>({limits::quiet_NaN(), limits::infinity(),
-		       -limits::infinity(), +0., -0., limits::denorm_min(),
-		       limits::min(), limits::max(), limits::min() / 3},
-		      {100000, -limits::max() / 2, limits::max() / 2},
-		      MAKE_TESTER(hypot));
-  COMPARE(hypot(V(limits::max()), V(limits::max())), V(limits::infinity()));
-  COMPARE(hypot(V(limits::min()), V(limits::min())),
-	  V(limits::min() * std::sqrt(T(2))));
+  test_values_2arg<V>(
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>, std::__infinity_v<T>, -std::__infinity_v<T>, -0.,
+      std::__denorm_min_v<T>, std::__norm_min_v<T> / 3,
+#endif
+      +0., std::__norm_min_v<T>, 1., 2., std::__finite_max_v<T> / 5,
+      std::__finite_max_v<T> / 3, std::__finite_max_v<T> / 2,
+#ifdef __FAST_MATH__
+      // fast-math hypot is imprecise for the max exponent
+    },
+    {100000, std::__finite_max_v<T> / 2},
+#else
+      std::__finite_max_v<T>},
+    {100000},
+#endif
+    MAKE_TESTER(hypot));
+#if !__FINITE_MATH_ONLY__
+  COMPARE(hypot(V(std::__finite_max_v<T>), V(std::__finite_max_v<T>)),
+	  V(std::__infinity_v<T>));
+#endif
+  COMPARE(hypot(V(std::__norm_min_v<T>), V(std::__norm_min_v<T>)),
+	  V(std::__norm_min_v<T> * std::sqrt(T(2))));
   VERIFY((sfinae_is_callable<V, V>(
     [](auto a, auto b) -> decltype(hypot(a, b)) { return {}; })));
   VERIFY((sfinae_is_callable<typename V::value_type, V>(
@@ -710,10 +735,14 @@ TEST_TYPES(V, test2Arg, real_test_types) //{{{1
   vir::test::setFuzzyness<double>(0);
   vir::test::setFuzzyness<long double>(0);
   test_values_2arg<V>(
-    {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
-     limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
-    {10000, -limits::max() / 2, limits::max() / 2}, MAKE_TESTER(pow),
-    MAKE_TESTER(fmod), MAKE_TESTER(remainder), MAKE_TESTER_NOFPEXCEPT(copysign),
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>, std::__infinity_v<T>, -std::__infinity_v<T>,
+      std::__denorm_min_v<T>, std::__norm_min_v<T> / 3, -0.,
+#endif
+      +0., std::__norm_min_v<T>, std::__finite_max_v<T>},
+    {10000}, MAKE_TESTER(pow), MAKE_TESTER(fmod), MAKE_TESTER(remainder),
+    MAKE_TESTER_NOFPEXCEPT(copysign),
     MAKE_TESTER(nextafter), // MAKE_TESTER(nexttoward),
     MAKE_TESTER(fdim), MAKE_TESTER(fmax), MAKE_TESTER(fmin),
     MAKE_TESTER_NOFPEXCEPT(isgreater), MAKE_TESTER_NOFPEXCEPT(isgreaterequal),
@@ -721,74 +750,92 @@ TEST_TYPES(V, test2Arg, real_test_types) //{{{1
     MAKE_TESTER_NOFPEXCEPT(islessgreater), MAKE_TESTER_NOFPEXCEPT(isunordered));
 }
 
+// 3-arg std::hypot needs to be fixed, this is a better reference:
+template <typename T>
+[[gnu::optimize("-fno-unsafe-math-optimizations")]]
+T
+hypot3(T x, T y, T z)
+{
+  x = std::abs(x);
+  y = std::abs(y);
+  z = std::abs(z);
+  auto too_small = [](T a, T b, T c) { return a + b == b && a + c == c; };
+  if (std::isinf(x) || std::isinf(y) || std::isinf(z))
+    return std::__infinity_v<T>;
+  else if (std::isnan(x) || std::isnan(y) || std::isnan(z))
+    return std::__quiet_NaN_v<T>;
+  else if (x == y && y == z)
+    return x * std::sqrt(T(3));
+  else if (z == 0 && y == 0)
+    return x;
+  else if (x == 0 && z == 0)
+    return y;
+  else if (x == 0 && y == 0)
+    return z;
+  else
+    {
+      T hi = std::max(std::max(x, y), z);
+      T lo0 = std::min(std::max(x, y), z);
+      T lo1 = std::min(x, y);
+      int e = 0;
+      hi = std::frexp(hi, &e);
+      lo0 = std::ldexp(lo0, -e);
+      lo1 = std::ldexp(lo1, -e);
+      T lo = lo0 * lo0 + lo1 * lo1;
+      return std::ldexp(std::sqrt(hi * hi + lo), e);
+    }
+}
+
 TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
 {
   vir::test::setFuzzyness<float>(1);
   vir::test::setFuzzyness<double>(1);
-  using T = typename V::value_type;
   vir::test::setFuzzyness<long double>(2); // because of the bad reference
 
-  using limits = std::numeric_limits<T>;
-  // 3-arg std::hypot needs to be fixed, this is a better reference:
-  auto&& hypot3 = [](T x, T y, T z) -> T {
-    x = std::abs(x);
-    y = std::abs(y);
-    z = std::abs(z);
-    if (std::isinf(x) || std::isinf(y) || std::isinf(z))
-      {
-	return limits::infinity();
-      }
-    else if (std::isnan(x) || std::isnan(y) || std::isnan(z))
-      {
-	return limits::quiet_NaN();
-      }
-    else if (x == y && y == z)
-      {
-	return x * std::sqrt(T(3));
-      }
-    else if (z == 0 && y == 0)
-      return x;
-    else if (x == 0 && z == 0)
-      return y;
-    else if (x == 0 && y == 0)
-      return z;
-    else if (x == 0)
-      return std::hypot(y, z);
-    else if (y == 0)
-      return std::hypot(x, z);
-    else if (z == 0)
-      return std::hypot(x, y);
-    else
-      {
-	long double hi = std::max(std::max(x, y), z);
-	long double lo0 = std::min(std::max(x, y), z);
-	long double lo1 = std::min(x, y);
-	if (std::isinf(x * x + y * y + z * z) || 0 == (lo0 * lo0 + lo1 * lo1))
-	  {
-	    lo0 /= hi;
-	    lo1 /= hi;
-	    return std::abs(hi) * std::sqrt(1 + (lo0 * lo0 + lo1 * lo1));
-	  }
-	else
-	  {
-	    return std::sqrt(hi * hi + (lo0 * lo0 + lo1 * lo1));
-	  }
-      }
-  };
-  test_values_3arg<V>({limits::quiet_NaN(), limits::infinity(),
-		       -limits::infinity(), +0., -0., 1., -1.,
-		       limits::denorm_min(), limits::min(), limits::max(),
-		       -limits::max(), limits::min() / 3},
-		      {100000, -limits::max(), limits::max()},
-		      MAKE_TESTER_2(hypot, hypot3));
-  COMPARE(hypot(V(limits::max()), V(limits::max()), V()),
-	  V(limits::infinity()));
-  COMPARE(hypot(V(limits::max()), V(), V(limits::max())),
-	  V(limits::infinity()));
-  COMPARE(hypot(V(), V(limits::max()), V(limits::max())),
-	  V(limits::infinity()));
-  COMPARE(hypot(V(limits::min()), V(limits::min()), V(limits::min())),
-	  V(limits::min() * std::sqrt(T(3))));
+  using T = typename V::value_type;
+  test_values_3arg<V>(
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>,
+      std::__infinity_v<T>,
+      -std::__infinity_v<T>,
+      std::__norm_min_v<T> / 3,
+      -0.,
+      std::__denorm_min_v<T>,
+#endif
+      0.,
+      1.,
+      -1.,
+      std::__norm_min_v<T>,
+      -std::__norm_min_v<T>,
+      2.,
+      -2.,
+      std::__finite_max_v<T> / 5,
+      std::__finite_max_v<T> / 3,
+      std::__finite_max_v<T> / 2,
+      -std::__finite_max_v<T> / 5,
+      -std::__finite_max_v<T> / 3,
+      -std::__finite_max_v<T> / 2,
+#ifdef __FAST_MATH__
+      // fast-math hypot is imprecise for the max exponent
+    },
+    {100000, std::__finite_max_v<T> / 2},
+#else
+      std::__finite_max_v<T>, -std::__finite_max_v<T>},
+    {100000},
+#endif
+    MAKE_TESTER_2(hypot, hypot3));
+#if !__FINITE_MATH_ONLY__
+  COMPARE(hypot(V(std::__finite_max_v<T>), V(std::__finite_max_v<T>), V()),
+	  V(std::__infinity_v<T>));
+  COMPARE(hypot(V(std::__finite_max_v<T>), V(), V(std::__finite_max_v<T>)),
+	  V(std::__infinity_v<T>));
+  COMPARE(hypot(V(), V(std::__finite_max_v<T>), V(std::__finite_max_v<T>)),
+	  V(std::__infinity_v<T>));
+#endif
+  COMPARE(hypot(V(std::__norm_min_v<T>), V(std::__norm_min_v<T>),
+		V(std::__norm_min_v<T>)),
+	  V(std::__norm_min_v<T> * std::sqrt(T(3))));
   VERIFY((sfinae_is_callable<V, V, V>(
     [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
   VERIFY((sfinae_is_callable<T, T, V>(
@@ -812,11 +859,15 @@ TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
 
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
-  test_values_3arg<V>({limits::quiet_NaN(), limits::infinity(),
-		       -limits::infinity(), +0., -0., limits::denorm_min(),
-		       limits::min(), limits::max(), limits::min() / 3},
-		      {10000, -limits::max() / 2, limits::max() / 2},
-		      MAKE_TESTER(fma));
+  test_values_3arg<V>(
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>, std::__infinity_v<T>, -std::__infinity_v<T>, -0.,
+      std::__norm_min_v<T> / 3, std::__denorm_min_v<T>,
+#endif
+      0., std::__norm_min_v<T>, std::__finite_max_v<T>},
+    {10000, -std::__finite_max_v<T> / 2, std::__finite_max_v<T> / 2},
+    MAKE_TESTER(fma));
   VERIFY((sfinae_is_callable<V, V, V>(
     [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
   VERIFY((sfinae_is_callable<T, T, V>(
@@ -844,30 +895,44 @@ TEST_TYPES(V, ldexp_scalbn_scalbln_modf, real_test_types) //{{{1
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
 
-  using limits = std::numeric_limits<typename V::value_type>;
+  using T = typename V::value_type;
+
+  // See https://sourceware.org/bugzilla/show_bug.cgi?id=18031
+  const bool modf_is_broken = [] {
+    volatile T x = T(5e20) / 7;
+    T tmp;
+    return std::fabs(std::modf(x, &tmp)) >= 1;
+  }();
+  if (modf_is_broken)
+    __builtin_fprintf(stderr,
+		      "NOTE: Skipping modf because std::modf is broken.\n");
+
   test_values<V>(
-    {limits::quiet_NaN(),
-     limits::infinity(),
-     -limits::infinity(),
-     +0.,
-     -0.,
-     +1.3,
-     -1.3,
-     2.1,
-     -2.1,
-     0.99,
-     0.9,
-     -0.9,
-     -0.99,
-     limits::denorm_min(),
-     limits::min(),
-     limits::max(),
-     limits::min() / 3,
-     -limits::denorm_min(),
-     -limits::min(),
-     -limits::max(),
-     -limits::min() / 3},
-    {10000, -limits::max() / 2, limits::max() / 2},
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>,
+      std::__infinity_v<T>,
+      -std::__infinity_v<T>,
+      -0.,
+      std::__denorm_min_v<T>,
+      std::__norm_min_v<T> / 3,
+      -std::__denorm_min_v<T>,
+      -std::__norm_min_v<T> / 3,
+#endif
+      +0.,
+      +1.3,
+      -1.3,
+      2.1,
+      -2.1,
+      0.99,
+      0.9,
+      -0.9,
+      -0.99,
+      std::__norm_min_v<T>,
+      std::__finite_max_v<T>,
+      -std::__norm_min_v<T>,
+      -std::__finite_max_v<T>},
+    {10000},
     [](const V input) {
       for (int exp : {-10000, -100, -10, -1, 0, 1, 10, 100, 10000})
 	{
@@ -937,7 +1002,9 @@ TEST_TYPES(V, ldexp_scalbn_scalbln_modf, real_test_types) //{{{1
 	    << "\nclean = " << iif(isnan(expect1), 0, input);
 	}
     },
-    [](const V input) {
+    [modf_is_broken](const V input) {
+      if (modf_is_broken)
+	return;
       V integral = {};
       const V totest = modf(input, &integral);
       auto&& expected = [&](const auto& v) -> std::pair<const V, const V> {
@@ -952,13 +1019,17 @@ TEST_TYPES(V, ldexp_scalbn_scalbln_modf, real_test_types) //{{{1
 	return tmp;
       };
       const auto expect1 = expected(input);
+#ifdef __STDC_IEC_559__
       COMPARE(isnan(totest), isnan(expect1.first))
 	<< "modf(" << input << ", iptr) = " << totest << " != " << expect1;
       COMPARE(isnan(integral), isnan(expect1.second))
 	<< "modf(" << input << ", iptr) = " << totest << " != " << expect1;
       COMPARE(isnan(totest), isnan(integral))
 	<< "modf(" << input << ", iptr) = " << totest << " != " << expect1;
-      const V clean = iif(isnan(totest), 0, input);
+      const V clean = iif(isnan(totest), V(), input);
+#else
+      const V clean = iif(isnormal(input), input, V());
+#endif
       const auto expect2 = expected(clean);
       COMPARE(modf(clean, &integral), expect2.first) << "\nclean = " << clean;
       COMPARE(integral, expect2.second);
@@ -970,13 +1041,22 @@ TEST_TYPES(V, remqo, real_test_types) //{{{1
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
 
-  using limits = std::numeric_limits<typename V::value_type>;
+  using T = typename V::value_type;
   test_values_2arg<V>(
-    {limits::quiet_NaN(), limits::infinity(), -limits::infinity(), +0., -0.,
-     limits::denorm_min(), limits::min(), limits::max(), limits::min() / 3},
-    {10000, -limits::max() / 2, limits::max() / 2}, [](const V a, const V b) {
+    {
+#ifdef __STDC_IEC_559__
+      std::__quiet_NaN_v<T>, std::__infinity_v<T>, -std::__infinity_v<T>,
+      std::__denorm_min_v<T>, std::__norm_min_v<T> / 3, -0.,
+#endif
+      +0., std::__norm_min_v<T>, std::__finite_max_v<T>},
+    {10000}, [](V a, V b) {
+
+#ifndef __STDC_IEC_559__
+      // without __STDC_IEC_559__, remquo(a, 0) is unspecified
+      where(b == 0, b) = 1;
+#endif
       using IV = std::experimental::fixed_size_simd<int, V::size()>;
-      IV quo = {}; // the type is wrong, this should fail
+      IV quo = {};
       const V totest = remquo(a, b, &quo);
       auto&& expected
 	= [&](const auto& v, const auto& w) -> std::pair<const V, const IV> {

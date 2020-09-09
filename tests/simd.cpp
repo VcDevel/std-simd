@@ -26,15 +26,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 }}}*/
 
-#define UNITTEST_ONLY_XTEST 1
+//#define UNITTEST_ONLY_XTEST 1
 #include "unittest.h"
 #include "metahelpers.h"
+#include "test_values.h"
 #include <random>
 
 template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 #include "testtypes.h"
 
-static std::mt19937 g_mt_gen{0};
 enum unscoped_enum //{{{1
 {
   foo
@@ -145,9 +145,8 @@ TEST_TYPES(V, generators, all_test_types) //{{{1
 	  (std::is_floating_point<T>::value));
 
   COMPARE(sfinae_is_callable<ullong (&)(int)>(call_generator<V>()),
-	  std::numeric_limits<T>::max() >= std::numeric_limits<ullong>::max()
-	    && std::numeric_limits<T>::digits
-		 >= std::numeric_limits<ullong>::digits);
+	  std::__finite_max_v<T> >= std::__finite_max_v<ullong>
+	  && std::__digits_v<T> >= std::__digits_v<ullong>);
 }
 
 template <class A, class B, class Expected = A>
@@ -166,7 +165,7 @@ binary_op_return_type() //{{{1
   ADD_PASS() << name;
 }
 
-XTEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
+TEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
 {
   using T = typename V::value_type;
   namespace simd_abi = std::experimental::simd_abi;
@@ -977,14 +976,10 @@ XTEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
 
       if constexpr (vi8<schar>::size() <= simd_abi::max_fixed_size<short>)
 	{
-	  COMPARE((is_substitution_failure<vi8<char>, vi8<short>>),
-		  std::is_unsigned_v<char>);
-	  COMPARE((is_substitution_failure<vi8<char>, vi8<int>>),
-		  std::is_unsigned_v<char>);
-	  COMPARE((is_substitution_failure<vi8<char>, vi8<long>>),
-		  std::is_unsigned_v<char>);
-	  COMPARE((is_substitution_failure<vi8<char>, vi8<llong>>),
-		  std::is_unsigned_v<char>);
+	  VERIFY(!(is_substitution_failure<vi8<char>, vi8<short>>));
+	  VERIFY(!(is_substitution_failure<vi8<char>, vi8<int>>));
+	  VERIFY(!(is_substitution_failure<vi8<char>, vi8<long>>));
+	  VERIFY(!(is_substitution_failure<vi8<char>, vi8<llong>>));
 	  COMPARE((is_substitution_failure<vi8<char>, vi8<ushort>>),
 		  std::is_signed_v<char>);
 	  COMPARE((is_substitution_failure<vi8<char>, vi8<uint>>),
@@ -1192,7 +1187,7 @@ TEST_TYPES(V, reductions, all_test_types) //{{{1
 	  T(3 * (V::size() / 3)   // 0+1+2 for every complete 3 elements in V
 	    + (V::size() % 3) / 2 // 0->0, 1->0, 2->1 adjustment
 	    ));
-  if ((1 + V::size()) * V::size() / 2 <= std::numeric_limits<T>::max())
+  if ((1 + V::size()) * V::size() / 2 <= std::__finite_max_v<T>)
     {
       COMPARE(reduce(V([](int i) { return i + 1; })),
 	      T((1 + V::size()) * V::size() / 2));
@@ -1230,20 +1225,18 @@ TEST_TYPES(V, reductions, all_test_types) //{{{1
       << "z: " << z;
   }
 
-  {
-    std::conditional_t<std::is_floating_point_v<T>,
-		       std::uniform_real_distribution<T>,
-		       std::uniform_int_distribution<T>>
-      dist(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max());
-    for (int repeat = 0; repeat < 100; ++repeat)
-      {
-	const V x([&](int) { return dist(g_mt_gen); });
-	T acc = x[0];
-	for (size_t i = 1; i < V::size(); ++i)
-	  acc += x[i];
-	FUZZY_COMPARE(reduce(x), acc);
-      }
-  }
+  test_values<V>({}, {1000}, [](V x) {
+    // avoid over-/underflow on signed integers:
+    if constexpr (std::is_signed_v<T> && std::is_integral_v<T>)
+      x /= int(V::size());
+    T acc = x[0];
+    for (size_t i = 1; i < V::size(); ++i)
+      acc += x[i];
+    // The error in the following could be huge if catastrophic
+    // cancellation occurs. (e.g. `a-a+b+b` vs. `a+b+b-a`) This is very
+    // unlikely, though.
+    ULP_COMPARE(reduce(x), acc, V::size() / 2);
+  });
 }
 
 TEST_TYPES(V, algorithms, all_test_types) //{{{1

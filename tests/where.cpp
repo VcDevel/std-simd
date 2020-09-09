@@ -102,8 +102,17 @@ TEST_TYPES(V, where, all_test_types)
   COMPARE(!alternating_mask, x == T(11));
   where(alternating_mask, x) -= Convertible<V>();
   COMPARE(alternating_mask, x == T(6));
-  where(alternating_mask, x) /= T(2);
-  COMPARE(alternating_mask, x == T(3)) << x;
+  constexpr bool fast_math =
+#ifdef __FAST_MATH__
+    true;
+#else
+    false;
+#endif
+  if constexpr (fast_math && std::is_floating_point_v<T>)
+    where(alternating_mask, x) *= T(.5);
+  else
+    where(alternating_mask, x) /= T(2);
+  COMPARE(alternating_mask, x == T(3)) << "\nx = " << x;
   where(alternating_mask, x) *= T(3);
   COMPARE(alternating_mask, x == T(9));
   COMPARE(!alternating_mask, x == T(11));
