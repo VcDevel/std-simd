@@ -3793,8 +3793,13 @@ struct _MaskImplX86Mixin
 	    else if constexpr (_FromBytes * 2 == _ToBytes)
 	      {
 		auto __y = __xzyw(__to_intrin(__k));
-		if constexpr (std::is_floating_point_v<_Tp>)
-		  return __intrin_bitcast<_To>(_mm256_unpacklo_ps(__y, __y));
+		if constexpr (std::is_floating_point_v<_Tp>
+		    || (!__have_avx2 && _FromBytes == 4))
+		  {
+		    const auto __yy = __vector_bitcast<float>(__y);
+		    return __intrin_bitcast<_To>(
+		      _mm256_unpacklo_ps(__yy, __yy));
+		  }
 		else
 		  return __intrin_bitcast<_To>(_mm256_unpacklo_epi8(__y, __y));
 	      }
