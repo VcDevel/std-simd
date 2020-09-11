@@ -725,10 +725,16 @@ struct _CommonImplX86 : _CommonImplBuiltin
       _GLIBCXX_SIMD_INTRINSIC __m256i operator()(__m256i __a, __m256i __b,
 						 __m256i __k) const noexcept
       {
-	return reinterpret_cast<__m256i>(
-	  __builtin_ia32_pblendvb256(reinterpret_cast<__v32qi>(__a),
-				     reinterpret_cast<__v32qi>(__b),
-				     reinterpret_cast<__v32qi>(__k)));
+	if constexpr (__have_avx2)
+	  return reinterpret_cast<__m256i>(
+	    __builtin_ia32_pblendvb256(reinterpret_cast<__v32qi>(__a),
+				       reinterpret_cast<__v32qi>(__b),
+				       reinterpret_cast<__v32qi>(__k)));
+	else
+	  return reinterpret_cast<__m256i>(
+	    __builtin_ia32_blendvps256(reinterpret_cast<__v8sf>(__a),
+				       reinterpret_cast<__v8sf>(__b),
+				       reinterpret_cast<__v8sf>(__k)));
       }
     } __eval;
     return __eval(__a, __b, __k);
