@@ -3665,11 +3665,9 @@ struct _MaskImplX86Mixin
 	_BitMask<_Np>(__x._M_data)._M_sanitized());
     // vector -> vector bitcast
     else if constexpr (sizeof(_Up) == sizeof(_Tp) && sizeof(_TW) == sizeof(_UW))
-      if constexpr (_ToN <= _Np)
-	return __wrapper_bitcast<_Up, _ToN>(__x);
-      else
-	return simd_abi::_VecBuiltin<sizeof(_UW)>::_S_masked(
-	  __wrapper_bitcast<_Up, _ToN>(__x));
+      return __wrapper_bitcast<_Up, _ToN>(
+	_ToN <= _Np ? __x
+		    : simd_abi::_VecBuiltin<sizeof(_Tp) * _Np>::_S_masked(__x));
     else // vector -> vector {{{
       {
 	if (__x._M_is_constprop() || __builtin_is_constant_evaluated())

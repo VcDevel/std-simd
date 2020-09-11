@@ -991,7 +991,7 @@ template <int _UsedBytes> struct simd_abi::_VecBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp> _S_implicit_mask()
   {
     using _UV = typename _MaskMember<_Tp>::_BuiltinType;
-    if constexpr (!_S_is_partial<_Tp>)
+    if constexpr (!_MaskMember<_Tp>::_S_is_partial)
       return ~_UV();
     else
       {
@@ -1013,7 +1013,7 @@ template <int _UsedBytes> struct simd_abi::_VecBuiltin
   _GLIBCXX_SIMD_INTRINSIC static constexpr _TW _S_masked(_TW __x)
   {
     using _Tp = typename _TVT::value_type;
-    if constexpr (!_S_is_partial<_Tp>)
+    if constexpr (!_MaskMember<_Tp>::_S_is_partial)
       return __x;
     else
       return __and(__as_vector(__x),
