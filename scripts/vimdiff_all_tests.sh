@@ -20,3 +20,7 @@ for filepath in ../../../../testsuite/experimental/simd/tests/*.h; do
       ;;
   esac
 done
+bits=../../../../testsuite/experimental/simd/tests/bits
+for i in conversions make_simd test_values; do
+  vimdiff $bits/$i.h $stdsimdrepo/$i.h
+done
