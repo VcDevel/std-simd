@@ -281,7 +281,6 @@ TEST_TYPES(V, frexp, real_test_types) //{{{1
   using T = typename V::value_type;
   constexpr auto denorm_min = std::__denorm_min_v<T>;
   constexpr auto norm_min = std::__norm_min_v<T>;
-  constexpr auto min = std::__finite_min_v<T>;
   constexpr auto max = std::__finite_max_v<T>;
   constexpr auto nan = std::__quiet_NaN_v<T>;
   constexpr auto inf = std::__infinity_v<T>;
@@ -722,7 +721,6 @@ hypot3(T x, T y, T z)
   x = std::abs(x);
   y = std::abs(y);
   z = std::abs(z);
-  auto too_small = [](T a, T b, T c) { return a + b == b && a + c == c; };
   if (std::isinf(x) || std::isinf(y) || std::isinf(z))
     return std::__infinity_v<T>;
   else if (std::isnan(x) || std::isnan(y) || std::isnan(z))
