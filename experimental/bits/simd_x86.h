@@ -319,6 +319,54 @@ __xzyw(_Tp __a)
 }
 
 // }}}
+// __maskload_epi32{{{
+template <typename _Tp>
+_GLIBCXX_SIMD_INTRINSIC auto
+  __maskload_epi32(const int* __ptr, _Tp __k)
+{
+  if constexpr (sizeof(__k) == 16)
+    return _mm_maskload_epi32(__ptr, __k);
+  else
+    return _mm256_maskload_epi32(__ptr, __k);
+}
+
+// }}}
+// __maskload_epi64{{{
+template <typename _Tp>
+_GLIBCXX_SIMD_INTRINSIC auto
+  __maskload_epi64(const _LLong* __ptr, _Tp __k)
+{
+  if constexpr (sizeof(__k) == 16)
+    return _mm_maskload_epi64(__ptr, __k);
+  else
+    return _mm256_maskload_epi64(__ptr, __k);
+}
+
+// }}}
+// __maskload_ps{{{
+template <typename _Tp>
+_GLIBCXX_SIMD_INTRINSIC auto
+  __maskload_ps(const float* __ptr, _Tp __k)
+{
+  if constexpr (sizeof(__k) == 16)
+    return _mm_maskload_ps(__ptr, __k);
+  else
+    return _mm256_maskload_ps(__ptr, __k);
+}
+
+// }}}
+// __maskload_pd{{{
+template <typename _Tp>
+_GLIBCXX_SIMD_INTRINSIC auto
+  __maskload_pd(const double* __ptr, _Tp __k)
+{
+  if constexpr (sizeof(__k) == 16)
+    return _mm_maskload_pd(__ptr, __k);
+  else
+    return _mm256_maskload_pd(__ptr, __k);
+}
+
+// }}}
 
 #ifdef _GLIBCXX_SIMD_WORKAROUND_PR85048
 #include "simd_x86_conversions.h"
@@ -853,36 +901,21 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr (__have_avx2 && sizeof(_Tp) == 4
 			   && std::is_integral_v<_Up>)
 	  {
-	    if constexpr (sizeof(__intrin) == 16)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       __vector_bitcast<_Tp, _Np>(
-			 _mm_maskload_epi32(reinterpret_cast<const int*>(__mem),
-					    __to_intrin(__k))));
-	    else if constexpr (sizeof(__intrin) == 32)
-	      __merge
-		= (~__k._M_data & __merge._M_data)
-		  | __vector_bitcast<_Tp, _Np>(
-		    _mm256_maskload_epi32(reinterpret_cast<const int*>(__mem),
-					  __to_intrin(__k)));
-	    else
-	      __assert_unreachable<_Tp>();
+	    static_assert(sizeof(__intrin) == 16 || sizeof(__intrin) == 32);
+	    __merge
+	      = __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
+		     __vector_bitcast<_Tp, _Np>(
+		       __maskload_epi32(reinterpret_cast<const int*>(__mem),
+					__to_intrin(__k))));
 	  }
 	else if constexpr (__have_avx && sizeof(_Tp) == 4)
 	  {
-	    if constexpr (sizeof(__intrin) == 16)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       __vector_bitcast<_Tp, _Np>(_mm_maskload_ps(
-			 reinterpret_cast<const float*>(__mem),
-			 __intrin_bitcast<__m128i>(__as_vector(__k)))));
-	    else if constexpr (sizeof(__intrin) == 32)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       _mm256_maskload_ps(reinterpret_cast<const float*>(__mem),
-					  __vector_bitcast<_LLong>(__k)));
-	    else
-	      __assert_unreachable<_Tp>();
+	    static_assert(sizeof(__intrin) == 16 || sizeof(__intrin) == 32);
+	    __merge
+	      = __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
+		     __vector_bitcast<_Tp, _Np>(
+		       __maskload_ps(reinterpret_cast<const float*>(__mem),
+				     __to_intrin(__k))));
 	  }
 	else if constexpr ((__is_avx512_abi<_Abi>() || __have_avx512vl)
 			   && sizeof(_Tp) == 8 && std::is_integral_v<_Up>)
@@ -919,36 +952,21 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else if constexpr (__have_avx2 && sizeof(_Tp) == 8
 			   && std::is_integral_v<_Up>)
 	  {
-	    if constexpr (sizeof(__intrin) == 16)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       __vector_bitcast<_Tp, _Np>(_mm_maskload_epi64(
-			 reinterpret_cast<const _LLong*>(__mem),
-			 __to_intrin(__k))));
-	    else if constexpr (sizeof(__intrin) == 32)
-	      __merge
-		= (~__vector_bitcast<_Tp>(__k) & __merge._M_data)
-		  | __vector_bitcast<_Tp>(_mm256_maskload_epi64(
-		    reinterpret_cast<const _LLong*>(__mem), __to_intrin(__k)));
-	    else
-	      __assert_unreachable<_Tp>();
+	    static_assert(sizeof(__intrin) == 16 || sizeof(__intrin) == 32);
+	    __merge
+	      = __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
+		     __vector_bitcast<_Tp, _Np>(
+		       __maskload_epi64(reinterpret_cast<const _LLong*>(__mem),
+					__to_intrin(__k))));
 	  }
 	else if constexpr (__have_avx && sizeof(_Tp) == 8)
 	  {
-	    if constexpr (sizeof(__intrin) == 16)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       __vector_bitcast<_Tp, _Np>(
-			 _mm_maskload_pd(reinterpret_cast<const double*>(__mem),
-					 __vector_bitcast<_LLong>(__k))));
-	    else if constexpr (sizeof(__intrin) == 32)
-	      __merge
-		= __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
-		       _mm256_maskload_pd(reinterpret_cast<const double*>(
-					    __mem),
-					  __vector_bitcast<_LLong>(__k)));
-	    else
-	      __assert_unreachable<_Tp>();
+	    static_assert(sizeof(__intrin) == 16 || sizeof(__intrin) == 32);
+	    __merge
+	      = __or(__andnot(__vector_bitcast<_Tp>(__k), __merge._M_data),
+		     __vector_bitcast<_Tp, _Np>(
+		       __maskload_pd(reinterpret_cast<const double*>(__mem),
+				     __to_intrin(__k))));
 	  }
 	else
 	  _BitOps::_S_bit_iteration(_MaskImpl::_S_to_bits(__k), [&](auto __i) {
