@@ -1229,13 +1229,15 @@ TEST_TYPES(V, reductions, all_test_types) //{{{1
     // avoid over-/underflow on signed integers:
     if constexpr (std::is_signed_v<T> && std::is_integral_v<T>)
       x /= int(V::size());
+    // The error in the following could be huge if catastrophic
+    // cancellation occurs. (e.g. `a-a+b+b` vs. `a+b+b-a`).
+    // Avoid catastrophic cancellation for floating point:
+    if constexpr (std::is_floating_point_v<T>)
+      x = abs(x);
     T acc = x[0];
     for (size_t i = 1; i < V::size(); ++i)
       acc += x[i];
-    // The error in the following could be huge if catastrophic
-    // cancellation occurs. (e.g. `a-a+b+b` vs. `a+b+b-a`) This is very
-    // unlikely, though.
-    ULP_COMPARE(reduce(x), acc, V::size() / 2);
+    ULP_COMPARE(reduce(x), acc, V::size() / 2).on_failure("x = ", x);
   });
 }
 
