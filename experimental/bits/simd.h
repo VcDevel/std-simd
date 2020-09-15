@@ -1139,8 +1139,7 @@ template <size_t _Np, bool _Sanitized> struct _BitMask
     static_assert(_DropLsb + _NewSize <= sizeof(_ULLong) * __CHAR_BIT__,
 		  "not implemented for bitmasks larger than one ullong");
     if constexpr (_NewSize == 1) // must sanitize because the return _Tp is bool
-      return _SanitizedBitMask<1>{
-	{static_cast<bool>(_M_bits[0] & (_Tp(1) << _DropLsb))}};
+      return _SanitizedBitMask<1>(_M_bits[0] & (_Tp(1) << _DropLsb));
     else
       return _BitMask<_NewSize,
 		      ((_NewSize + _DropLsb == sizeof(_Tp) * __CHAR_BIT__
