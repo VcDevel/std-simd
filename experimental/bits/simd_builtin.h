@@ -2121,7 +2121,7 @@ template <typename _Abi> struct _SimdImplBuiltin
 	  return __vector_bitcast<float, 2>(_S_plus_minus(__x4, __y));
       }
 #endif
-#if __GCC_IEC_559 == 0
+#if !defined __clang__ && __GCC_IEC_559 == 0
     if (__builtin_is_constant_evaluated()
 	|| (__builtin_constant_p(__x) && __builtin_constant_p(__y)))
       return (__x + __y) - __y;

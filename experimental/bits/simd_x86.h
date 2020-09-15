@@ -613,6 +613,10 @@ struct _CommonImplX86 : _CommonImplBuiltin
   _GLIBCXX_SIMD_INTRINSIC static _TV
   _S_blend_avx512(const _Kp __k, const _TV __a, const _TV __b) noexcept
   {
+#ifdef __clang__
+    // FIXME: this does a boolean choice, not a blend
+    return __k ? __a : __b;
+#else
     static_assert(__is_vector_type_v<_TV>);
     using _Tp = typename _VectorTraits<_TV>::value_type;
     static_assert(sizeof(_TV) >= 16);
@@ -679,6 +683,7 @@ struct _CommonImplX86 : _CommonImplBuiltin
 	  return reinterpret_cast<_TV>(
 	    __builtin_ia32_blendmq_128_mask(__aa, __bb, __k));
       }
+#endif
   }
 
   // }}}
@@ -1395,7 +1400,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	      return __vector_convert<_R>(__quotients...);
 	    },
 	    [&__xf, &__yf](auto __i) -> _SimdWrapper<_Float, __n_intermediate> {
-#if __GCC_IEC_559 == 0
+#if !defined __clang__ && __GCC_IEC_559 == 0
 	      // If -freciprocal-math is active, using the `/` operator is
 	      // incorrect because it may be translated to an imprecise
 	      // multiplication with reciprocal. We need to use inline assembly

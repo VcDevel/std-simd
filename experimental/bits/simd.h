@@ -359,12 +359,19 @@ __int_for_sizeof()
 {
   if constexpr (_Bytes == sizeof(int))
     return int();
+#ifdef __clang__
+  else if constexpr (_Bytes == sizeof(char))
+    return char();
+#else
   else if constexpr (_Bytes == sizeof(_SChar))
     return _SChar();
+#endif
   else if constexpr (_Bytes == sizeof(short))
     return short();
+#ifndef __clang__
   else if constexpr (_Bytes == sizeof(long))
     return long();
+#endif
   else if constexpr (_Bytes == sizeof(_LLong))
     return _LLong();
 #ifdef __SIZEOF_INT128__
@@ -1422,9 +1429,11 @@ struct __is_vector_type : false_type
 };
 template <typename _Tp>
 struct __is_vector_type<
-  _Tp, std::void_t<typename __vector_type<decltype(std::declval<_Tp>()[0]),
-					  sizeof(_Tp)>::type>>
-  : std::is_same<_Tp, typename __vector_type<decltype(std::declval<_Tp>()[0]),
+  _Tp, std::void_t<typename __vector_type<
+	 std::remove_reference_t<decltype(std::declval<_Tp>()[0])>,
+	 sizeof(_Tp)>::type>>
+  : std::is_same<_Tp, typename __vector_type<std::remove_reference_t<decltype(
+					       std::declval<_Tp>()[0])>,
 					     sizeof(_Tp)>::type>
 {
 };
@@ -1519,7 +1528,7 @@ __intrin_bitcast(_From __v)
 	__builtin_memcpy(&__r, &__v, sizeof(_To));
 	return __r;
       }
-#if _GLIBCXX_SIMD_X86INTRIN
+#if _GLIBCXX_SIMD_X86INTRIN && !defined __clang__
   else if constexpr (__have_avx && sizeof(_From) == 16 && sizeof(_To) == 32)
     return reinterpret_cast<_To>(__builtin_ia32_ps256_ps(
       reinterpret_cast<__vector_type_t<float, 4>>(__v)));
@@ -2582,7 +2591,17 @@ __vectorized_sizeof()
 		    && sizeof(_Tp) < 8
 		    // Only allow fp if the user allows non-ICE559 fp (e.g. via
 		    // -ffast-math). ARMv7 NEON fp is not conforming to IEC559.
-		    && (__GCC_IEC_559 == 0 || !std::is_floating_point_v<_Tp>) )
+		    && (
+#ifdef __clang__
+#ifdef __FAST_MATH__
+		      true
+#else
+		      false
+#endif
+#else
+		      __GCC_IEC_559 == 0
+#endif
+		      || !std::is_floating_point_v<_Tp>) )
 	return 16;
     }
 

@@ -215,8 +215,12 @@
 #endif
 //}}}
 
+#ifdef __clang__
+#define _GLIBCXX_SIMD_NORMAL_MATH
+#else
 #define _GLIBCXX_SIMD_NORMAL_MATH                                              \
   [[__gnu__::__optimize__("finite-math-only,no-signed-zeros")]]
+#endif
 #define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
 #define _GLIBCXX_SIMD_INTRINSIC                                                \
   [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
