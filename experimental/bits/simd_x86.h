@@ -2213,7 +2213,9 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else
 	  __assert_unreachable<_Tp>();
       } // }}}
-    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+    else if (__builtin_is_constant_evaluated()) // {{{
+      return _Base::_S_equal_to(__x, __y);
+    else if constexpr (sizeof(__x) == 8) // {{{
       {
 	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
 			    == __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
