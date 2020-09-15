@@ -3530,7 +3530,7 @@ struct _MaskImplX86Mixin
 	      return __intrin_bitcast<_UV>(__lo128(_mm512_movm_epi16(__k)));
 	    else if constexpr (__have_avx512f)
 	      {
-		__m256i __as32bits;
+		__m256i __as32bits = {};
 		if constexpr (__have_avx512vl)
 		  __as32bits = _mm256_maskz_mov_epi32(__k, ~__m256i());
 		else
@@ -4274,7 +4274,7 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 			       -int(__mem[1])});
     else if constexpr (sizeof(_Tp) == 8 && _S_size<_Tp> <= 4 && __have_avx)
       {
-	int __bool4;
+	int __bool4 = 0;
 	__builtin_memcpy(&__bool4, __mem, _S_size<_Tp>);
 	const auto __k = __to_intrin(
 	  (__vector_broadcast<4>(__bool4)
