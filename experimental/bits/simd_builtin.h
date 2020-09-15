@@ -1370,7 +1370,7 @@ template <typename _Abi> struct _SimdImplBuiltin
   template <typename _Tp>
   using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
   template <typename _Tp>
-  using _MaskMember = typename _Abi::_MaskMember<_Tp>;
+  using _MaskMember = typename _Abi::template _MaskMember<_Tp>;
   template <typename _Tp>
   static constexpr size_t _S_size = _Abi::template _S_size<_Tp>;
   template <typename _Tp>
@@ -2627,7 +2627,7 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   template <typename _Tp>
   using _SimdMember = typename _Abi::template __traits<_Tp>::_SimdMember;
   template <typename _Tp>
-  using _MaskMember = typename _Abi::_MaskMember<_Tp>;
+  using _MaskMember = typename _Abi::template _MaskMember<_Tp>;
   using _SuperImpl = typename _Abi::_MaskImpl;
   using _CommonImpl = typename _Abi::_CommonImpl;
   template <typename _Tp>
