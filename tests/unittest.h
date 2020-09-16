@@ -106,8 +106,12 @@ template <class Lhs, class Rhs, class = void> struct vc2_compare_traits
 	Lhs> || std::experimental::is_simd_mask_v<Rhs>;
   using lhs_t = typename help<Lhs>::type;
   using rhs_t = typename help<Rhs>::type;
+#ifdef __GXX_CONDITIONAL_IS_OVERLOADABLE__
+  using common_simd_type = std::common_type_t<lhs_t, rhs_t>;
+#else
   using common_simd_type
     = decltype(std::declval<lhs_t>() + std::declval<rhs_t>());
+#endif
   using common_type
     = std::conditional_t<is_mask, typename common_simd_type::mask_type,
 			 common_simd_type>;

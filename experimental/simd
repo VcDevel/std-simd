@@ -36,7 +36,8 @@
 #ifndef _GLIBCXX_EXPERIMENTAL_SIMD
 #define _GLIBCXX_EXPERIMENTAL_SIMD
 
-#define __cpp_lib_experimental_parallel_simd 201803
+#if __cplusplus >= 201703L && defined __cpp_concepts && __cpp_concepts >= 201907
+#define __cpp_lib_experimental_parallel_simd 202002
 
 #pragma GCC diagnostic push
 // Many [[gnu::vector_size(N)]] types might lead to a -Wpsabi warning which is
@@ -69,5 +70,6 @@
 
 #pragma GCC diagnostic pop
 
+#endif // C++17 plus C++20 concepts
 #endif // _GLIBCXX_EXPERIMENTAL_SIMD
 // vim: ft=cpp

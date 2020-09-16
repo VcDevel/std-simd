@@ -48,6 +48,24 @@ struct convertible //{{{1
   operator int();
   operator float();
 };
+
+// make0, make1, make3 {{{1
+template <class T>
+constexpr T
+make(int n)
+{
+  return static_cast<T>(n);
+}
+template <class T>
+constexpr T
+make3()
+{
+  if constexpr (std::is_enum_v<T>)
+    return make<T>(1);
+  else
+    return 3;
+}
+
 TEST_TYPES(V, broadcast, all_test_types) //{{{1
 {
   using T = typename V::value_type;
@@ -57,45 +75,48 @@ TEST_TYPES(V, broadcast, all_test_types) //{{{1
   {
     V x;     // not initialized
     x = V{}; // default broadcasts 0
-    COMPARE(x, V(0));
+    COMPARE(x, V(make<T>(0)));
     COMPARE(x, V());
     COMPARE(x, V{});
     x = V(); // default broadcasts 0
-    COMPARE(x, V(0));
+    COMPARE(x, V(make<T>(0)));
     COMPARE(x, V());
     COMPARE(x, V{});
-    x = 0;
-    COMPARE(x, V(0));
+    x = make<T>(0);
+    COMPARE(x, V(make<T>(0)));
     COMPARE(x, V());
     COMPARE(x, V{});
 
     for (std::size_t i = 0; i < V::size(); ++i)
       {
-	COMPARE(T(x[i]), T(0)) << "i = " << i;
-	COMPARE(x[i], T(0)) << "i = " << i;
+	COMPARE(T(x[i]), make<T>(0)) << "i = " << i;
+	COMPARE(x[i], make<T>(0)) << "i = " << i;
       }
   }
 
-  V x = 3;
-  V y = T(0);
+  V x = make3<T>();
+  V y = make<T>(0);
   for (std::size_t i = 0; i < V::size(); ++i)
     {
-      COMPARE(x[i], T(3)) << "i = " << i;
-      COMPARE(y[i], T(0)) << "i = " << i;
+      COMPARE(x[i], make3<T>()) << "i = " << i;
+      COMPARE(y[i], make<T>(0)) << "i = " << i;
     }
-  y = 3;
+  y = make3<T>();
   COMPARE(x, y);
 
-  VERIFY(!(is_substitution_failure<V&, unscoped_enum, assignment>) );
+  VERIFY(!(is_substitution_failure<V &, unscoped_enum, assignment>));
   VERIFY((is_substitution_failure<V&, scoped_enum, assignment>) );
   COMPARE((is_substitution_failure<V&, convertible, assignment>),
 	  (!std::is_convertible<convertible, T>::value));
   COMPARE((is_substitution_failure<V&, long double, assignment>),
-	  (sizeof(long double) > sizeof(T) || std::is_integral<T>::value));
+	  (sizeof(long double) > sizeof(T)
+	   || std::is_integral_v<T> || std::is_enum_v<T>) );
   COMPARE((is_substitution_failure<V&, double, assignment>),
-	  (sizeof(double) > sizeof(T) || std::is_integral<T>::value));
+	  (sizeof(double) > sizeof(T)
+	   || std::is_integral_v<T> || std::is_enum_v<T>) );
   COMPARE((is_substitution_failure<V&, float, assignment>),
-	  (sizeof(float) > sizeof(T) || std::is_integral<T>::value));
+	  (sizeof(float) > sizeof(T)
+	   || std::is_integral_v<T> || std::is_enum_v<T>) );
   COMPARE((is_substitution_failure<V&, long long, assignment>),
 	  (has_less_bits<T, long long>() || std::is_unsigned<T>::value));
   COMPARE((is_substitution_failure<V&, unsigned long long, assignment>),
@@ -104,8 +125,9 @@ TEST_TYPES(V, broadcast, all_test_types) //{{{1
 	  (has_less_bits<T, long>() || std::is_unsigned<T>::value));
   COMPARE((is_substitution_failure<V&, unsigned long, assignment>),
 	  (has_less_bits<T, unsigned long>()));
-  // int broadcast *always* works:
-  VERIFY(!(is_substitution_failure<V&, int, assignment>) );
+  // int broadcast works for all arithmetic T:
+  COMPARE((is_substitution_failure<V&, int, assignment>),
+	  !std::is_arithmetic_v<T>);
   // uint broadcast works for any unsigned T:
   COMPARE((is_substitution_failure<V&, unsigned int, assignment>),
 	  (!std::is_unsigned<T>::value && has_less_bits<T, unsigned int>()));
@@ -127,16 +149,21 @@ template <class V> struct call_generator // {{{1
 TEST_TYPES(V, generators, all_test_types) //{{{1
 {
   using T = typename V::value_type;
-  V x([](int) { return T(1); });
-  COMPARE(x, V(1));
-  x = V(
-    [](int) { return 1; }); // unconditionally returns int from generator lambda
-  COMPARE(x, V(1));
-  x = V([](auto i) { return T(i); });
-  COMPARE(x, V([](T i) { return i; }));
+  V x([](int) { return make<T>(1); });
+  COMPARE(x, V(make<T>(1)));
+  x = V([](auto i) { return make<T>(i); });
+  if constexpr (!std::is_enum_v<T>)
+    {
+      COMPARE(x, V([](T i) { return i; }));
+      // unconditionally return int from generator lambda
+      x = V([](int) { return 1; });
+      COMPARE(x, V(make<T>(1)));
+    }
+  else
+    COMPARE(x, V([](int i) { return make<T>(i); }));
 
-  VERIFY((
-    sfinae_is_callable<int (&)(int)>(call_generator<V>()))); // int always works
+  COMPARE((sfinae_is_callable<int (&)(int)>(call_generator<V>())),
+	  std::is_arithmetic_v<T>); // int works for arithmetic types
   COMPARE(sfinae_is_callable<schar (&)(int)>(call_generator<V>()),
 	  std::is_signed<T>::value);
   COMPARE(sfinae_is_callable<uchar (&)(int)>(call_generator<V>()),
@@ -154,7 +181,6 @@ void
 binary_op_return_type() //{{{1
 {
   using namespace vir::test;
-  static_assert(std::is_same<A, Expected>::value, "");
   using AC = std::add_const_t<A>;
   using BC = std::add_const_t<B>;
   const auto name = vir::typeToString<A>() + " + " + vir::typeToString<B>();
@@ -173,12 +199,26 @@ TEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
   binary_op_return_type<V, T, V>();
   binary_op_return_type<V, int, V>();
 
-  if constexpr (std::is_same_v<V, vfloat>)
+  if constexpr (std::is_enum_v<T>)
+    {
+      using U = std::underlying_type_t<T>;
+      using VU = stdx::rebind_simd_t<U, V>;
+      if constexpr (std::is_convertible_v<T, int>)
+	{ // unscoped enum
+	  binary_op_return_type<V, U, VU>();
+	}
+      else
+	{ // scoped enum (enum class)
+	  VERIFY((is_substitution_failure<V, U>) );
+	}
+    }
+
+  if constexpr (std::is_same_v<T, float>)
     { //{{{2
-      binary_op_return_type<vfloat, schar>();
-      binary_op_return_type<vfloat, uchar>();
-      binary_op_return_type<vfloat, short>();
-      binary_op_return_type<vfloat, ushort>();
+      binary_op_return_type<V, schar>();
+      binary_op_return_type<V, uchar>();
+      binary_op_return_type<V, short>();
+      binary_op_return_type<V, ushort>();
 
       binary_op_return_type<vf32<float>, schar>();
       binary_op_return_type<vf32<float>, uchar>();
@@ -193,25 +233,25 @@ TEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
       binary_op_return_type<vf32<float>, vf32<ushort>>();
       binary_op_return_type<vf32<float>, vf32<float>>();
 
-      VERIFY((is_substitution_failure<vfloat, uint>) );
-      VERIFY((is_substitution_failure<vfloat, long>) );
-      VERIFY((is_substitution_failure<vfloat, ulong>) );
-      VERIFY((is_substitution_failure<vfloat, llong>) );
-      VERIFY((is_substitution_failure<vfloat, ullong>) );
-      VERIFY((is_substitution_failure<vfloat, double>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<schar>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<uchar>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<short>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<ushort>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<int>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<uint>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<long>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<ulong>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<llong>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<ullong>>) );
-      VERIFY((is_substitution_failure<vfloat, vf32<float>>) );
+      VERIFY((is_substitution_failure<V, uint>) );
+      VERIFY((is_substitution_failure<V, long>) );
+      VERIFY((is_substitution_failure<V, ulong>) );
+      VERIFY((is_substitution_failure<V, llong>) );
+      VERIFY((is_substitution_failure<V, ullong>) );
+      VERIFY((is_substitution_failure<V, double>) );
+      VERIFY((is_substitution_failure<V, vf32<schar>>) );
+      VERIFY((is_substitution_failure<V, vf32<uchar>>) );
+      VERIFY((is_substitution_failure<V, vf32<short>>) );
+      VERIFY((is_substitution_failure<V, vf32<ushort>>) );
+      VERIFY((is_substitution_failure<V, vf32<int>>) );
+      VERIFY((is_substitution_failure<V, vf32<uint>>) );
+      VERIFY((is_substitution_failure<V, vf32<long>>) );
+      VERIFY((is_substitution_failure<V, vf32<ulong>>) );
+      VERIFY((is_substitution_failure<V, vf32<llong>>) );
+      VERIFY((is_substitution_failure<V, vf32<ullong>>) );
+      VERIFY((is_substitution_failure<V, vf32<float>>) );
 
-      VERIFY((is_substitution_failure<vf32<float>, vfloat>) );
+      VERIFY((is_substitution_failure<vf32<float>, V>) );
       VERIFY((is_substitution_failure<vf32<float>, uint>) );
       VERIFY((is_substitution_failure<vf32<float>, long>) );
       VERIFY((is_substitution_failure<vf32<float>, ulong>) );
@@ -225,7 +265,7 @@ TEST_TYPES(V, operator_conversions, current_native_test_types) //{{{1
       VERIFY((is_substitution_failure<vf32<float>, vf32<llong>>) );
       VERIFY((is_substitution_failure<vf32<float>, vf32<ullong>>) );
 
-      VERIFY((is_substitution_failure<vfloat, vf32<double>>) );
+      VERIFY((is_substitution_failure<V, vf32<double>>) );
     }
   else if constexpr (std::is_same_v<V, vdouble>)
     { //{{{2

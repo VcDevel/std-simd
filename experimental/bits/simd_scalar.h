@@ -641,6 +641,11 @@ struct _MaskImplScalar
 
   // }}}
   // _S_convert {{{
+  template <typename>
+    _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    _S_convert(bool __x) noexcept
+    { return __x; }
+
   template <typename, bool _Sanitized>
     _GLIBCXX_SIMD_INTRINSIC static constexpr bool
     _S_convert(_BitMask<1, _Sanitized> __x)

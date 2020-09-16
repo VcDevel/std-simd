@@ -596,7 +596,12 @@ template <typename _Tp, typename _Abi0, typename... _Abis>
       else
 	{
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
-	  return reinterpret_cast<const __may_alias<_Tp>*>(this)[__i];
+	  _Tp __r;
+	  __builtin_memcpy(&__r,
+			   reinterpret_cast<const char*>(this)
+			     + __i * sizeof(_Tp),
+			   sizeof(_Tp));
+	  return __r;
 #else
 	  if constexpr (__is_scalar_abi<_Abi0>())
 	    {
@@ -618,7 +623,8 @@ template <typename _Tp, typename _Abi0, typename... _Abis>
       else
 	{
 #ifdef _GLIBCXX_SIMD_USE_ALIASING_LOADS
-	  reinterpret_cast<__may_alias<_Tp>*>(this)[__i] = __val;
+	__builtin_memcpy(reinterpret_cast<char*>(this) + __i * sizeof(_Tp),
+			 &__val, sizeof(_Tp));
 #else
 	  if (__i < simd_size_v<_Tp, _Abi0>)
 	    _M_subscript_write(__i, __val);
@@ -632,7 +638,7 @@ template <typename _Tp, typename _Abi0, typename... _Abis>
     // _M_subscript_read/_write {{{
     _Tp _M_subscript_read([[maybe_unused]] size_t __i) const noexcept
     {
-      if constexpr (__is_vectorizable_v<_FirstType>)
+      if constexpr (__vectorizable<_FirstType>)
 	return first;
       else
 	return first[__i];
@@ -640,7 +646,7 @@ template <typename _Tp, typename _Abi0, typename... _Abis>
 
     void _M_subscript_write([[maybe_unused]] size_t __i, _Tp __y) noexcept
     {
-      if constexpr (__is_vectorizable_v<_FirstType>)
+      if constexpr (__vectorizable<_FirstType>)
 	first = __y;
       else
 	first._M_set(__i, __y);
@@ -1325,7 +1331,8 @@ template <int _Np>
 	  return __meta._S_generator(
 	    [&](auto __i) constexpr {
 	      return __i < _Np ? __gen(_SizeConstant<__meta._S_offset + __i>())
-			       : 0;
+			       : invoke_result_t<
+				 _Fp&, _SizeConstant<__meta._S_offset + __i>>();
 	    },
 	    _TypeTag<_Tp>());
 	});
@@ -1903,7 +1910,12 @@ template <int _Np>
 
     // }}}
     // _S_convert {{{
-    template <typename _Tp, typename _Up, typename _UAbi>
+    template <typename>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
+      _S_convert(_MaskMember __x) noexcept
+      { return __x; }
+
+    template <typename, typename _Up, typename _UAbi>
       _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
       _S_convert(simd_mask<_Up, _UAbi> __x)
       {

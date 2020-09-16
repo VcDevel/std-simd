@@ -465,7 +465,7 @@ template <typename _Tp, typename _Abi>
   cos(const simd<_Tp, _Abi>& __x)
   {
     using _V = simd<_Tp, _Abi>;
-    if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
+    if constexpr (__is_scalar_abi<_Abi>() || __fixed_size_abi<_Abi>)
       return {__private_init, _Abi::_SimdImpl::_S_cos(__data(__x))};
     else
       {
@@ -511,7 +511,7 @@ template <typename _Tp, typename _Abi>
   sin(const simd<_Tp, _Abi>& __x)
   {
     using _V = simd<_Tp, _Abi>;
-    if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
+    if constexpr (__is_scalar_abi<_Abi>() || __fixed_size_abi<_Abi>)
       return {__private_init, _Abi::_SimdImpl::_S_sin(__data(__x))};
     else
       {
@@ -647,7 +647,7 @@ template <typename _Tp, typename _Abi>
 	(*__exp)[0] = __tmp;
 	return __r;
       }
-    else if constexpr (__is_fixed_size_abi_v<_Abi>)
+    else if constexpr (__fixed_size_abi<_Abi>)
       {
 	return {__private_init,
 		_Abi::_SimdImpl::_S_frexp(__data(__x), __data(*__exp))};
@@ -753,7 +753,7 @@ template <typename _Tp, typename _Abi>
     constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
     if constexpr (_Np == 1)
       return std::logb(__x[0]);
-    else if constexpr (__is_fixed_size_abi_v<_Abi>)
+    else if constexpr (__fixed_size_abi<_Abi>)
       {
 	return {__private_init,
 		__data(__x)._M_apply_per_chunk([](auto __impl, auto __xx) {
@@ -833,7 +833,7 @@ template <typename _Tp, typename _Abi>
   modf(const simd<_Tp, _Abi>& __x, simd<_Tp, _Abi>* __iptr)
   {
     if constexpr (__is_scalar_abi<_Abi>()
-		  || (__is_fixed_size_abi_v<
+		  || (__fixed_size_abi<
 			_Abi> && simd_size_v<_Tp, _Abi> == 1))
       {
 	_Tp __tmp;
@@ -954,7 +954,7 @@ template <typename _VV>
     using _Tp = typename _V::value_type;
     if constexpr (_V::size() == 1)
       return std::hypot(_Tp(__x[0]), _Tp(__y[0]));
-    else if constexpr (__is_fixed_size_abi_v<typename _V::abi_type>)
+    else if constexpr (__fixed_size_abi<typename _V::abi_type>)
       {
 	return __fixed_size_apply<_V>([](auto __a,
 					 auto __b) { return hypot(__a, __b); },
@@ -1077,7 +1077,7 @@ template <typename _Tp, typename _Abi>
   _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>
   hypot(const simd<_Tp, _Abi>& __x, const simd<_Tp, _Abi>& __y)
   {
-    return __hypot<conditional_t<__is_fixed_size_abi_v<_Abi>,
+    return __hypot<conditional_t<__fixed_size_abi<_Abi>,
 				 const simd<_Tp, _Abi>&, simd<_Tp, _Abi>>>(__x,
 									   __y);
   }
@@ -1096,7 +1096,7 @@ _GLIBCXX_SIMD_CVTING2(hypot)
       return std::hypot(_Tp(__x[0]), _Tp(__y[0]), _Tp(__z[0]));
     else
     */
-    if constexpr (__is_fixed_size_abi_v<_Abi> && _V::size() > 1)
+    if constexpr (__fixed_size_abi<_Abi> && _V::size() > 1)
       {
 	return __fixed_size_apply<simd<_Tp, _Abi>>(
 	  [](auto __a, auto __b, auto __c) { return hypot(__a, __b, __c); },
@@ -1253,7 +1253,7 @@ _GLIBCXX_SIMD_CVTING2(hypot)
   hypot(const simd<_Tp, _Abi>& __x, const simd<_Tp, _Abi>& __y,
 	const simd<_Tp, _Abi>& __z)
   {
-    return __hypot<conditional_t<__is_fixed_size_abi_v<_Abi>,
+    return __hypot<conditional_t<__fixed_size_abi<_Abi>,
 				 const simd<_Tp, _Abi>&, simd<_Tp, _Abi>>>(__x,
 									   __y,
 									   __z);

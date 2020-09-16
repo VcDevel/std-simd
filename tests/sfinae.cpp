@@ -445,17 +445,6 @@ TEST(deduce_broken)
     [](auto a) -> std::experimental::simd_abi::deduce_t<decltype(a), 8> {
       return {};
     })));
-  enum Foo
-  {
-  };
-  VERIFY(!(sfinae_is_callable<Foo>(
-    [](auto a) -> std::experimental::simd_abi::deduce_t<decltype(a), 1> {
-      return {};
-    })));
-  VERIFY(!(sfinae_is_callable<Foo>(
-    [](auto a) -> std::experimental::simd_abi::deduce_t<decltype(a), 8> {
-      return {};
-    })));
 }
 
 TEST_TYPES(V, deduce_from_list, all_test_types)
