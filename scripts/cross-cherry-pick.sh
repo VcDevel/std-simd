@@ -1,9 +1,10 @@
 #!/bin/bash
 stdsimdrepo=$1
 rev=$2
-gccrepo=$(pwd)
+#gccrepo=$(pwd)
 { cd $stdsimdrepo && git show $rev; } \
   | sed -e 's,experimental/bits/,libstdc++-v3/include/experimental/bits/,g' \
+        -e 's,experimental/simd\>,libstdc++-v3/include/experimental/simd,g' \
         -e 's,tests/math.cpp,libstdc++-v3/testsuite/experimental/simd/tests/*.h,g' \
         -e 's,tests/mask.cpp,libstdc++-v3/testsuite/experimental/simd/tests/*.h,g' \
         -e 's,tests/simd.cpp,libstdc++-v3/testsuite/experimental/simd/tests/*.h,g' \
