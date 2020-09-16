@@ -50,7 +50,10 @@ operator<<(std::ostream& out, const simd<T, Abi>& v)
     }
   else
     {
-      using TT = std::conditional_t<(sizeof(T) < sizeof(int)), int, T>;
+      using TT = std::conditional_t<
+	(sizeof(T) < sizeof(int)
+	 || std::is_same_v<T, char32_t> || std::is_same_v<T, wchar_t>),
+	int, T>;
       out << green << '[';
       out << TT(v[0]);
       for (size_t i = 1; i < v.size(); ++i)
