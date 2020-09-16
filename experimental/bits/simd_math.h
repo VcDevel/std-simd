@@ -69,7 +69,7 @@ struct __math_return_type
     std::experimental::simd<_Tp, _Abi> __x)                                    \
   {                                                                            \
     return {std::experimental::__private_init,                                 \
-	    _Abi::_SimdImpl::__##__name(std::experimental::__data(__x))};      \
+	    _Abi::_SimdImpl::_S_##__name(std::experimental::__data(__x))};     \
   }
 
 // }}}
@@ -141,8 +141,8 @@ struct __extra_argument_type
     const typename _Arg2::type& __y)                                           \
   {                                                                            \
     return {std::experimental::__private_init,                                 \
-	    _Abi::_SimdImpl::__##__name(std::experimental::__data(__x),        \
-					_Arg2::__data(__y))};                  \
+	    _Abi::_SimdImpl::_S_##__name(std::experimental::__data(__x),       \
+					 _Arg2::__data(__y))};                 \
   }                                                                            \
   template <typename _Up, typename _Tp, typename _Abi>                         \
   _GLIBCXX_SIMD_INTRINSIC std::experimental::__math_return_type_t<             \
@@ -181,9 +181,9 @@ struct __extra_argument_type
     typename _Arg3::type __z)                                                  \
   {                                                                            \
     return {std::experimental::__private_init,                                 \
-	    _Abi::_SimdImpl::__##__name(std::experimental::__data(__x),        \
-					_Arg2::__data(__y),                    \
-					_Arg3::__data(__z))};                  \
+	    _Abi::_SimdImpl::_S_##__name(std::experimental::__data(__x),       \
+					 _Arg2::__data(__y),                   \
+					 _Arg3::__data(__z))};                 \
   }                                                                            \
   template <typename _Tp, typename _Up, typename _V, typename...,              \
 	    typename _TT = __remove_cvref_t<_Tp>,                              \
@@ -272,7 +272,7 @@ __zero_low_bits(simd<_Tp, _Abi> __x)
   const simd<_Tp, _Abi> __bitmask = __bit_cast<_Tp>(
     ~std::make_unsigned_t<__int_for_sizeof_t<_Tp>>() << _Bits);
   return {__private_init,
-	  _Abi::_SimdImpl::__bit_and(__data(__x), __data(__bitmask))};
+	  _Abi::_SimdImpl::_S_bit_and(__data(__x), __data(__bitmask))};
 }
 
 // }}}
@@ -413,45 +413,19 @@ __fold_input(const simd<double, _Abi>& __x)
 }
 
 // }}}
-// __extract_exponent_bits {{{
-template <typename _Abi>
-rebind_simd_t<int, simd<float, _Abi>>
-__extract_exponent_bits(const simd<float, _Abi>& __v)
+// __extract_exponent_as_int {{{
+template <typename _Tp, typename _Abi>
+rebind_simd_t<int, simd<_Tp, _Abi>>
+__extract_exponent_as_int(const simd<_Tp, _Abi>& __v)
 {
-  using namespace std::experimental::__proposed;
-  using namespace std::experimental::__proposed::float_bitwise_operators;
-  constexpr simd<float, _Abi> __exponent_mask
-    = std::numeric_limits<float>::infinity(); // 0x7f800000
-  return __bit_cast<rebind_simd_t<int, simd<float, _Abi>>>(__v
-							   & __exponent_mask);
-}
-
-template <typename _Abi>
-rebind_simd_t<int, simd<double, _Abi>>
-__extract_exponent_bits(const simd<double, _Abi>& __v)
-{
-  using namespace std::experimental::_P0918;
-  using namespace std::experimental::__proposed::float_bitwise_operators;
-  const simd<double, _Abi> __exponent_mask
-    = std::numeric_limits<double>::infinity(); // 0x7ff0000000000000
-  constexpr auto _Np = simd_size_v<double, _Abi> * 2;
-  constexpr auto _Max = simd_abi::max_fixed_size<int>;
-  if constexpr (_Np > _Max)
-    {
-      const auto __tup
-	= split<_Max / 2, (_Np - _Max) / 2>(__v & __exponent_mask);
-      return concat(
-	shuffle<strided<2, 1>>(
-	  __bit_cast<simd<int, simd_abi::deduce_t<int, _Max>>>(
-	    std::get<0>(__tup))),
-	shuffle<strided<2, 1>>(
-	  __bit_cast<simd<int, simd_abi::deduce_t<int, _Np - _Max>>>(
-	    std::get<1>(__tup))));
-    }
-  else
-    return shuffle<strided<2, 1>>(
-      __bit_cast<simd<int, simd_abi::deduce_t<int, _Np>>>(__v
-							  & __exponent_mask));
+  using _Vp = simd<_Tp, _Abi>;
+  using _Up = make_unsigned_t<__int_for_sizeof_t<_Tp>>;
+  using namespace std::experimental::__float_bitwise_operators;
+  const _Vp __exponent_mask
+    = __infinity_v<_Tp>; // 0x7f800000 or 0x7ff0000000000000
+  return static_simd_cast<rebind_simd_t<int, _Vp>>(
+    __bit_cast<rebind_simd_t<_Up, _Vp>>(__v & __exponent_mask)
+    >> (__digits_v<_Tp> - 1));
 }
 
 // }}}
@@ -508,7 +482,7 @@ cos(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
   if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
-    return {__private_init, _Abi::_SimdImpl::__cos(__data(__x))};
+    return {__private_init, _Abi::_SimdImpl::_S_cos(__data(__x))};
   else
     {
       if constexpr (is_same_v<_Tp, float>)
@@ -522,7 +496,7 @@ cos(const simd<_Tp, _Abi>& __x)
       //        1 | sinSeries, -
       //        2 | cosSeries, -
       //        3 | sinSeries, +
-      using namespace std::experimental::__proposed::float_bitwise_operators;
+      using namespace std::experimental::__float_bitwise_operators;
       const _V __sign_flip
 	= _V(-0.f) & static_simd_cast<_V>((1 + __f._M_quadrant) << 30);
 
@@ -555,7 +529,7 @@ sin(const simd<_Tp, _Abi>& __x)
 {
   using _V = simd<_Tp, _Abi>;
   if constexpr (__is_scalar_abi<_Abi>() || __is_fixed_size_abi_v<_Abi>)
-    return {__private_init, _Abi::_SimdImpl::__sin(__data(__x))};
+    return {__private_init, _Abi::_SimdImpl::_S_sin(__data(__x))};
   else
     {
       if constexpr (is_same_v<_Tp, float>)
@@ -569,7 +543,7 @@ sin(const simd<_Tp, _Abi>& __x)
       //        1 | cosSeries
       //        2 | sinSeries, sign flip
       //        3 | cosSeries, sign flip
-      using namespace std::experimental::__proposed::float_bitwise_operators;
+      using namespace std::experimental::__float_bitwise_operators;
       const auto __sign_flip
 	= (__x ^ static_simd_cast<_V>(1 - __f._M_quadrant)) & _V(_Tp(-0.));
 
@@ -694,24 +668,22 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
   else if constexpr (__is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init,
-	      _Abi::_SimdImpl::__frexp(__data(__x), __data(*__exp))};
+	      _Abi::_SimdImpl::_S_frexp(__data(__x), __data(*__exp))};
 #if _GLIBCXX_SIMD_X86INTRIN
     }
   else if constexpr (__have_avx512f)
     {
-      using _IV = __samesize<int, simd<_Tp, _Abi>>;
       constexpr size_t _Np = simd_size_v<_Tp, _Abi>;
       constexpr size_t _NI = _Np < 4 ? 4 : _Np;
       const auto __v = __data(__x);
       const auto __isnonzero
-	= _Abi::_SimdImpl::__isnonzerovalue_mask(__v._M_data);
+	= _Abi::_SimdImpl::_S_isnonzerovalue_mask(__v._M_data);
       const _SimdWrapper<int, _NI> __exp_plus1
 	= 1 + __convert<_SimdWrapper<int, _NI>>(__getexp(__v))._M_data;
       const _SimdWrapper<int, _Np> __e = __wrapper_bitcast<int, _Np>(
 	_Abi::_CommonImpl::_S_blend(_SimdWrapper<bool, _NI>(__isnonzero),
 				    _SimdWrapper<int, _NI>(), __exp_plus1));
-      simd_abi::deduce_t<int, _Np>::_CommonImpl::__store(
-	__e, __exp, overaligned<alignof(_IV)>);
+      simd_abi::deduce_t<int, _Np>::_CommonImpl::_S_store(__e, __exp);
       return {__private_init,
 	      _Abi::_CommonImpl::_S_blend(_SimdWrapper<bool, _Np>(__isnonzero),
 					  __v, __getmant_avx512(__v))};
@@ -723,44 +695,47 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
       static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
       using _V = simd<_Tp, _Abi>;
       using _IV = rebind_simd_t<int, _V>;
-      using _Limits = std::numeric_limits<_Tp>;
       using namespace std::experimental::__proposed;
-      using namespace std::experimental::__proposed::float_bitwise_operators;
+      using namespace std::experimental::__float_bitwise_operators;
 
-      constexpr int __exp_shift = sizeof(_Tp) == 4 ? 23 : 20;
       constexpr int __exp_adjust = sizeof(_Tp) == 4 ? 0x7e : 0x3fe;
       constexpr int __exp_offset = sizeof(_Tp) == 4 ? 0x70 : 0x200;
       constexpr _Tp __subnorm_scale = sizeof(_Tp) == 4 ? 0x1p112 : 0x1p512;
-      constexpr _V __exponent_mask
-	= _Limits::infinity(); // 0x7f800000 or 0x7ff0000000000000
-      constexpr _V __p5_1_exponent
-	= _Tp(sizeof(_Tp) == 4 ? -0x1.fffffep-1 : -0x1.fffffffffffffp-1);
+      _GLIBCXX_SIMD_USE_CONSTEXPR_API _V __exponent_mask
+	= __infinity_v<_Tp>; // 0x7f800000 or 0x7ff0000000000000
+      _GLIBCXX_SIMD_USE_CONSTEXPR_API _V __p5_1_exponent
+	= -(2 - __epsilon_v<_Tp>) / 2; // 0xbf7fffff or 0xbfefffffffffffff
 
-      _V __mant = __p5_1_exponent & (__exponent_mask | __x);
-      const _IV __exponent_bits = __extract_exponent_bits(__x);
+      _V __mant = __p5_1_exponent & (__exponent_mask | __x); // +/-[.5, 1)
+      const _IV __exponent_bits = __extract_exponent_as_int(__x);
       if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))))
 	{
-	  *__exp = simd_cast<__samesize<int, _V>>(
-	    (__exponent_bits >> __exp_shift) - __exp_adjust);
+	  *__exp
+	    = simd_cast<__samesize<int, _V>>(__exponent_bits - __exp_adjust);
 	  return __mant;
 	}
 
-      // can't use isunordered(x*inf, x*0) because inf*0 raises invalid
+#if __FINITE_MATH_ONLY__
+      // at least one element of __x is 0 or subnormal, the rest is normal (inf
+      // and NaN are excluded by -ffinite-math-only)
+      const auto __iszero_inf_nan = __x == 0;
+#else
       const auto __as_int
 	= __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(abs(__x));
       const auto __inf = __bit_cast<rebind_simd_t<__int_for_sizeof_t<_Tp>, _V>>(
-	_V(std::numeric_limits<_Tp>::infinity()));
+	_V(__infinity_v<_Tp>));
       const auto __iszero_inf_nan = static_simd_cast<typename _V::mask_type>(
 	__as_int == 0 || __as_int >= __inf);
+#endif
 
       const _V __scaled_subnormal = __x * __subnorm_scale;
       const _V __mant_subnormal
 	= __p5_1_exponent & (__exponent_mask | __scaled_subnormal);
       where(!isnormal(__x), __mant) = __mant_subnormal;
       where(__iszero_inf_nan, __mant) = __x;
-      _IV __e = __extract_exponent_bits(__scaled_subnormal);
+      _IV __e = __extract_exponent_as_int(__scaled_subnormal);
       using _MaskType = typename std::conditional_t<
-	sizeof(typename _V::mask_type) == sizeof(_IV), _V, _IV>::mask_type;
+	sizeof(typename _V::value_type) == sizeof(int), _V, _IV>::mask_type;
       const _MaskType __value_isnormal = isnormal(__x).__cvt();
       where(__value_isnormal.__cvt(), __e) = __exponent_bits;
       static_assert(sizeof(_IV) == sizeof(__value_isnormal));
@@ -769,7 +744,7 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
 	  | (__bit_cast<_IV>(static_simd_cast<_MaskType>(__exponent_bits == 0)
 			     & static_simd_cast<_MaskType>(__x != 0))
 	     & _IV(__exp_adjust + __exp_offset));
-      *__exp = simd_cast<__samesize<int, _V>>((__e >> __exp_shift) - __offset);
+      *__exp = simd_cast<__samesize<int, _V>>(__e - __offset);
       return __mant;
     }
 }
@@ -794,7 +769,7 @@ logb(const simd<_Tp, _Abi>& __x)
   else if constexpr (__is_fixed_size_abi_v<_Abi>)
     {
       return {__private_init,
-	      __data(__x).__apply_per_chunk([](auto __impl, auto __xx) {
+	      __data(__x)._M_apply_per_chunk([](auto __impl, auto __xx) {
 		using _V = typename decltype(__impl)::simd_type;
 		return __data(
 		  std::experimental::logb(_V(__private_init, __xx)));
@@ -827,7 +802,7 @@ logb(const simd<_Tp, _Abi>& __x)
       using namespace std::experimental::__proposed;
       auto __is_normal = isnormal(__x);
 
-      // work on __abs(__x) to reflect the return value on Linux for negative
+      // work on abs(__x) to reflect the return value on Linux for negative
       // inputs (domain-error => implementation-defined value is returned)
       const _V abs_x = abs(__x);
 
@@ -837,8 +812,8 @@ logb(const simd<_Tp, _Abi>& __x)
 	using namespace std::experimental::__proposed;
 	using _IV = rebind_simd_t<
 	  std::conditional_t<sizeof(_Tp) == sizeof(_LLong), _LLong, int>, _V>;
-	return (__bit_cast<_IV>(__v) >> (std::numeric_limits<_Tp>::digits - 1))
-	       - (std::numeric_limits<_Tp>::max_exponent - 1);
+	return (__bit_cast<_IV>(__v) >> (__digits_v<_Tp> - 1))
+	       - (__max_exponent_v<_Tp> - 1);
       };
       _V __r = static_simd_cast<_V>(__exponent(abs_x));
       if (_GLIBCXX_SIMD_IS_LIKELY(all_of(__is_normal)))
@@ -848,9 +823,9 @@ logb(const simd<_Tp, _Abi>& __x)
       const auto __is_zero = __x == 0;
       const auto __is_nan = isnan(__x);
       const auto __is_inf = isinf(__x);
-      where(__is_zero, __r) = -std::numeric_limits<_Tp>::infinity();
+      where(__is_zero, __r) = -__infinity_v<_Tp>;
       where(__is_nan, __r) = __x;
-      where(__is_inf, __r) = std::numeric_limits<_Tp>::infinity();
+      where(__is_inf, __r) = __infinity_v<_Tp>;
       __is_normal |= __is_zero || __is_nan || __is_inf;
       if (all_of(__is_normal))
 	// at this point everything but subnormals is handled
@@ -869,11 +844,24 @@ template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
 modf(const simd<_Tp, _Abi>& __x, simd<_Tp, _Abi>* __iptr)
 {
-  const auto __integral = trunc(__x);
-  *__iptr = __integral;
-  auto __r = __x - __integral;
+  if constexpr (__is_scalar_abi<_Abi>()
+		|| (__is_fixed_size_abi_v<_Abi> && simd_size_v<_Tp, _Abi> == 1))
+    {
+      _Tp __tmp;
+      _Tp __r = std::modf(__x[0], &__tmp);
+      __iptr[0] = __tmp;
+      return __r;
+    }
+  else
+    {
+      const auto __integral = trunc(__x);
+      *__iptr = __integral;
+      auto __r = __x - __integral;
+#if !__FINITE_MATH_ONLY__
   where(isinf(__x), __r) = _Tp();
+#endif
   return copysign(__r, __x);
+    }
 }
 
 _GLIBCXX_SIMD_MATH_CALL2_(scalbn, int)
@@ -891,14 +879,14 @@ enable_if_t<!std::is_floating_point_v<_Tp> && std::is_signed_v<_Tp>,
 	    simd<_Tp, _Abi>>
 abs(const simd<_Tp, _Abi>& __x)
 {
-  return {__private_init, _Abi::_SimdImpl::__abs(__data(__x))};
+  return {__private_init, _Abi::_SimdImpl::_S_abs(__data(__x))};
 }
 template <typename _Tp, typename _Abi>
 enable_if_t<!std::is_floating_point_v<_Tp> && std::is_signed_v<_Tp>,
 	    simd<_Tp, _Abi>>
 fabs(const simd<_Tp, _Abi>& __x)
 {
-  return {__private_init, _Abi::_SimdImpl::__abs(__data(__x))};
+  return {__private_init, _Abi::_SimdImpl::_S_abs(__data(__x))};
 }
 
 // the following are overloads for functions in <cstdlib> and not covered by
@@ -978,7 +966,7 @@ _GLIBCXX_SIMD_INTRINSIC _R
 __fixed_size_apply(_ToApply&& __apply, const _Tp& __arg0, const _Tps&... __args)
 {
   return {__private_init,
-	  __data(__arg0).__apply_per_chunk(
+	  __data(__arg0)._M_apply_per_chunk(
 	    [&](auto __impl, const auto&... __inner) {
 	      using _V = typename decltype(__impl)::simd_type;
 	      return __data(__apply(_V(__private_init, __inner)...));
@@ -1007,26 +995,59 @@ __hypot(_VV __x, _VV __y)
       // dp. It still needs the Annex F fixups though and isn't faster on
       // Skylake-AVX512 (not even for SSE and AVX vectors, and really bad for
       // AVX-512).
-      using namespace __proposed::float_bitwise_operators;
-      using _Limits = std::numeric_limits<_Tp>;
+      using namespace __float_bitwise_operators;
       _V __absx = abs(__x);          // no error
       _V __absy = abs(__y);          // no error
       _V __hi = max(__absx, __absy); // no error
       _V __lo = min(__absy, __absx); // no error
 
       // round __hi down to the next power-of-2:
-      constexpr _V __inf(_Limits::infinity());
+      _GLIBCXX_SIMD_USE_CONSTEXPR_API _V __inf(__infinity_v<_Tp>);
 
+#ifndef __FAST_MATH__
+      if constexpr (__have_neon && !__have_neon_a32)
+	{ // With ARMv7 NEON, we have no subnormals and must use slightly
+	  // different strategy
+	  const _V __hi_exp = __hi & __inf;
+	  _V __scale_back = __hi_exp;
+	  // For large exponents (max & max/2) the inversion comes too close to
+	  // subnormals. Subtract 3 from the exponent:
+	  where(__hi_exp > 1, __scale_back) = __hi_exp * _Tp(0.125);
+	  // Invert and adjust for the off-by-one error of inversion via xor:
+	  const _V __scale = (__scale_back ^ __inf) * _Tp(.5);
+	  const _V __h1 = __hi * __scale;
+	  const _V __l1 = __lo * __scale;
+	  _V __r = __scale_back * sqrt(__h1 * __h1 + __l1 * __l1);
+	  // Fix up hypot(0, 0) to not be NaN:
+	  where(__hi == 0, __r) = 0;
+	  return __r;
+	}
+#endif
+
+#ifdef __FAST_MATH__
+      // With fast-math, ignore precision of subnormals and inputs from
+      // __finite_max_v/2 to __finite_max_v. This removes all branching/masking.
+      if constexpr (true)
+#else
       if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))
 				  && all_of(isnormal(__y))))
+#endif
 	{
 	  const _V __hi_exp = __hi & __inf;
 	  //((__hi + __hi) & __inf) ^ __inf almost works for computing __scale,
 	  // except when (__hi + __hi) & __inf == __inf, in which case __scale
 	  // becomes 0 (should be min/2 instead) and thus loses the information
 	  // from __lo.
+#ifdef __FAST_MATH__
+	  using _Ip = __int_for_sizeof_t<_Tp>;
+	  using _IV = rebind_simd_t<_Ip, _V>;
+	  const auto __as_int = __bit_cast<_IV>(__hi_exp);
+	  const _V __scale = __bit_cast<_V>(2 * __bit_cast<_Ip>(_Tp(1)) - __as_int);
+#else
 	  const _V __scale = (__hi_exp ^ __inf) * _Tp(.5);
-	  constexpr _V __mant_mask = _Limits::min() - _Limits::denorm_min();
+#endif
+	  _GLIBCXX_SIMD_USE_CONSTEXPR_API _V __mant_mask
+	    = __norm_min_v<_Tp> - __denorm_min_v<_Tp>;
 	  const _V __h1 = (__hi & __mant_mask) | _V(1);
 	  const _V __l1 = __lo * __scale;
 	  return __hi_exp * sqrt(__h1 * __h1 + __l1 * __l1);
@@ -1036,15 +1057,16 @@ __hypot(_VV __x, _VV __y)
 	  // slower path to support subnormals
 	  // if __hi is subnormal, avoid scaling by inf & final mul by 0 (which
 	  // yields NaN) by using min()
-	  _V __scale = _V(1 / _Limits::min());
+	  _V __scale = _V(1 / __norm_min_v<_Tp>);
 	  // invert exponent w/o error and w/o using the slow divider unit:
 	  // xor inverts the exponent but off by 1. Multiplication with .5
 	  // adjusts for the discrepancy.
-	  where(__hi >= _Limits::min(), __scale)
+	  where(__hi >= __norm_min_v<_Tp>, __scale)
 	    = ((__hi & __inf) ^ __inf) * _Tp(.5);
 	  // adjust final exponent for subnormal inputs
-	  _V __hi_exp = _Limits::min();
-	  where(__hi >= _Limits::min(), __hi_exp) = __hi & __inf; // no error
+	  _V __hi_exp = __norm_min_v<_Tp>;
+	  where(__hi >= __norm_min_v<_Tp>, __hi_exp)
+	    = __hi & __inf;                                       // no error
 	  _V __h1 = __hi * __scale;                               // no error
 	  _V __l1 = __lo * __scale;                               // no error
 
@@ -1056,14 +1078,14 @@ __hypot(_VV __x, _VV __y)
 	  // the naive fixup goes like this:
 	  //
 	  // where(__l1 == 0, __r)                      = __hi;
-	  // where(isunordered(__x, __y), __r)          = _Limits::quiet_NaN();
+	  // where(isunordered(__x, __y), __r)          = __quiet_NaN_v<_Tp>;
 	  // where(isinf(__absx) || isinf(__absy), __r) = __inf;
 	  //
 	  // The fixup can be prepared in parallel with the sqrt, requiring a
 	  // single blend step after hi_exp * sqrt, reducing latency and
 	  // throughput:
 	  _V __fixup = __hi; // __lo == 0
-	  where(isunordered(__x, __y), __fixup) = _Limits::quiet_NaN();
+	  where(isunordered(__x, __y), __fixup) = __quiet_NaN_v<_Tp>;
 	  where(isinf(__absx) || isinf(__absy), __fixup) = __inf;
 	  where(!(__lo == 0 || isunordered(__x, __y)
 		  || (isinf(__absx) || isinf(__absy))),
@@ -1106,27 +1128,24 @@ __hypot(_VV __x, _VV __y, _VV __z)
     }
   else
     {
-      using namespace __proposed::float_bitwise_operators;
-      using _Limits = std::numeric_limits<_Tp>;
+      using namespace __float_bitwise_operators;
       const _V __absx = abs(__x);                 // no error
       const _V __absy = abs(__y);                 // no error
       const _V __absz = abs(__z);                 // no error
       _V __hi = max(max(__absx, __absy), __absz); // no error
       _V __l0 = min(__absz, max(__absx, __absy)); // no error
       _V __l1 = min(__absy, __absx);              // no error
-      if constexpr (numeric_limits<_Tp>::digits == 64
-		    && numeric_limits<_Tp>::max_exponent == 0x4000
-		    && numeric_limits<_Tp>::min_exponent == -0x3FFD
-		    && _V::size() == 1)
+      if constexpr (__digits_v<_Tp> == 64 && __max_exponent_v<_Tp> == 0x4000
+		    && __min_exponent_v<_Tp> == -0x3FFD && _V::size() == 1)
 	{ // Seems like x87 fp80, where bit 63 is always 1 unless subnormal or
 	  // NaN. In this case the bit-tricks don't work, they require IEC559
 	  // binary32 or binary64 format.
 #ifdef __STDC_IEC_559__
 	  // fixup for Annex F requirements
 	  if (isinf(__absx[0]) || isinf(__absy[0]) || isinf(__absz[0]))
-	    return _Limits::infinity();
+	    return __infinity_v<_Tp>;
 	  else if (isunordered(__absx[0], __absy[0] + __absz[0]))
-	    return _Limits::quiet_NaN();
+	    return __quiet_NaN_v<_Tp>;
 	  else if (__l0[0] == 0 && __l1[0] == 0)
 	    return __hi;
 #endif
@@ -1142,11 +1161,43 @@ __hypot(_VV __x, _VV __y, _VV __z)
       else
 	{
 	  // round __hi down to the next power-of-2:
-	  constexpr _V __inf(_Limits::infinity());
+	  _GLIBCXX_SIMD_USE_CONSTEXPR_API _V __inf(__infinity_v<_Tp>);
 
+#ifndef __FAST_MATH__
+	  if constexpr (_V::size() > 1 && __have_neon && !__have_neon_a32)
+	    { // With ARMv7 NEON, we have no subnormals and must use slightly
+	      // different strategy
+	      const _V __hi_exp = __hi & __inf;
+	      _V __scale_back = __hi_exp;
+	      // For large exponents (max & max/2) the inversion comes too close
+	      // to subnormals. Subtract 3 from the exponent:
+	      where(__hi_exp > 1, __scale_back) = __hi_exp * _Tp(0.125);
+	      // Invert and adjust for the off-by-one error of inversion via
+	      // xor:
+	      const _V __scale = (__scale_back ^ __inf) * _Tp(.5);
+	      const _V __h1 = __hi * __scale;
+	      __l0 *= __scale;
+	      __l1 *= __scale;
+	      _V __lo
+		= __l0 * __l0 + __l1 * __l1; // add the two smaller values first
+	      asm("":"+m"(__lo));
+	      _V __r = __scale_back * sqrt(__h1 * __h1 + __lo);
+	      // Fix up hypot(0, 0, 0) to not be NaN:
+	      where(__hi == 0, __r) = 0;
+	      return __r;
+	    }
+#endif
+
+#ifdef __FAST_MATH__
+	  // With fast-math, ignore precision of subnormals and inputs from
+	  // __finite_max_v/2 to __finite_max_v. This removes all
+	  // branching/masking.
+	  if constexpr (true)
+#else
 	  if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))
 				      && all_of(isnormal(__y))
 				      && all_of(isnormal(__z))))
+#endif
 	    {
 	      const _V __hi_exp = __hi & __inf;
 	      //((__hi + __hi) & __inf) ^ __inf almost works for computing
@@ -1154,9 +1205,18 @@ __hypot(_VV __x, _VV __y, _VV __z)
 	      // case __scale
 	      // becomes 0 (should be min/2 instead) and thus loses the
 	      // information from __lo.
+#ifdef __FAST_MATH__
+	      using _Ip = __int_for_sizeof_t<_Tp>;
+	      using _IV = rebind_simd_t<_Ip, _V>;
+	      const auto __as_int = __bit_cast<_IV>(__hi_exp);
+	      const _V __scale
+		= __bit_cast<_V>(2 * __bit_cast<_Ip>(_Tp(1)) - __as_int);
+#else
 	      const _V __scale = (__hi_exp ^ __inf) * _Tp(.5);
-	      constexpr _V __mant_mask = _Limits::min() - _Limits::denorm_min();
-	      const _V __h1 = (__hi & __mant_mask) | _V(1);
+#endif
+	      constexpr _Tp __mant_mask
+		= __norm_min_v<_Tp> - __denorm_min_v<_Tp>;
+	      const _V __h1 = (__hi & _V(__mant_mask)) | _V(1);
 	      __l0 *= __scale;
 	      __l1 *= __scale;
 	      const _V __lo
@@ -1168,15 +1228,15 @@ __hypot(_VV __x, _VV __y, _VV __z)
 	      // slower path to support subnormals
 	      // if __hi is subnormal, avoid scaling by inf & final mul by 0
 	      // (which yields NaN) by using min()
-	      _V __scale = _V(1 / _Limits::min());
+	      _V __scale = _V(1 / __norm_min_v<_Tp>);
 	      // invert exponent w/o error and w/o using the slow divider unit:
 	      // xor inverts the exponent but off by 1. Multiplication with .5
 	      // adjusts for the discrepancy.
-	      where(__hi >= _Limits::min(), __scale)
+	      where(__hi >= __norm_min_v<_Tp>, __scale)
 		= ((__hi & __inf) ^ __inf) * _Tp(.5);
 	      // adjust final exponent for subnormal inputs
-	      _V __hi_exp = _Limits::min();
-	      where(__hi >= _Limits::min(), __hi_exp)
+	      _V __hi_exp = __norm_min_v<_Tp>;
+	      where(__hi >= __norm_min_v<_Tp>, __hi_exp)
 		= __hi & __inf;         // no error
 	      _V __h1 = __hi * __scale; // no error
 	      __l0 *= __scale;          // no error
@@ -1189,9 +1249,15 @@ __hypot(_VV __x, _VV __y, _VV __z)
 	      _V __fixup = __hi; // __lo == 0
 	      // where(__lo == 0, __fixup)                   = __hi;
 	      where(isunordered(__x, __y + __z), __fixup)
-		= _Limits::quiet_NaN();
+		= __quiet_NaN_v<_Tp>;
 	      where(isinf(__absx) || isinf(__absy) || isinf(__absz), __fixup)
 		= __inf;
+	      // Instead of __lo == 0, the following could depend on __h1² ==
+	      // __h1² + __lo (i.e. __hi is so much larger than the other two
+	      // inputs that the result is exactly __hi). While this may improve
+	      // precision, it is likely to reduce efficiency if the ISA has
+	      // FMAs (because __h1² + __lo is an FMA, but the intermediate
+	      // __h1² must be kept)
 	      where(!(__lo == 0 || isunordered(__x, __y + __z) || isinf(__absx)
 		      || isinf(__absy) || isinf(__absz)),
 		    __fixup)
@@ -1243,9 +1309,21 @@ template <typename _Tp, typename _Abi>
 enable_if_t<std::is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
 copysign(const simd<_Tp, _Abi>& __x, const simd<_Tp, _Abi>& __y)
 {
-  using namespace std::experimental::__proposed::float_bitwise_operators;
-  const auto __signmask = -simd<_Tp, _Abi>();
-  return (__x & (__x ^ __signmask)) | (__y & __signmask);
+  if constexpr (simd_size_v<_Tp, _Abi> == 1)
+    return std::copysign(__x[0], __y[0]);
+  else if constexpr (std::is_same_v<_Tp, long double> && sizeof(_Tp) == 12)
+    // Remove this case once __bit_cast is implemented via __builtin_bit_cast.
+    // It is necessary, because __signmask below cannot be computed at compile
+    // time.
+    return simd<_Tp, _Abi>(
+      [&](auto __i) { return std::copysign(__x[__i], __y[__i]); });
+  else
+    {
+      using _V = simd<_Tp, _Abi>;
+      using namespace std::experimental::__float_bitwise_operators;
+      _GLIBCXX_SIMD_USE_CONSTEXPR_API auto __signmask = _V(1) ^ _V(-1);
+      return (__x & (__x ^ __signmask)) | (__y & __signmask);
+    }
 }
 
 _GLIBCXX_SIMD_MATH_CALL2_(nextafter, _Tp)
@@ -1268,7 +1346,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, _R>
 isinf(std::experimental::simd<_Tp, _Abi> __x)
 {
   return {std::experimental::__private_init,
-	  _Abi::_SimdImpl::__isinf(std::experimental::__data(__x))};
+	  _Abi::_SimdImpl::_S_isinf(std::experimental::__data(__x))};
 }
 template <typename _Tp, typename _Abi, typename...,
 	  typename _R
@@ -1277,7 +1355,7 @@ enable_if_t<std::is_floating_point_v<_Tp>, _R>
 isnan(std::experimental::simd<_Tp, _Abi> __x)
 {
   return {std::experimental::__private_init,
-	  _Abi::_SimdImpl::__isnan(std::experimental::__data(__x))};
+	  _Abi::_SimdImpl::_S_isnan(std::experimental::__data(__x))};
 }
 _GLIBCXX_SIMD_MATH_CALL_(isnormal)
 
@@ -1294,7 +1372,7 @@ signbit(std::experimental::simd<_Tp, _Abi> __x)
     }
   else
     return {std::experimental::__private_init,
-	    _Abi::_SimdImpl::__signbit(std::experimental::__data(__x))};
+	    _Abi::_SimdImpl::_S_signbit(std::experimental::__data(__x))};
 }
 
 _GLIBCXX_SIMD_MATH_CALL2_(isgreater, _Tp)

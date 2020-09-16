@@ -149,9 +149,10 @@ AlignTrailingComments: true
 AllowShortFunctionsOnASingleLine: All
 AlwaysBreakTemplateDeclarations: MultiLine
 KeepEmptyLinesAtTheStartOfBlocks: false
-Standard: Latest
+Standard: Cpp11
 StatementMacros: ['_GLIBCXX_SIMD_FIXED_OP', '_GLIBCXX_SIMD_APPLY_ON_TUPLE_']
 MacroBlockBegin: '^_GLIBCXX_BEGIN_[A-Z0-9_]+$'
 MacroBlockEnd:   '^_GLIBCXX_END_[A-Z0-9_]+$'
+IndentWrappedFunctionNames: true
 
 # vim: ft=yaml

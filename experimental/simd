@@ -41,7 +41,9 @@
 #pragma GCC diagnostic push
 // Many [[gnu::vector_size(N)]] types might lead to a -Wpsabi warning which is
 // irrelevant as those functions never appear on ABI borders
+#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wpsabi"
+#endif
 
 // If __OPTIMIZE__ is not defined some intrinsics are defined as macros, making
 // use of C casts internally. This requires us to disable the warning as it
@@ -54,13 +56,14 @@
 #include "bits/simd.h"
 #include "bits/simd_fixed_size.h"
 #include "bits/simd_scalar.h"
-#include "bits/simd_combine.h"
 #include "bits/simd_builtin.h"
 #include "bits/simd_converter.h"
 #if _GLIBCXX_SIMD_X86INTRIN
 #include "bits/simd_x86.h"
 #elif _GLIBCXX_SIMD_HAVE_NEON
 #include "bits/simd_neon.h"
+#elif __ALTIVEC__
+#include "bits/simd_ppc.h"
 #endif
 #include "bits/simd_math.h"
 

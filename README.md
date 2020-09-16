@@ -14,10 +14,8 @@ with older GCC versions.
 
 * x86_64 is the main development platform and thoroughly tested. This includes
   support from SSE-only up to AVX512 on Xeon Phi or Xeon CPUs.
-* aarch64 was tested and verified to work. No significant performance evaluation
-  was done.
-* ARM NEON in general should work, too.
-* IBM Power support received minimal testing.
+* aarch64, arm, and ppc64le was tested and verified to work. No significant 
+  performance evaluation was done.
 * In any case, a fallback to correct execution via builtin arthmetic types is
   available for all targets.
 

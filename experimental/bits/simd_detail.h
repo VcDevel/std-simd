@@ -215,16 +215,32 @@
 #endif
 //}}}
 
+#ifdef __clang__
+#define _GLIBCXX_SIMD_NORMAL_MATH
+#else
 #define _GLIBCXX_SIMD_NORMAL_MATH                                              \
   [[__gnu__::__optimize__("finite-math-only,no-signed-zeros")]]
+#endif
 #define _GLIBCXX_SIMD_NEVER_INLINE [[__gnu__::__noinline__]]
 #define _GLIBCXX_SIMD_INTRINSIC                                                \
   [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
-#define _GLIBCXX_SIMD_CONST __attribute__((__const__))
 #define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]] inline
 #define _GLIBCXX_SIMD_IS_UNLIKELY(__x) __builtin_expect(__x, 0)
 #define _GLIBCXX_SIMD_IS_LIKELY(__x) __builtin_expect(__x, 1)
+
+#if defined __STRICT_ANSI__ && __STRICT_ANSI__
+#define _GLIBCXX_SIMD_CONSTEXPR
+#define _GLIBCXX_SIMD_USE_CONSTEXPR_API const
+#else
 #define _GLIBCXX_SIMD_CONSTEXPR constexpr
+#define _GLIBCXX_SIMD_USE_CONSTEXPR_API constexpr
+#endif
+
+#if defined __clang__
+#define _GLIBCXX_SIMD_USE_CONSTEXPR const
+#else
+#define _GLIBCXX_SIMD_USE_CONSTEXPR constexpr
+#endif
 
 #define _GLIBCXX_SIMD_LIST_BINARY(__macro) __macro(|) __macro(&) __macro(^)
 #define _GLIBCXX_SIMD_LIST_SHIFTS(__macro) __macro(<<) __macro(>>)
@@ -260,11 +276,6 @@
 // vector conversions on x86 not optimized:
 #if _GLIBCXX_SIMD_X86INTRIN
 #define _GLIBCXX_SIMD_WORKAROUND_PR85048 1
-#endif
-
-// zero extension from xmm to zmm not optimized:
-#if __GNUC__ < 9
-#define _GLIBCXX_SIMD_WORKAROUND_PR85480 1
 #endif
 
 // Invalid instruction mov from xmm16-31

@@ -2,7 +2,7 @@
 
 cd "`dirname "$0"`/.."
 SRCDIR="$PWD"
-GCCDIR=~/src/gcc
+GCCDIR=~/src/gcc-simd
 if test "$1" != "-f"; then
   cd $GCCDIR
   if test -n "$(git status -s -uno)"; then
@@ -23,7 +23,7 @@ for i in simd bits/simd*.h; do
   {
     sed '/\/\/ Copyright/Q' $i
     cat <<EOF
-// Copyright (C) 2019 Free Software Foundation, Inc.
+// Copyright (C) 2020 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the

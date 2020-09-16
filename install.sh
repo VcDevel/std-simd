@@ -63,7 +63,17 @@ fi
 
 if $do_install; then
   echo "Testing that $CXX can include <experimental/simd> without errors:"
-  echo '#include "experimental/simd"'|"$CXX" -fmax-errors=1 -fsyntax-only -std=c++17 -x c++ -o- - >/dev/null || { echo Failed.; exit 1; } || exit
+  echo '#include "experimental/simd"'|"$CXX" -fmax-errors=1 -fsyntax-only -std=c++17 -x c++ -o- - >/dev/null || {
+cat <<EOF
+
+Compile test failed.
+*********************************************
+ Note that std-simd requires at least GCC 9.
+*********************************************
+
+EOF
+exit 1
+} || exit
   echo Passed.
 
   install -v -p -d "$includedir/experimental/bits"

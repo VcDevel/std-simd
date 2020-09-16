@@ -13,7 +13,7 @@ env:
   - CC=gcc-9 CXX=g++-9 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2
 
 script:
-  - ctest -V -S scripts/test.cmake
+  - ctest -VV -S scripts/test.cmake
 
 notifications:
   email: false
