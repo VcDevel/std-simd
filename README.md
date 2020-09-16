@@ -1,3 +1,7 @@
+# *WIP*: conditional operator and `simd<user-defined types>`
+This branch explores some options going forward for C++20/23. You need a 
+patched GCC, which supports overloading `operator?:`, to use this branch.
+
 # `std::experimental::simd`
 portable, zero-overhead C++ types for explicitly data-parallel programming
 
