@@ -63,7 +63,7 @@ install:
 	./install.sh
 
 benchmarks:
-	cd benchmarks && for i in *.cpp; do ./run.sh $$i; done
+	cd benchmarks && for i in *.cpp; do echo $$i; ./run.sh $$i; done
 
 benchmark-%:
 	cd benchmarks && ./run.sh $*
