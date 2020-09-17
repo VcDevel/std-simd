@@ -132,153 +132,35 @@ using current_native_mask_test_types
   = vir::expand_one<vir::Template1<stdx::native_simd_mask>, testtypes>;
 
 // native_test_types {{{1
-template <class T> struct sizeof8 : std::integral_constant<bool, sizeof(T) == 8>
-{
-};
-template <class T>
-struct sizeof_gt_2 : std::integral_constant<bool, (sizeof(T) > 2)>
+template <class T> struct is_unusable : std::negation<std::is_destructible<T>>
 {
 };
 using native_test_types =
 #if !defined(ABITYPES) || ABITYPES == 0
-  vir::concat<
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && !_GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI       \
-  && _GLIBCXX_SIMD_X86INTRIN
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::__avx512>,
-		    vir::Template<base_template, simd_abi::_VecBltnBtmsk<40>>>,
-      testtypes_64_32>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_AVX_ABI && !_GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::__avx>,
-		    vir::Template<base_template, simd_abi::_VecBuiltin<24>>>,
-      testtypes_fp>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_SSE_ABI && !_GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::__sse>,
-		    vir::Template<base_template, simd_abi::_VecBuiltin<12>>>,
-      testtypes_float>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-    vir::expand_list<
-      vir::Typelist<
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
-	vir::Template<base_template, simd_abi::__avx512>,
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<40>>,
-#if _GLIBCXX_SIMD_HAVE_AVX512VL
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<24>>,
-#endif
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-	vir::Template<base_template, simd_abi::__avx>,
-	vir::Template<base_template, simd_abi::_VecBuiltin<24>>,
-#endif
-	vir::Template<base_template, simd_abi::__sse>>,
-      testtypes_wo_ldouble>,
-    vir::expand_list<
-      vir::Typelist<
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<44>>,
-#if _GLIBCXX_SIMD_HAVE_AVX512VL
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<8>>,
-#endif
-#endif
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI
-	vir::Template<base_template, simd_abi::_VecBuiltin<20>>,
-#endif
-	vir::Template<base_template, simd_abi::_VecBuiltin<12>>,
-	vir::Template<base_template, simd_abi::_VecBuiltin<8>>>,
-      typename vir::filter_list<vir::filter_predicate<sizeof8>,
-				testtypes_wo_ldouble>::type>,
-    vir::expand_list<
-      vir::Typelist<
-#if _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN              \
-  && _GLIBCXX_SIMD_HAVE_AVX512VL
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<6>>,
-	vir::Template<base_template, simd_abi::_VecBltnBtmsk<4>>,
-#endif
-	vir::Template<base_template, simd_abi::_VecBuiltin<6>>,
-	vir::Template<base_template, simd_abi::_VecBuiltin<4>>>,
-      typename vir::filter_list<vir::filter_predicate<sizeof_gt_2>,
-				testtypes_wo_ldouble>::type>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_NEON
-#if _GLIBCXX_SIMD_HAVE_NEON_A32
-#if _GLIBCXX_SIMD_HAVE_NEON_A64
-    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    typename vir::filter_list<vir::filter_predicate<sizeof8>,
-					      testtypes_wo_ldouble>::type>,
-    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
-		    testtypes_wo_ldouble>,
-#else
-    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    typename vir::filter_list<vir::filter_predicate<sizeof8>,
-					      testtypes_wo_ldouble>::type>,
-    vir::expand_one<
-      vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
-      typename vir::filter_list<double, testtypes_wo_ldouble>::type>,
-#endif
-#else
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
-      typename vir::filter_list<vir::filter_predicate<sizeof8>,
-				testtypes_wo_ldouble>::type>,
-#endif
-#endif
-    vir::expand_one<vir::Template<base_template, simd_abi::scalar>, testtypes>>;
+  // Creates a list of
+  //   base_template<testtypes..., all_native_abis...>
+  // using an outer product of testtypes and all_native_abis. Subseqently, all
+  // types that are unusable (not destructible) are filtered out.
+  vir::filter_list<
+    vir::filter_predicate<is_unusable>,
+    vir::expand_one<vir::Template<base_template>,
+		    vir::outer_product<testtypes, all_native_abis>>>::type;
 #else  // !defined(ABITYPES) || ABITYPES == 0
   vir::Typelist<>;
 #endif // !defined(ABITYPES) || ABITYPES == 0
 
 // native_real_test_types {{{1
+template <class T> struct first_tparam_is_not_fp : std::true_type
+{
+};
+template <template <typename...> class Class, typename T0, typename... Ts>
+struct first_tparam_is_not_fp<Class<T0, Ts...>>
+  : std::negation<std::is_floating_point<T0>>
+{
+};
 using native_real_test_types =
-#if !defined(ABITYPES) || ABITYPES == 0
-  vir::concat<
-#if _GLIBCXX_SIMD_HAVE_AVX512_ABI && _GLIBCXX_SIMD_X86INTRIN
-    vir::expand_one<vir::Template<base_template, simd_abi::__avx512>,
-		    testtypes_fp>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_AVX_ABI
-    vir::expand_one<vir::Template<base_template, simd_abi::__avx>,
-		    testtypes_fp>,
-#endif
-#if _GLIBCXX_SIMD_HAVE_SSE_ABI
-#if _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI
-    vir::expand_one<vir::Template<base_template, simd_abi::__sse>,
-		    testtypes_fp>,
-#else
-    vir::expand_one<vir::Template<base_template, simd_abi::__sse>,
-		    testtypes_float>,
-#endif
-#endif
-#if _GLIBCXX_SIMD_HAVE_NEON
-#if _GLIBCXX_SIMD_HAVE_NEON_A32
-#if _GLIBCXX_SIMD_HAVE_NEON_A64
-    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    testtypes_float>,
-    vir::expand_one<vir::Template<base_template, simd_abi::_VecBuiltin<16>>,
-		    testtypes_fp>,
-#else
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
-      testtypes_float>,
-#endif
-#else
-    vir::expand_list<
-      vir::Typelist<vir::Template<base_template, simd_abi::_VecBuiltin<8>>,
-		    vir::Template<base_template, simd_abi::_VecBuiltin<16>>>,
-      testtypes_float>,
-#endif
-#endif
-    vir::expand_one<vir::Template<base_template, simd_abi::scalar>,
-		    testtypes_fp>>;
-#else  // !defined(ABITYPES) || ABITYPES == 0
-  vir::Typelist<>;
-#endif // !defined(ABITYPES) || ABITYPES == 0
+  typename vir::filter_list<vir::filter_predicate<first_tparam_is_not_fp>,
+			    native_test_types>::type;
 
 // fixed_size_abi_list {{{1
 using fixed_size_abi_list = vir::concat<
