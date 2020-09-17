@@ -2213,7 +2213,7 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else
 	  __assert_unreachable<_Tp>();
       } // }}}
-    else if (__builtin_is_constant_evaluated()) // {{{
+    else if (__builtin_is_constant_evaluated())
       return _Base::_S_equal_to(__x, __y);
     else if constexpr (sizeof(__x) == 8) // {{{
       {
