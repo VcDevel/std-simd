@@ -207,22 +207,18 @@ using real_test_types
 		vir::expand_list<fixed_size_abi_list, testtypes_fp>>;
 
 // many_fixed_size_types {{{1
-using many_fixed_size_types = vir::expand_list<
-  vir::Typelist<vir::Template<base_template, simd_abi::fixed_size<3>>,
-		vir::Template<base_template, simd_abi::fixed_size<4>>,
-		vir::Template<base_template, simd_abi::fixed_size<5>>,
-		vir::Template<base_template, simd_abi::fixed_size<6>>,
-		vir::Template<base_template, simd_abi::fixed_size<7>>,
-		vir::Template<base_template, simd_abi::fixed_size<8>>,
-		vir::Template<base_template, simd_abi::fixed_size<9>>,
-		vir::Template<base_template, simd_abi::fixed_size<10>>,
-		vir::Template<base_template, simd_abi::fixed_size<11>>,
-		vir::Template<base_template, simd_abi::fixed_size<12>>,
-		vir::Template<base_template, simd_abi::fixed_size<13>>,
-		vir::Template<base_template, simd_abi::fixed_size<14>>,
-		vir::Template<base_template, simd_abi::fixed_size<15>>,
-		vir::Template<base_template, simd_abi::fixed_size<17>>>,
-  testtypes_float>;
+using many_fixed_size_types = vir::expand_one<
+  vir::Template<base_template>,
+  vir::outer_product<
+    testtypes_float,
+    vir::Typelist<simd_abi::fixed_size<3>, simd_abi::fixed_size<4>,
+		  simd_abi::fixed_size<5>, simd_abi::fixed_size<6>,
+		  simd_abi::fixed_size<7>, simd_abi::fixed_size<8>,
+		  simd_abi::fixed_size<9>, simd_abi::fixed_size<10>,
+		  simd_abi::fixed_size<11>, simd_abi::fixed_size<12>,
+		  simd_abi::fixed_size<13>, simd_abi::fixed_size<14>,
+		  simd_abi::fixed_size<15>, simd_abi::fixed_size<17>>>>;
+
 // reduced_test_types {{{1
 #if _GLIBCXX_SIMD_HAVE_AVX512F
 // reduce compile times when AVX512 is available
