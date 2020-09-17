@@ -932,10 +932,10 @@ template <int _UsedBytes> struct simd_abi::_VecBuiltin
 
   template <typename _Tp>
   struct _IsValidSizeFor
-    : std::conjunction<
-	__bool_constant<(_UsedBytes / sizeof(_Tp) > 1
-			 && _UsedBytes % sizeof(_Tp) == 0)>,
-	__bool_constant<(_UsedBytes <= __vectorized_sizeof<_Tp>())>>
+    : __bool_constant<(_UsedBytes / sizeof(_Tp) > 1
+		       && _UsedBytes % sizeof(_Tp) == 0
+		       && _UsedBytes <= __vectorized_sizeof<_Tp>()
+		       && (!__have_avx512f || _UsedBytes <= 32))>
   {
   };
   template <typename _Tp>
