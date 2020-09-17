@@ -135,9 +135,14 @@ inline std::string
 filename()
 {
   static_assert(std::is_floating_point<T>::value, "");
-  static const auto cache = std::string("reference-") + F::str
-			    + (std::is_same<T, float>::value ? "-sp" : "-dp")
-			    + ".dat";
+  static const auto cache
+    = std::string("reference-") + F::str
+      + (std::is_same<T, float>::value
+	   ? "-sp"
+	   : std::is_same<T, double>::value
+	       ? "-dp"
+	       : std::is_same<T, long double>::value ? "-ep" : "-??")
+      + ".dat";
   return cache;
 }
 #endif // _GLIBCXX_SIMD_LINK_TESTDATA
