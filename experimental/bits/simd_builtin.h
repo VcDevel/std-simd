@@ -826,6 +826,7 @@ struct _GnuTraits
       return static_cast<const simd<_Tp, _Abi>*>(this)->_M_data.__builtin();
     }
   };
+
   struct _SimdBase1
   {
     explicit operator __intrinsic_type_t<_Tp, _Np>() const
@@ -833,6 +834,7 @@ struct _GnuTraits
       return __data(*static_cast<const simd<_Tp, _Abi>*>(this));
     }
   };
+
   using _SimdBase
     = std::conditional_t<std::is_same<__intrinsic_type_t<_Tp, _Np>,
 				      __vector_type_t<_Tp, _Np>>::value,
@@ -851,6 +853,7 @@ struct _GnuTraits
       return static_cast<const simd_mask<_Tp, _Abi>*>(this)->_M_data._M_data;
     }
   };
+
   struct _MaskBase1
   {
     explicit operator __intrinsic_type_t<_Tp, _Np>() const
@@ -858,6 +861,7 @@ struct _GnuTraits
       return __data(*static_cast<const simd_mask<_Tp, _Abi>*>(this));
     }
   };
+
   using _MaskBase
     = std::conditional_t<std::is_same<__intrinsic_type_t<_Tp, _Np>,
 				      __vector_type_t<_Tp, _Np>>::value,
@@ -938,11 +942,13 @@ template <int _UsedBytes> struct simd_abi::_VecBuiltin
 		       && (!__have_avx512f || _UsedBytes <= 32))>
   {
   };
+
   template <typename _Tp>
   struct _IsValid : std::conjunction<_IsValidAbiTag, __is_vectorizable<_Tp>,
 				     _IsValidSizeFor<_Tp>>
   {
   };
+
   template <typename _Tp>
   static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
@@ -1058,6 +1064,7 @@ template <int _UsedBytes> struct simd_abi::_VecBltnBtmsk
   struct _IsValidAbiTag : __bool_constant<(_UsedBytes > 1)>
   {
   };
+
   template <typename _Tp>
   struct _IsValidSizeFor
     : __bool_constant<(_UsedBytes / sizeof(_Tp) > 1
@@ -1065,6 +1072,7 @@ template <int _UsedBytes> struct simd_abi::_VecBltnBtmsk
 		       && (_UsedBytes > 32 || __have_avx512vl))>
   {
   };
+
   // Bitmasks require at least AVX512F. If sizeof(_Tp) < 4 the AVX512BW is also
   // required.
   template <typename _Tp>
@@ -1075,6 +1083,7 @@ template <int _UsedBytes> struct simd_abi::_VecBltnBtmsk
 		  _IsValidSizeFor<_Tp>>
   {
   };
+
   template <typename _Tp>
   static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 

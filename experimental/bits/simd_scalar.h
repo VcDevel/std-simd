@@ -62,12 +62,15 @@ struct simd_abi::_Scalar
   struct _IsValidAbiTag : true_type
   {
   };
+
   template <typename _Tp> struct _IsValidSizeFor : true_type
   {
   };
+
   template <typename _Tp> struct _IsValid : __is_vectorizable<_Tp>
   {
   };
+
   template <typename _Tp>
   static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
@@ -100,18 +103,22 @@ struct simd_abi::_Scalar
     {
       _SimdCastType() = delete;
     };
+
     struct _MaskCastType
     {
       _MaskCastType() = delete;
     };
+
     struct _SimdBase
     {
     };
+
     struct _MaskBase
     {
     };
   };
 };
+
 // }}}
 // _CommonImplScalar {{{
 struct _CommonImplScalar

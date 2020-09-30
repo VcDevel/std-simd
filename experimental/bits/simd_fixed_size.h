@@ -55,12 +55,14 @@ struct __simd_tuple_element<0, _SimdTuple<_Tp, _A0, _As...>>
 {
   using type = std::experimental::simd<_Tp, _A0>;
 };
+
 template <size_t _I, typename _Tp, typename _A0, typename... _As>
 struct __simd_tuple_element<_I, _SimdTuple<_Tp, _A0, _As...>>
 {
   using type =
     typename __simd_tuple_element<_I - 1, _SimdTuple<_Tp, _As...>>::type;
 };
+
 template <size_t _I, typename _Tp>
 using __simd_tuple_element_t = typename __simd_tuple_element<_I, _Tp>::type;
 
@@ -111,9 +113,11 @@ __simd_tuple_pop_front(_Tp&& __x)
 struct __as_simd
 {
 };
+
 struct __as_simd_tuple
 {
 };
+
 template <typename _Tp, typename _A0, typename... _Abis>
 _GLIBCXX_SIMD_INTRINSIC constexpr simd<_Tp, _A0>
 __simd_tuple_get_impl(__as_simd, const _SimdTuple<_Tp, _A0, _Abis...>& __t,
@@ -1061,12 +1065,14 @@ template <typename _Tp> struct _AbisInSimdTuple<_SimdTuple<_Tp>>
   using _Counts = std::index_sequence<0>;
   using _Begins = std::index_sequence<0>;
 };
+
 template <typename _Tp, typename _Ap>
 struct _AbisInSimdTuple<_SimdTuple<_Tp, _Ap>>
 {
   using _Counts = std::index_sequence<1>;
   using _Begins = std::index_sequence<0>;
 };
+
 template <typename _Tp, typename _A0, typename... _As>
 struct _AbisInSimdTuple<_SimdTuple<_Tp, _A0, _A0, _As...>>
 {
@@ -1075,6 +1081,7 @@ struct _AbisInSimdTuple<_SimdTuple<_Tp, _A0, _A0, _As...>>
   using _Begins = typename _SeqOp<typename _AbisInSimdTuple<
     _SimdTuple<_Tp, _A0, _As...>>::_Begins>::_NotFirstPlusOne;
 };
+
 template <typename _Tp, typename _A0, typename _A1, typename... _As>
 struct _AbisInSimdTuple<_SimdTuple<_Tp, _A0, _A1, _As...>>
 {
@@ -1122,6 +1129,7 @@ struct __autocvt_to_simd
     return reinterpret_cast<simd<typename _TT::value_type, _Abi>*>(&_M_data);
   }
 };
+
 template <typename _Tp> __autocvt_to_simd(_Tp &&) -> __autocvt_to_simd<_Tp>;
 
 template <typename _Tp> struct __autocvt_to_simd<_Tp, true>
@@ -1162,16 +1170,19 @@ template <int _Np> struct simd_abi::_Fixed
   struct _IsValidAbiTag : public __bool_constant<(_Np > 0)>
   {
   };
+
   template <typename _Tp>
   struct _IsValidSizeFor
     : __bool_constant<(_Np <= simd_abi::max_fixed_size<_Tp>)>
   {
   };
+
   template <typename _Tp>
   struct _IsValid
     : conjunction<_IsValidAbiTag, __is_vectorizable<_Tp>, _IsValidSizeFor<_Tp>>
   {
   };
+
   template <typename _Tp>
   static constexpr bool _S_is_valid_v = _IsValid<_Tp>::value;
 
