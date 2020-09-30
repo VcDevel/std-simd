@@ -289,7 +289,8 @@ struct _SimdImplScalar
 			      & __promote_preserving_unsigned(__y));
   }
 
-  template <typename _Tp> static constexpr inline _Tp _S_bit_or(_Tp __x, _Tp __y)
+  template <typename _Tp>
+  static constexpr inline _Tp _S_bit_or(_Tp __x, _Tp __y)
   {
     if constexpr (is_floating_point_v<_Tp>)
       {
@@ -643,7 +644,8 @@ struct _SimdImplScalar
     return __x == __y;
   }
   template <typename _Tp>
-  _GLIBCXX_SIMD_INTRINSIC constexpr static bool _S_not_equal_to(_Tp __x, _Tp __y)
+  _GLIBCXX_SIMD_INTRINSIC constexpr static bool _S_not_equal_to(_Tp __x,
+								_Tp __y)
   {
     return __x != __y;
   }

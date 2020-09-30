@@ -1720,8 +1720,10 @@ _GLIBCXX_SIMD_INTRINSIC constexpr _V
 __generate_vector(_Gp&& __gen)
 {
   if constexpr (__is_vector_type_v<_V>)
-    return __generate_vector_impl<typename _VVT::value_type, _VVT::_S_full_size>(
-      static_cast<_Gp&&>(__gen), std::make_index_sequence<_VVT::_S_full_size>());
+    return __generate_vector_impl<typename _VVT::value_type,
+				  _VVT::_S_full_size>(
+      static_cast<_Gp&&>(__gen),
+      std::make_index_sequence<_VVT::_S_full_size>());
   else
     return __generate_vector_impl<typename _VVT::value_type,
 				  _VVT::_S_partial_width>(
@@ -3866,11 +3868,10 @@ split(const simd<typename _V::value_type, _Ap>& __x)
 template <typename _V, typename _Ap,
 	  size_t _Parts
 	  = simd_size_v<typename _V::simd_type::value_type, _Ap> / _V::size()>
-enable_if_t<
-  (is_simd_mask_v<
-     _V> && simd_size_v<typename _V::simd_type::value_type, _Ap> == _Parts * _V::size()),
-  std::array<_V, _Parts>>
-split(const simd_mask<typename _V::simd_type::value_type, _Ap>& __x)
+  enable_if_t<(is_simd_mask_v<_V>
+      && simd_size_v<typename _V::simd_type::value_type, _Ap>
+	== _Parts * _V::size()), std::array<_V, _Parts>>
+  split(const simd_mask<typename _V::simd_type::value_type, _Ap>& __x)
 {
   if constexpr (std::is_same_v<_Ap, typename _V::abi_type>)
     {
@@ -4136,8 +4137,8 @@ public:
   _GLIBCXX_SIMD_INTRINSIC constexpr _SmartReference operator __op##=(          \
     _Tp&& __x)&&                                                               \
   {                                                                            \
-    const value_type& __lhs = _M_read();                                        \
-    _M_write(__lhs __op __x);                                                   \
+    const value_type& __lhs = _M_read();                                       \
+    _M_write(__lhs __op __x);                                                  \
     return {_M_obj, _M_index};                                                 \
   }
   _GLIBCXX_SIMD_ALL_ARITHMETICS(_GLIBCXX_SIMD_OP_);

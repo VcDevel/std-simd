@@ -198,11 +198,13 @@ __convert_x86(_V __v)
       else
 	return __zero_extend(__vector_bitcast<_Up>(__v));
     }
-  else if constexpr (_Np < _M && sizeof(_To) > 16) // zero extend (eg. xmm -> ymm){{{2
+  else if constexpr (_Np < _M && sizeof(_To) > 16) //{{{2
+    // zero extend (eg. xmm -> ymm)
     return __zero_extend(
       __convert_x86<__vector_type_t<
 	_Up, (16 / sizeof(_Up) > _Np) ? 16 / sizeof(_Up) : _Np>>(__v));
-  else if constexpr (_Np > _M && sizeof(__v) > 16) // partial input (eg. ymm -> xmm){{{2
+  else if constexpr (_Np > _M && sizeof(__v) > 16) //{{{2
+    // partial input (eg. ymm -> xmm)
     return __convert_x86<_To>(__extract_part<0, _Np / _M>(__v));
   else if constexpr (__i64_to_i32) //{{{2
     {

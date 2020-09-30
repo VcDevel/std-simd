@@ -2287,7 +2287,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else
 	  __assert_unreachable<_Tp>();
       } // }}}
-    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+    else if constexpr (!__builtin_is_constant_evaluated() // {{{
+		       && sizeof(__x) == 8)
       {
 	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
 			    != __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
@@ -2393,7 +2394,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else
 	  __assert_unreachable<_Tp>();
       } // }}}
-    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+    else if constexpr (!__builtin_is_constant_evaluated() // {{{
+		       && sizeof(__x) == 8)
       {
 	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
 			    < __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
@@ -2499,7 +2501,8 @@ template <typename _Abi> struct _SimdImplX86 : _SimdImplBuiltin<_Abi>
 	else
 	  __assert_unreachable<_Tp>();
       } // }}}
-    else if constexpr (!__builtin_is_constant_evaluated() && sizeof(__x) == 8) // {{{
+    else if constexpr (!__builtin_is_constant_evaluated() // {{{
+		       && sizeof(__x) == 8)
       {
 	const auto __r128 = __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__x)
 			    <= __vector_bitcast<_Tp, 16 / sizeof(_Tp)>(__y);
@@ -4693,7 +4696,8 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 
   template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
-  _S_bit_or(const _SimdWrapper<_Tp, _Np>& __x, const _SimdWrapper<_Tp, _Np>& __y)
+    _S_bit_or(const _SimdWrapper<_Tp, _Np>& __x,
+	      const _SimdWrapper<_Tp, _Np>& __y)
   {
     if constexpr (std::is_same_v<_Tp, bool>)
       {
@@ -4840,7 +4844,8 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 		 != 0;
       }
     else if constexpr (__is_avx512_abi<_Abi>())
-      return (__k._M_data._M_data & _Abi::template _S_implicit_mask<_Tp>()) != 0;
+      return (__k._M_data._M_data & _Abi::template _S_implicit_mask<_Tp>())
+	     != 0;
   }
 
   // }}}
@@ -4873,7 +4878,8 @@ struct _MaskImplX86 : _MaskImplX86Mixin, _MaskImplBuiltin<_Abi>
 		 == 0;
       }
     else if constexpr (__is_avx512_abi<_Abi>())
-      return (__k._M_data._M_data & _Abi::template _S_implicit_mask<_Tp>()) == 0;
+      return (__k._M_data._M_data & _Abi::template _S_implicit_mask<_Tp>())
+	     == 0;
   }
 
   // }}}

@@ -336,8 +336,8 @@ __fold_input(const simd<float, _Abi>& __x)
   // zero most mantissa bits:
   constexpr float __1_over_pi = 0x1.45F306p-2f; // 1/π
   const auto __y = (__r._M_x * __1_over_pi + 0x1.8p23f) - 0x1.8p23f;
-  // split π into 4 parts, the first three with 13 trailing zeros (to make the following
-  // multiplications precise):
+  // split π into 4 parts, the first three with 13 trailing zeros (to make the
+  // following multiplications precise):
   constexpr float __pi0 = 0x1.920000p1f;
   constexpr float __pi1 = 0x1.fb4000p-11f;
   constexpr float __pi2 = 0x1.444000p-23f;

@@ -587,11 +587,10 @@ __convert_all(_From __v)
 					 _ToVT::_S_full_size)>(__v))};
 	}
 #if _GLIBCXX_SIMD_X86INTRIN // {{{
-      else if constexpr (
-	!__have_sse4_1 && _Offset == 0
-	&& is_integral_v<
-	  typename _FromVT::
-	    value_type> && sizeof(typename _FromVT::value_type) < sizeof(typename _ToVT::value_type)
+      else if constexpr (!__have_sse4_1 && _Offset == 0
+	&& is_integral_v<typename _FromVT::value_type>
+	&& sizeof(typename _FromVT::value_type)
+	  < sizeof(typename _ToVT::value_type)
 	&& !(sizeof(typename _FromVT::value_type) == 4
 	     && is_same_v<typename _ToVT::value_type, double>) )
 	{
@@ -1551,10 +1550,8 @@ template <typename _Abi> struct _SimdImplBuiltin
     [[maybe_unused]] const auto __vi = __to_intrin(__v);
     constexpr size_t __max_store_size
       = _SuperImpl::template _S_max_store_size<_Up>;
-    if constexpr (
-      std::is_same_v<
-	_Tp,
-	_Up> || (std::is_integral_v<_Tp> && std::is_integral_v<_Up> && sizeof(_Tp) == sizeof(_Up)))
+    if constexpr (std::is_same_v<_Tp, _Up> || (std::is_integral_v<_Tp>
+	  && std::is_integral_v<_Up> && sizeof(_Tp) == sizeof(_Up)))
       {
 	// bitwise or no conversion, reinterpret:
 	const _MaskMember<_Up> __kk = [&]() {
@@ -2312,7 +2309,8 @@ template <typename _Abi> struct _SimdImplBuiltin
     // compare to inf using the corresponding integer type
     /*
        return
-       __vector_bitcast<_Tp>(__vector_bitcast<__int_for_sizeof_t<_Tp>>(_S_abs(__x)._M_data)
+       __vector_bitcast<_Tp>(__vector_bitcast<__int_for_sizeof_t<_Tp>>(
+			     _S_abs(__x)._M_data)
        ==
        __vector_bitcast<__int_for_sizeof_t<_Tp>>(__vector_broadcast<_Np>(
        __infinity_v<_Tp>)));
@@ -2935,7 +2933,8 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static int _S_find_first_set(simd_mask<_Tp, _Abi> __k)
   {
-    return _BitOps::_S_firstbit(_SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
+    return _BitOps::_S_firstbit(
+      _SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
   }
 
   // }}}
@@ -2943,7 +2942,8 @@ template <typename _Abi> struct _MaskImplBuiltin : _MaskImplBuiltinMixin
   template <typename _Tp>
   _GLIBCXX_SIMD_INTRINSIC static int _S_find_last_set(simd_mask<_Tp, _Abi> __k)
   {
-    return _BitOps::_S_lastbit(_SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
+    return _BitOps::_S_lastbit(
+      _SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
   }
 
   // }}}

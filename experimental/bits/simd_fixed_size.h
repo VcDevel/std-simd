@@ -1385,9 +1385,9 @@ template <int _Np> struct _SimdImplFixedSize
       if (__meta._S_submask(__bits).any())
 #pragma GCC diagnostic push
       // __mem + __mem._S_offset could be UB ([expr.add]/4.3, but it punts the
-      // responsibility for avoiding UB to the caller of the masked store via the
-      // mask. Consequently, the compiler may assume this branch is unreachable,
-      // if the pointer arithmetic is UB.
+      // responsibility for avoiding UB to the caller of the masked store via
+      // the mask. Consequently, the compiler may assume this branch is
+      // unreachable, if the pointer arithmetic is UB.
 #pragma GCC diagnostic ignored "-Warray-bounds"
 	__meta._S_masked_store(__native, __mem + __meta._S_offset,
 			       __meta._S_make_mask(__bits));
