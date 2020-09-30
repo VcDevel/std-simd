@@ -41,7 +41,7 @@ template <typename _Tp>
 _GLIBCXX_SIMD_INTRINSIC constexpr decltype(auto)
 __promote_preserving_unsigned(const _Tp& __x)
 {
-  if constexpr (std::is_signed_v<decltype(+__x)> && std::is_unsigned_v<_Tp>)
+  if constexpr (is_signed_v<decltype(+__x)> && is_unsigned_v<_Tp>)
     return static_cast<unsigned int>(__x);
   else
     return __x;

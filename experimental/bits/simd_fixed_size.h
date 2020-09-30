@@ -28,15 +28,15 @@
 /*
  * The fixed_size ABI gives the following guarantees:
  *  - simd objects are passed via the stack
- *  - memory layout of `simd<_Tp, _Np>` is equivalent to `std::array<_Tp, _Np>`
+ *  - memory layout of `simd<_Tp, _Np>` is equivalent to `array<_Tp, _Np>`
  *  - alignment of `simd<_Tp, _Np>` is `_Np * sizeof(_Tp)` if _Np is __a
  *    power-of-2 value, otherwise `__next_power_of_2(_Np * sizeof(_Tp))` (Note:
  *    if the alignment were to exceed the system/compiler maximum, it is bounded
  *    to that maximum)
- *  - simd_mask objects are passed like std::bitset<_Np>
- *  - memory layout of `simd_mask<_Tp, _Np>` is equivalent to `std::bitset<_Np>`
+ *  - simd_mask objects are passed like bitset<_Np>
+ *  - memory layout of `simd_mask<_Tp, _Np>` is equivalent to `bitset<_Np>`
  *  - alignment of `simd_mask<_Tp, _Np>` is equal to the alignment of
- *    `std::bitset<_Np>`
+ *    `bitset<_Np>`
  */
 
 #ifndef _GLIBCXX_EXPERIMENTAL_SIMD_FIXED_SIZE_H_
@@ -53,7 +53,7 @@ template <size_t _I, typename _Tp> struct __simd_tuple_element;
 template <typename _Tp, typename _A0, typename... _As>
 struct __simd_tuple_element<0, _SimdTuple<_Tp, _A0, _As...>>
 {
-  using type = std::experimental::simd<_Tp, _A0>;
+  using type = simd<_Tp, _A0>;
 };
 
 template <size_t _I, typename _Tp, typename _A0, typename... _As>
@@ -192,7 +192,7 @@ struct __tuple_element_meta : public _Abi::_SimdImpl
   using _Traits = _SimdTraits<_Tp, _Abi>;
   using _MaskImpl = typename _Abi::_MaskImpl;
   using _MaskMember = typename _Traits::_MaskMember;
-  using simd_type = std::experimental::simd<_Tp, _Abi>;
+  using simd_type = simd<_Tp, _Abi>;
   static constexpr size_t _S_offset = _Offset;
   static constexpr size_t _S_size() { return simd_size<_Tp, _Abi>::value; }
   static constexpr _MaskImpl _S_mask_impl = {};
@@ -347,7 +347,7 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
   }
   static constexpr size_t _S_first_size = simd_size_v<_Tp, _Abi0>;
   static constexpr bool _S_is_homogeneous
-    = (std::is_same_v<_Abi0, _Abis> && ...);
+    = (is_same_v<_Abi0, _Abis> && ...);
 
   using _Base = _SimdTupleData<typename _SimdTraits<_Tp, _Abi0>::_SimdMember,
 			       _SimdTuple<_Tp, _Abis...>>;
@@ -586,13 +586,12 @@ struct _SimdTuple<_Tp, _Abi0, _Abis...>
 
   template <typename _Up, _Up _I>
   _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
-  operator[](std::integral_constant<_Up, _I>) const noexcept
+  operator[](integral_constant<_Up, _I>) const noexcept
   {
     if constexpr (_I < simd_size_v<_Tp, _Abi0>)
       return _M_subscript_read(_I);
     else
-      return second[std::integral_constant<_Up,
-					   _I - simd_size_v<_Tp, _Abi0>>()];
+      return second[integral_constant<_Up, _I - simd_size_v<_Tp, _Abi0>>()];
   }
 
   _Tp operator[](size_t __i) const noexcept
@@ -658,14 +657,13 @@ private:
 // __make_simd_tuple {{{1
 template <typename _Tp, typename _A0>
 _GLIBCXX_SIMD_INTRINSIC _SimdTuple<_Tp, _A0>
-__make_simd_tuple(std::experimental::simd<_Tp, _A0> __x0)
+  __make_simd_tuple(simd<_Tp, _A0> __x0)
 {
   return {__data(__x0)};
 }
 template <typename _Tp, typename _A0, typename... _As>
 _GLIBCXX_SIMD_INTRINSIC _SimdTuple<_Tp, _A0, _As...>
-__make_simd_tuple(const std::experimental::simd<_Tp, _A0>& __x0,
-		  const std::experimental::simd<_Tp, _As>&... __xs)
+  __make_simd_tuple(const simd<_Tp, _A0>& __x0, const simd<_Tp, _As>&... __xs)
 {
   return {__data(__x0), __make_simd_tuple(__xs...)};
 }
@@ -690,7 +688,7 @@ __make_simd_tuple(
 // __to_simd_tuple {{{1
 template <typename _Tp, size_t _Np, typename _V, size_t _NV, typename... _VX>
 _GLIBCXX_SIMD_INTRINSIC constexpr __fixed_size_storage_t<_Tp, _Np>
-__to_simd_tuple(const std::array<_V, _NV>& __from, const _VX... __fromX);
+__to_simd_tuple(const array<_V, _NV>& __from, const _VX... __fromX);
 
 template <typename _Tp, size_t _Np,
 	  size_t _Offset = 0, // skip this many elements in __from0
@@ -699,7 +697,7 @@ template <typename _Tp, size_t _Np,
 _GLIBCXX_SIMD_INTRINSIC _R constexpr __to_simd_tuple(const _V0 __from0,
 						     const _VX... __fromX)
 {
-  static_assert(std::is_same_v<typename _V0VT::value_type, _Tp>);
+  static_assert(is_same_v<typename _V0VT::value_type, _Tp>);
   static_assert(_Offset < _V0VT::_S_full_size);
   using _R0 = __vector_type_t<_Tp, _R::_S_first_size>;
   if constexpr (_R::_S_tuple_size == 1)
@@ -775,16 +773,16 @@ _GLIBCXX_SIMD_INTRINSIC _R constexpr __to_simd_tuple(const _V0 __from0,
 
 template <typename _Tp, size_t _Np, typename _V, size_t _NV, typename... _VX>
 _GLIBCXX_SIMD_INTRINSIC constexpr __fixed_size_storage_t<_Tp, _Np>
-__to_simd_tuple(const std::array<_V, _NV>& __from, const _VX... __fromX)
+__to_simd_tuple(const array<_V, _NV>& __from, const _VX... __fromX)
 {
-  if constexpr (std::is_same_v<_Tp, _V>)
+  if constexpr (is_same_v<_Tp, _V>)
     {
       static_assert(
 	sizeof...(_VX) == 0,
 	"An array of scalars must be the last argument to __to_simd_tuple");
       return __call_with_subscripts(
 	__from,
-	std::make_index_sequence<_NV>(), [&](const auto... __args) constexpr {
+	make_index_sequence<_NV>(), [&](const auto... __args) constexpr {
 	  return __simd_tuple_concat(
 	    _SimdTuple<_Tp, simd_abi::scalar>{__args}..., _SimdTuple<_Tp>());
 	});
@@ -792,7 +790,7 @@ __to_simd_tuple(const std::array<_V, _NV>& __from, const _VX... __fromX)
   else
     return __call_with_subscripts(
       __from,
-      std::make_index_sequence<_NV>(), [&](const auto... __args) constexpr {
+      make_index_sequence<_NV>(), [&](const auto... __args) constexpr {
 	return __to_simd_tuple<_Tp, _Np>(__args..., __fromX...);
       });
 }
@@ -802,8 +800,8 @@ template <typename _Tp, typename _A0, size_t _NOut, size_t _Np,
 	  size_t... _Indexes>
 _GLIBCXX_SIMD_INTRINSIC __fixed_size_storage_t<_Tp, _NOut>
 __to_simd_tuple_impl(
-  std::index_sequence<_Indexes...>,
-  const std::array<__vector_type_t<_Tp, simd_size_v<_Tp, _A0>>, _Np>& __args)
+  index_sequence<_Indexes...>,
+  const array<__vector_type_t<_Tp, simd_size_v<_Tp, _A0>>, _Np>& __args)
 {
   return __make_simd_tuple<_Tp, __to_tuple_helper<_Indexes, _A0>...>(
     __args[_Indexes]...);
@@ -813,11 +811,11 @@ template <typename _Tp, typename _A0, size_t _NOut, size_t _Np,
 	  typename _R = __fixed_size_storage_t<_Tp, _NOut>>
 _GLIBCXX_SIMD_INTRINSIC _R
 __to_simd_tuple_sized(
-  const std::array<__vector_type_t<_Tp, simd_size_v<_Tp, _A0>>, _Np>& __args)
+  const array<__vector_type_t<_Tp, simd_size_v<_Tp, _A0>>, _Np>& __args)
 {
   static_assert(_Np * simd_size_v<_Tp, _A0> >= _NOut);
   return __to_simd_tuple_impl<_Tp, _A0, _NOut>(
-    std::make_index_sequence<_R::_S_tuple_size>(), __args);
+    make_index_sequence<_R::_S_tuple_size>(), __args);
 }
 
 // __optimize_simd_tuple {{{1
@@ -842,7 +840,7 @@ _GLIBCXX_SIMD_INTRINSIC _R
 __optimize_simd_tuple(const _SimdTuple<_Tp, _A0, _A1, _Abis...>& __x)
 {
   using _Tup = _SimdTuple<_Tp, _A0, _A1, _Abis...>;
-  if constexpr (std::is_same_v<_R, _Tup>)
+  if constexpr (is_same_v<_R, _Tup>)
     return __x;
   else if constexpr (is_same_v<typename _R::_FirstType,
 			       typename _Tup::_FirstType>)
@@ -1051,26 +1049,26 @@ struct __fixed_size_storage_builder<_Tp, _Np, _SimdTuple<_Tp, _As...>, _Next,
 // _AbisInSimdTuple {{{
 template <typename _Tp> struct _SeqOp;
 template <size_t _I0, size_t... _Is>
-struct _SeqOp<std::index_sequence<_I0, _Is...>>
+struct _SeqOp<index_sequence<_I0, _Is...>>
 {
-  using _FirstPlusOne = std::index_sequence<_I0 + 1, _Is...>;
-  using _NotFirstPlusOne = std::index_sequence<_I0, (_Is + 1)...>;
+  using _FirstPlusOne = index_sequence<_I0 + 1, _Is...>;
+  using _NotFirstPlusOne = index_sequence<_I0, (_Is + 1)...>;
   template <size_t _First, size_t _Add>
-  using _Prepend = std::index_sequence<_First, _I0 + _Add, (_Is + _Add)...>;
+  using _Prepend = index_sequence<_First, _I0 + _Add, (_Is + _Add)...>;
 };
 
 template <typename _Tp> struct _AbisInSimdTuple;
 template <typename _Tp> struct _AbisInSimdTuple<_SimdTuple<_Tp>>
 {
-  using _Counts = std::index_sequence<0>;
-  using _Begins = std::index_sequence<0>;
+  using _Counts = index_sequence<0>;
+  using _Begins = index_sequence<0>;
 };
 
 template <typename _Tp, typename _Ap>
 struct _AbisInSimdTuple<_SimdTuple<_Tp, _Ap>>
 {
-  using _Counts = std::index_sequence<1>;
-  using _Begins = std::index_sequence<0>;
+  using _Counts = index_sequence<1>;
+  using _Begins = index_sequence<0>;
 };
 
 template <typename _Tp, typename _A0, typename... _As>
@@ -1093,7 +1091,7 @@ struct _AbisInSimdTuple<_SimdTuple<_Tp, _A0, _A1, _As...>>
 
 // }}}
 // __autocvt_to_simd {{{
-template <typename _Tp, bool = std::is_arithmetic_v<__remove_cvref_t<_Tp>>>
+template <typename _Tp, bool = is_arithmetic_v<__remove_cvref_t<_Tp>>>
 struct __autocvt_to_simd
 {
   _Tp _M_data;
@@ -1101,14 +1099,14 @@ struct __autocvt_to_simd
   operator _TT() { return _M_data; }
   operator _TT&()
   {
-    static_assert(std::is_lvalue_reference<_Tp>::value, "");
-    static_assert(!std::is_const<_Tp>::value, "");
+    static_assert(is_lvalue_reference<_Tp>::value, "");
+    static_assert(!is_const<_Tp>::value, "");
     return _M_data;
   }
   operator _TT*()
   {
-    static_assert(std::is_lvalue_reference<_Tp>::value, "");
-    static_assert(!std::is_const<_Tp>::value, "");
+    static_assert(is_lvalue_reference<_Tp>::value, "");
+    static_assert(!is_const<_Tp>::value, "");
     return &_M_data;
   }
 
@@ -1144,14 +1142,14 @@ template <typename _Tp> struct __autocvt_to_simd<_Tp, true>
   operator fixed_size_simd<_TT, 1>() { return _M_fd; }
   operator fixed_size_simd<_TT, 1> &()
   {
-    static_assert(std::is_lvalue_reference<_Tp>::value, "");
-    static_assert(!std::is_const<_Tp>::value, "");
+    static_assert(is_lvalue_reference<_Tp>::value, "");
+    static_assert(!is_const<_Tp>::value, "");
     return _M_fd;
   }
   operator fixed_size_simd<_TT, 1> *()
   {
-    static_assert(std::is_lvalue_reference<_Tp>::value, "");
-    static_assert(!std::is_const<_Tp>::value, "");
+    static_assert(is_lvalue_reference<_Tp>::value, "");
+    static_assert(!is_const<_Tp>::value, "");
     return &_M_fd;
   }
 };
@@ -1238,9 +1236,9 @@ template <int _Np> struct simd_abi::_Fixed
       {
 	return static_cast<const simd<_Tp, _Fixed>*>(this)->_M_data;
       }
-      explicit operator std::array<_Tp, _Np>() const
+      explicit operator array<_Tp, _Np>() const
       {
-	std::array<_Tp, _Np> __r;
+	array<_Tp, _Np> __r;
 	// _SimdMember can be larger because of higher alignment
 	static_assert(sizeof(__r) <= sizeof(_SimdMember), "");
 	__builtin_memcpy(__r.data(), &static_cast<const _SimdMember&>(*this),
@@ -1251,7 +1249,7 @@ template <int _Np> struct simd_abi::_Fixed
 
     // }}}
     // _MaskBase {{{
-    // empty. The std::bitset interface suffices
+    // empty. The bitset interface suffices
     struct _MaskBase
     {
     };
@@ -1260,7 +1258,7 @@ template <int _Np> struct simd_abi::_Fixed
     // _SimdCastType {{{
     struct _SimdCastType
     {
-      _SimdCastType(const std::array<_Tp, _Np>&);
+      _SimdCastType(const array<_Tp, _Np>&);
       _SimdCastType(const _SimdMember& dd) : _M_data(dd) {}
       explicit operator const _SimdMember &() const { return _M_data; }
 
@@ -1305,9 +1303,9 @@ template <int _Np> struct _SimdImplFixedSize
   using _MaskMember = _SanitizedBitMask<_Np>;
   template <typename _Tp> using _SimdMember = __fixed_size_storage_t<_Tp, _Np>;
   template <typename _Tp>
-  static constexpr std::size_t _S_tuple_size = _SimdMember<_Tp>::_S_tuple_size;
+  static constexpr size_t _S_tuple_size = _SimdMember<_Tp>::_S_tuple_size;
   template <typename _Tp>
-  using _Simd = std::experimental::simd<_Tp, simd_abi::fixed_size<_Np>>;
+  using _Simd = simd<_Tp, simd_abi::fixed_size<_Np>>;
   template <typename _Tp> using _TypeTag = _Tp*;
 
   // broadcast {{{2
@@ -1591,7 +1589,7 @@ template <int _Np> struct _SimdImplFixedSize
     else if constexpr (                                                        \
       is_same_v<                                                               \
 	_Tp,                                                                   \
-	_RetTp> && (... && std::is_same_v<_SimdTuple<_Tp, _As...>, _More>) )   \
+	_RetTp> && (... && is_same_v<_SimdTuple<_Tp, _As...>, _More>) )   \
       return __x._M_apply_per_chunk(                                           \
 	[](auto __impl, auto __xx, auto... __pack) constexpr {                 \
 	  using _V = typename decltype(__impl)::simd_type;                     \

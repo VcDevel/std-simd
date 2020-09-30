@@ -27,25 +27,25 @@
 namespace std {
 
 template <template <typename> class _Trait, typename _Tp, typename = void>
-struct __value_exists_impl : std::false_type
+struct __value_exists_impl : false_type
 {
 };
 
 template <template <typename> class _Trait, typename _Tp>
 struct __value_exists_impl<_Trait, _Tp,
-			   std::void_t<decltype(_Trait<_Tp>::value)>>
-  : std::true_type
+			   void_t<decltype(_Trait<_Tp>::value)>>
+  : true_type
 {
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>> struct __digits_impl
+template <typename _Tp, bool = is_arithmetic_v<_Tp>> struct __digits_impl
 {
 };
 
 template <typename _Tp> struct __digits_impl<_Tp, true>
 {
   static inline constexpr int value
-    = sizeof(_Tp) * __CHAR_BIT__ - std::is_signed_v<_Tp>;
+    = sizeof(_Tp) * __CHAR_BIT__ - is_signed_v<_Tp>;
 };
 
 template <> struct __digits_impl<float, true>
@@ -63,7 +63,7 @@ template <> struct __digits_impl<long double, true>
   static inline constexpr int value = __LDBL_MANT_DIG__;
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>> struct __digits10_impl
+template <typename _Tp, bool = is_arithmetic_v<_Tp>> struct __digits10_impl
 {
 };
 
@@ -88,7 +88,7 @@ template <> struct __digits10_impl<long double, true>
   static inline constexpr int value = __LDBL_DIG__;
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>>
+template <typename _Tp, bool = is_arithmetic_v<_Tp>>
 struct __max_digits10_impl
 {
 };
@@ -96,7 +96,7 @@ struct __max_digits10_impl
 template <typename _Tp> struct __max_digits10_impl<_Tp, true>
 {
   static inline constexpr int value
-    = std::is_floating_point_v<_Tp>
+    = is_floating_point_v<_Tp>
 	? 2 + __digits_impl<_Tp>::value * 643L / 2136
 	: __digits10_impl<_Tp>::value + 1;
 };
@@ -177,14 +177,14 @@ template <> struct __min_exponent10_impl<long double>
   static inline constexpr int value = __LDBL_MIN_10_EXP__;
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>> struct __radix_impl
+template <typename _Tp, bool = is_arithmetic_v<_Tp>> struct __radix_impl
 {
 };
 
 template <typename _Tp> struct __radix_impl<_Tp, true>
 {
   static inline constexpr int value
-    = std::is_floating_point_v<_Tp> ? __FLT_RADIX__ : 2;
+    = is_floating_point_v<_Tp> ? __FLT_RADIX__ : 2;
 };
 
 // [num.traits.util], numeric utility traits
@@ -206,7 +206,7 @@ inline constexpr _Up
     return __def;
 }
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>> struct __norm_min_impl
+template <typename _Tp, bool = is_arithmetic_v<_Tp>> struct __norm_min_impl
 {
 };
 
@@ -274,7 +274,7 @@ template <> struct __epsilon_impl<long double>
   static inline constexpr long double value = __LDBL_EPSILON__;
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>>
+template <typename _Tp, bool = is_arithmetic_v<_Tp>>
 struct __finite_min_impl
 {
 };
@@ -282,7 +282,7 @@ struct __finite_min_impl
 template <typename _Tp> struct __finite_min_impl<_Tp, true>
 {
   static inline constexpr _Tp value
-    = std::is_unsigned_v<_Tp> ? _Tp()
+    = is_unsigned_v<_Tp> ? _Tp()
 			      : -2 * (_Tp(1) << __digits_impl<_Tp>::value - 1);
 };
 
@@ -301,7 +301,7 @@ template <> struct __finite_min_impl<long double, true>
   static inline constexpr long double value = -__LDBL_MAX__;
 };
 
-template <typename _Tp, bool = std::is_arithmetic_v<_Tp>>
+template <typename _Tp, bool = is_arithmetic_v<_Tp>>
 struct __finite_max_impl
 {
 };
@@ -376,7 +376,7 @@ template <> struct __quiet_NaN_impl<long double>
 };
 #endif
 
-template <typename _Tp, bool = std::is_floating_point_v<_Tp>>
+template <typename _Tp, bool = is_floating_point_v<_Tp>>
 struct __reciprocal_overflow_threshold_impl
 {
 };
@@ -405,7 +405,7 @@ template <typename _Tp> struct __reciprocal_overflow_threshold_impl<_Tp, true>
 		_Tp(0.99) / __finite_max_impl<_Tp>::value);
 };
 
-template <typename _Tp, bool = std::is_floating_point_v<_Tp>>
+template <typename _Tp, bool = is_floating_point_v<_Tp>>
 struct __round_error_impl
 {
 };
@@ -442,52 +442,52 @@ template <> struct __signaling_NaN_impl<long double>
 
 // [num.traits.val], numeric distinguished value traits
 template <typename _Tp>
-struct __denorm_min : __denorm_min_impl<std::remove_cv_t<_Tp>>
+struct __denorm_min : __denorm_min_impl<remove_cv_t<_Tp>>
 {
 };
 
-template <typename _Tp> struct __epsilon : __epsilon_impl<std::remove_cv_t<_Tp>>
-{
-};
-
-template <typename _Tp>
-struct __finite_max : __finite_max_impl<std::remove_cv_t<_Tp>>
+template <typename _Tp> struct __epsilon : __epsilon_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __finite_min : __finite_min_impl<std::remove_cv_t<_Tp>>
+struct __finite_max : __finite_max_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __infinity : __infinity_impl<std::remove_cv_t<_Tp>>
+struct __finite_min : __finite_min_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __norm_min : __norm_min_impl<std::remove_cv_t<_Tp>>
+struct __infinity : __infinity_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __quiet_NaN : __quiet_NaN_impl<std::remove_cv_t<_Tp>>
+struct __norm_min : __norm_min_impl<remove_cv_t<_Tp>>
+{
+};
+
+template <typename _Tp>
+struct __quiet_NaN : __quiet_NaN_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
 struct __reciprocal_overflow_threshold
-  : __reciprocal_overflow_threshold_impl<std::remove_cv_t<_Tp>>
+  : __reciprocal_overflow_threshold_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __round_error : __round_error_impl<std::remove_cv_t<_Tp>>
+struct __round_error : __round_error_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __signaling_NaN : __signaling_NaN_impl<std::remove_cv_t<_Tp>>
+struct __signaling_NaN : __signaling_NaN_impl<remove_cv_t<_Tp>>
 {
 };
 
@@ -514,41 +514,41 @@ template <typename _Tp>
 inline constexpr auto __signaling_NaN_v = __signaling_NaN<_Tp>::value;
 
 // [num.traits.char], numeric characteristics traits
-template <typename _Tp> struct __digits : __digits_impl<std::remove_cv_t<_Tp>>
+template <typename _Tp> struct __digits : __digits_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __digits10 : __digits10_impl<std::remove_cv_t<_Tp>>
+struct __digits10 : __digits10_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __max_digits10 : __max_digits10_impl<std::remove_cv_t<_Tp>>
+struct __max_digits10 : __max_digits10_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __max_exponent : __max_exponent_impl<std::remove_cv_t<_Tp>>
+struct __max_exponent : __max_exponent_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __max_exponent10 : __max_exponent10_impl<std::remove_cv_t<_Tp>>
+struct __max_exponent10 : __max_exponent10_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __min_exponent : __min_exponent_impl<std::remove_cv_t<_Tp>>
+struct __min_exponent : __min_exponent_impl<remove_cv_t<_Tp>>
 {
 };
 
 template <typename _Tp>
-struct __min_exponent10 : __min_exponent10_impl<std::remove_cv_t<_Tp>>
+struct __min_exponent10 : __min_exponent10_impl<remove_cv_t<_Tp>>
 {
 };
 
-template <typename _Tp> struct __radix : __radix_impl<std::remove_cv_t<_Tp>>
+template <typename _Tp> struct __radix : __radix_impl<remove_cv_t<_Tp>>
 {
 };
 
@@ -569,7 +569,7 @@ template <typename _Tp> inline constexpr auto __radix_v = __radix<_Tp>::value;
 
 // mkretz's extensions
 // TODO: does GCC tell me? __GCC_IEC_559 >= 2 is not the right answer
-template <typename _Tp> struct __has_iec559_storage_format : std::true_type
+template <typename _Tp> struct __has_iec559_storage_format : true_type
 {
 };
 
@@ -593,7 +593,7 @@ inline constexpr bool __has_iec559_storage_format_v
      - isinf(1/0) is true
  */
 template <template <typename> class _Trait, typename _Tp>
-struct __has_iec559_behavior : std::false_type
+struct __has_iec559_behavior : false_type
 {
 };
 
@@ -603,39 +603,39 @@ inline constexpr bool __has_iec559_behavior_v
 
 #if !__FINITE_MATH_ONLY__
 #if __FLT_HAS_QUIET_NAN__
-template <> struct __has_iec559_behavior<__quiet_NaN, float> : std::true_type
+template <> struct __has_iec559_behavior<__quiet_NaN, float> : true_type
 {
 };
 #endif
 
 #if __DBL_HAS_QUIET_NAN__
-template <> struct __has_iec559_behavior<__quiet_NaN, double> : std::true_type
+template <> struct __has_iec559_behavior<__quiet_NaN, double> : true_type
 {
 };
 #endif
 
 #if __LDBL_HAS_QUIET_NAN__
 template <>
-struct __has_iec559_behavior<__quiet_NaN, long double> : std::true_type
+struct __has_iec559_behavior<__quiet_NaN, long double> : true_type
 {
 };
 #endif
 
 #if __FLT_HAS_INFINITY__
-template <> struct __has_iec559_behavior<__infinity, float> : std::true_type
+template <> struct __has_iec559_behavior<__infinity, float> : true_type
 {
 };
 #endif
 
 #if __DBL_HAS_INFINITY__
-template <> struct __has_iec559_behavior<__infinity, double> : std::true_type
+template <> struct __has_iec559_behavior<__infinity, double> : true_type
 {
 };
 #endif
 
 #if __LDBL_HAS_INFINITY__
 template <>
-struct __has_iec559_behavior<__infinity, long double> : std::true_type
+struct __has_iec559_behavior<__infinity, long double> : true_type
 {
 };
 #endif
@@ -643,21 +643,21 @@ struct __has_iec559_behavior<__infinity, long double> : std::true_type
 #ifdef __SUPPORT_SNAN__
 #if __FLT_HAS_QUIET_NAN__
 template <>
-struct __has_iec559_behavior<__signaling_NaN, float> : std::true_type
+struct __has_iec559_behavior<__signaling_NaN, float> : true_type
 {
 };
 #endif
 
 #if __DBL_HAS_QUIET_NAN__
 template <>
-struct __has_iec559_behavior<__signaling_NaN, double> : std::true_type
+struct __has_iec559_behavior<__signaling_NaN, double> : true_type
 {
 };
 #endif
 
 #if __LDBL_HAS_QUIET_NAN__
 template <>
-struct __has_iec559_behavior<__signaling_NaN, long double> : std::true_type
+struct __has_iec559_behavior<__signaling_NaN, long double> : true_type
 {
 };
 #endif

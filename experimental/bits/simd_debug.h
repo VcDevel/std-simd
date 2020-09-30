@@ -154,20 +154,20 @@ public:
   {
     __color = __color > 37 ? 30 : __color + 1;
     __buffer << "\n\033[1;40;" << __color << "m      ";
-    [](const std::initializer_list<int>&) {}({(__print(__args, int()), 0)...});
+    [](const initializer_list<int>&) {}({(__print(__args, int()), 0)...});
     return *this;
   }
 
 private:
   template <typename _Tp,
-	    typename = decltype(__buffer << std::declval<const _Tp&>())>
+	    typename = decltype(__buffer << declval<const _Tp&>())>
   void __print(const _Tp& __x, int)
   {
     __buffer << ' ' << __x;
   }
 
   template <typename _Tp,
-	    typename = decltype(__buffer << std::declval<const _Tp&>()[0])>
+	    typename = decltype(__buffer << declval<const _Tp&>()[0])>
   void __print(const _Tp& __x, float)
   {
     using _U = __remove_cvref_t<decltype(__x[0])>;

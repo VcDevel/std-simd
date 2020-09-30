@@ -69,7 +69,7 @@ template <typename _Abi> struct _SimdImplNeon : _SimdImplBuiltin<_Abi>
 
   // }}}
   // _S_masked_store_nocvt {{{
-  template <typename _Tp, std::size_t _Np>
+  template <typename _Tp, size_t _Np>
   _GLIBCXX_SIMD_INTRINSIC static void
   _S_masked_store_nocvt(_SimdWrapper<_Tp, _Np> __v, _Tp* __mem,
 			_MaskMember<_Tp> __k)
@@ -439,7 +439,7 @@ struct _MaskImplNeon : _MaskImplNeonMixin, _MaskImplBuiltin<_Abi>
 	const auto __kk
 	  = __vector_bitcast<char>(__k._M_data)
 	    | ~__vector_bitcast<char>(_Abi::template _S_implicit_mask<_Tp>());
-	using _Up = std::make_unsigned_t<__int_for_sizeof_t<decltype(__kk)>>;
+	using _Up = make_unsigned_t<__int_for_sizeof_t<decltype(__kk)>>;
 	return __bit_cast<_Up>(__kk) + 1 > 1;
       }
     else

@@ -897,7 +897,7 @@ __convert_x86(_V __v0, _V __v1)
 
   // iX_to_iX {{{2
   [[maybe_unused]] constexpr bool __i_to_i
-    = std::is_integral_v<_Up> && std::is_integral_v<_Tp>;
+    = is_integral_v<_Up> && is_integral_v<_Tp>;
   [[maybe_unused]] constexpr bool __i8_to_i16
     = __i_to_i && sizeof(_Tp) == 1 && sizeof(_Up) == 2;
   [[maybe_unused]] constexpr bool __i8_to_i32
@@ -1025,7 +1025,7 @@ __convert_x86(_V __v0, _V __v1)
   // concat => use 1-arg __convert_x86 {{{2
   if constexpr (sizeof(__v0) < 16 || (sizeof(__v0) == 16 && __have_avx2)
 		|| (sizeof(__v0) == 16 && __have_avx
-		    && std::is_floating_point_v<_Tp>)
+		    && is_floating_point_v<_Tp>)
 		|| (sizeof(__v0) == 32 && __have_avx512f
 		    && (sizeof(_Tp) >= 4 || __have_avx512bw)))
     {
@@ -1038,8 +1038,8 @@ __convert_x86(_V __v0, _V __v1)
       // conversion using bit reinterpretation (or no conversion at all) should
       // all go through the concat branch above:
       static_assert(!(
-	std::is_floating_point_v<
-	  _Tp> == std::is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
+	is_floating_point_v<
+	  _Tp> == is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
       // handle all zero extension{{{2
       if constexpr (2 * _Np < _M && sizeof(_To) > 16)
 	{
@@ -1278,12 +1278,12 @@ __convert_x86(_V __v0, _V __v1)
 	    }
 	  else if constexpr (__z_to_z && __have_avx512dq)
 	    {
-	      return std::is_signed_v<_Tp> ? __concat(_mm512_cvtepi64_ps(__i0),
+	      return is_signed_v<_Tp> ? __concat(_mm512_cvtepi64_ps(__i0),
 						      _mm512_cvtepi64_ps(__i1))
 					   : __concat(_mm512_cvtepu64_ps(__i0),
 						      _mm512_cvtepu64_ps(__i1));
 	    }
-	  else if constexpr (__z_to_z && std::is_signed_v<_Tp>)
+	  else if constexpr (__z_to_z && is_signed_v<_Tp>)
 	    {
 	      const __m512 __hi32 = _mm512_cvtepi32_ps(
 		__concat(_mm512_cvtepi64_epi32(__to_intrin(__v0 >> 32)),
@@ -1300,7 +1300,7 @@ __convert_x86(_V __v0, _V __v1)
 		= _mm512_cvtepi32_ps(_mm512_set1_epi32(0x0000ffffu) & __lo32);
 	      return (__hi32 * 0x100000000LL + __hi16) + __lo16;
 	    }
-	  else if constexpr (__z_to_z && std::is_unsigned_v<_Tp>)
+	  else if constexpr (__z_to_z && is_unsigned_v<_Tp>)
 	    {
 	      return __intrin_bitcast<_To>(
 		_mm512_cvtepu32_ps(
@@ -1432,7 +1432,7 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3)
 
   // iX_to_iX {{{2
   [[maybe_unused]] constexpr bool __i_to_i
-    = std::is_integral_v<_Up> && std::is_integral_v<_Tp>;
+    = is_integral_v<_Up> && is_integral_v<_Tp>;
   [[maybe_unused]] constexpr bool __i8_to_i16
     = __i_to_i && sizeof(_Tp) == 1 && sizeof(_Up) == 2;
   [[maybe_unused]] constexpr bool __i8_to_i32
@@ -1563,7 +1563,7 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3)
   // concat => use 2-arg __convert_x86 {{{2
   if constexpr (sizeof(__v0) < 16 || (sizeof(__v0) == 16 && __have_avx2)
 		|| (sizeof(__v0) == 16 && __have_avx
-		    && std::is_floating_point_v<_Tp>)
+		    && is_floating_point_v<_Tp>)
 		|| (sizeof(__v0) == 32 && __have_avx512f))
     {
       // The ISA can handle wider input registers, so concat and use two-arg
@@ -1575,8 +1575,8 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3)
       // conversion using bit reinterpretation (or no conversion at all) should
       // all go through the concat branch above:
       static_assert(!(
-	std::is_floating_point_v<
-	  _Tp> == std::is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
+	is_floating_point_v<
+	  _Tp> == is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
       // handle all zero extension{{{2
       if constexpr (4 * _Np < _M && sizeof(_To) > 16)
 	{
@@ -1836,7 +1836,7 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
 
   // [if]X_to_i8 {{{2
   [[maybe_unused]] constexpr bool __i_to_i
-    = std::is_integral_v<_Up> && std::is_integral_v<_Tp>;
+    = is_integral_v<_Up> && is_integral_v<_Tp>;
   [[maybe_unused]] constexpr bool __i64_to_i8
     = __i_to_i && sizeof(_Tp) == 8 && sizeof(_Up) == 1;
   [[maybe_unused]] constexpr bool __f64_to_i8
@@ -1857,7 +1857,7 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
   // concat => use 4-arg __convert_x86 {{{2
   if constexpr (sizeof(__v0) < 16 || (sizeof(__v0) == 16 && __have_avx2)
 		|| (sizeof(__v0) == 16 && __have_avx
-		    && std::is_floating_point_v<_Tp>)
+		    && is_floating_point_v<_Tp>)
 		|| (sizeof(__v0) == 32 && __have_avx512f))
     {
       // The ISA can handle wider input registers, so concat and use two-arg
@@ -1870,8 +1870,8 @@ __convert_x86(_V __v0, _V __v1, _V __v2, _V __v3, _V __v4, _V __v5, _V __v6,
       // conversion using bit reinterpretation (or no conversion at all) should
       // all go through the concat branch above:
       static_assert(!(
-	std::is_floating_point_v<
-	  _Tp> == std::is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
+	is_floating_point_v<
+	  _Tp> == is_floating_point_v<_Up> && sizeof(_Tp) == sizeof(_Up)));
       static_assert(!(8 * _Np < _M && sizeof(_To) > 16),
 		    "zero extension should be impossible");
       if constexpr (__i64_to_i8) //{{{2

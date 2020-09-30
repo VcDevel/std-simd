@@ -34,7 +34,7 @@ _GLIBCXX_SIMD_BEGIN_NAMESPACE
 // _SimdConverter scalar -> scalar {{{
 template <typename _From, typename _To>
 struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::scalar,
-		      std::enable_if_t<!std::is_same_v<_From, _To>>>
+		      enable_if_t<!is_same_v<_From, _To>>>
 {
   _GLIBCXX_SIMD_INTRINSIC constexpr _To operator()(_From __a) const noexcept
   {
@@ -46,7 +46,7 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, simd_abi::scalar,
 // _SimdConverter scalar -> "native" {{{
 template <typename _From, typename _To, typename _Abi>
 struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi,
-		      std::enable_if_t<!std::is_same_v<_Abi, simd_abi::scalar>>>
+		      enable_if_t<!is_same_v<_Abi, simd_abi::scalar>>>
 {
   using _Ret = typename _Abi::template __traits<_To>::_SimdMember;
 
@@ -55,7 +55,7 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi,
   operator()(_From __a, _More... __more) const noexcept
   {
     static_assert(sizeof...(_More) + 1 == _Abi::template _S_size<_To>);
-    static_assert(std::conjunction_v<std::is_same<_From, _More>...>);
+    static_assert(conjunction_v<is_same<_From, _More>...>);
     return __make_vector<_To>(__a, __more...);
   }
 };
@@ -65,11 +65,11 @@ struct _SimdConverter<_From, simd_abi::scalar, _To, _Abi,
 template <typename _From, typename _To, typename _AFrom, typename _ATo>
 struct _SimdConverter<
   _From, _AFrom, _To, _ATo,
-  std::enable_if_t<!std::disjunction_v<
+  enable_if_t<!disjunction_v<
     __is_fixed_size_abi<_AFrom>, __is_fixed_size_abi<_ATo>,
-    std::is_same<_AFrom, simd_abi::scalar>,
-    std::is_same<_ATo, simd_abi::scalar>,
-    std::conjunction<std::is_same<_From, _To>, std::is_same<_AFrom, _ATo>>>>>
+    is_same<_AFrom, simd_abi::scalar>,
+    is_same<_ATo, simd_abi::scalar>,
+    conjunction<is_same<_From, _To>, is_same<_AFrom, _ATo>>>>>
 {
   using _Arg = typename _AFrom::template __traits<_From>::_SimdMember;
   using _Ret = typename _ATo::template __traits<_To>::_SimdMember;
@@ -112,7 +112,7 @@ struct _SimdConverter<_From, simd_abi::fixed_size<1>, _To, simd_abi::scalar,
 template <typename _From, typename _To, int _Np>
 struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
 		      simd_abi::fixed_size<_Np>,
-		      std::enable_if_t<!std::is_same_v<_From, _To>>>
+		      enable_if_t<!is_same_v<_From, _To>>>
 {
   using _Ret = __fixed_size_storage_t<_To, _Np>;
   using _Arg = __fixed_size_storage_t<_From, _Np>;
@@ -120,12 +120,12 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
   _GLIBCXX_SIMD_INTRINSIC constexpr _Ret
   operator()(const _Arg& __x) const noexcept
   {
-    if constexpr (std::is_same_v<_From, _To>)
+    if constexpr (is_same_v<_From, _To>)
       return __x;
 
     // special case (optimize) int signedness casts
     else if constexpr (sizeof(_From) == sizeof(_To)
-		       && std::is_integral_v<_From> && std::is_integral_v<_To>)
+		       && is_integral_v<_From> && is_integral_v<_To>)
       return __bit_cast<_Ret>(__x);
 
     // special case if all ABI tags in _Ret are scalar
@@ -274,7 +274,7 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To,
 // i.e. 1 register to ? registers
 template <typename _From, typename _Ap, typename _To, int _Np>
 struct _SimdConverter<_From, _Ap, _To, simd_abi::fixed_size<_Np>,
-		      std::enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
+		      enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
 {
   static_assert(
     _Np == simd_size_v<_From, _Ap>,
@@ -315,7 +315,7 @@ struct _SimdConverter<_From, _Ap, _To, simd_abi::fixed_size<_Np>,
 // i.e. ? register to 1 registers
 template <typename _From, int _Np, typename _To, typename _Ap>
 struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To, _Ap,
-		      std::enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
+		      enable_if_t<!__is_fixed_size_abi_v<_Ap>>>
 {
   static_assert(
     _Np == simd_size_v<_To, _Ap>,
@@ -331,7 +331,7 @@ struct _SimdConverter<_From, simd_abi::fixed_size<_Np>, _To, _Ap,
     else if constexpr (_Arg::_S_is_homogeneous)
       return __call_with_n_evaluations<_Arg::_S_tuple_size>(
 	[](auto... __members) {
-	  if constexpr ((std::is_convertible_v<decltype(__members),
+	  if constexpr ((is_convertible_v<decltype(__members),
 					       _To> && ...))
 	    return __vector_type_t<_To, _Np>{static_cast<_To>(__members)...};
 	  else
