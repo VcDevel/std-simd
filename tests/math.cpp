@@ -797,26 +797,21 @@ TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
   COMPARE(hypot(V(std::__norm_min_v<T>), V(std::__norm_min_v<T>),
 		V(std::__norm_min_v<T>)),
 	  V(std::__norm_min_v<T> * std::sqrt(T(3))));
-  VERIFY((sfinae_is_callable<V, V, V>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, T, V>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, T>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, V, T>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, V, V>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, V>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, V, T>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<int, int, V>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<int, V, int>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, int>(
-    [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; })));
+  auto&& hypot3_test
+    = [](auto a, auto b, auto c) -> decltype(hypot(a, b, c)) { return {}; };
+  VERIFY((sfinae_is_callable<V, V, V>(hypot3_test)));
+  VERIFY((sfinae_is_callable<T, T, V>(hypot3_test)));
+  VERIFY((sfinae_is_callable<V, T, T>(hypot3_test)));
+  VERIFY((sfinae_is_callable<T, V, T>(hypot3_test)));
+  VERIFY((sfinae_is_callable<T, V, V>(hypot3_test)));
+  VERIFY((sfinae_is_callable<V, T, V>(hypot3_test)));
+  VERIFY((sfinae_is_callable<V, V, T>(hypot3_test)));
+  VERIFY((sfinae_is_callable<int, int, V>(hypot3_test)));
+  VERIFY((sfinae_is_callable<int, V, int>(hypot3_test)));
+  VERIFY((sfinae_is_callable<V, T, int>(hypot3_test)));
+  VERIFY(!(sfinae_is_callable<bool, V, V>(hypot3_test)));
+  VERIFY(!(sfinae_is_callable<V, bool, V>(hypot3_test)));
+  VERIFY(!(sfinae_is_callable<V, V, bool>(hypot3_test)));
 
   vir::test::setFuzzyness<float>(0);
   vir::test::setFuzzyness<double>(0);
@@ -829,26 +824,20 @@ TEST_TYPES(V, hypot3_fma, real_test_types) //{{{1
       0., std::__norm_min_v<T>, std::__finite_max_v<T>},
     {10000, -std::__finite_max_v<T> / 2, std::__finite_max_v<T> / 2},
     MAKE_TESTER(fma));
-  VERIFY((sfinae_is_callable<V, V, V>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, T, V>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, T>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, V, T>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<T, V, V>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, V>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, V, T>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<int, int, V>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<int, V, int>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
-  VERIFY((sfinae_is_callable<V, T, int>(
-    [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; })));
+  auto&& fma_test
+    = [](auto a, auto b, auto c) -> decltype(fma(a, b, c)) { return {}; };
+  VERIFY((sfinae_is_callable<V, V, V>(fma_test)));
+  VERIFY((sfinae_is_callable<T, T, V>(fma_test)));
+  VERIFY((sfinae_is_callable<V, T, T>(fma_test)));
+  VERIFY((sfinae_is_callable<T, V, T>(fma_test)));
+  VERIFY((sfinae_is_callable<T, V, V>(fma_test)));
+  VERIFY((sfinae_is_callable<V, T, V>(fma_test)));
+  VERIFY((sfinae_is_callable<V, V, T>(fma_test)));
+  VERIFY((sfinae_is_callable<int, int, V>(fma_test)));
+  VERIFY((sfinae_is_callable<int, V, int>(fma_test)));
+  VERIFY((sfinae_is_callable<V, T, int>(fma_test)));
+  VERIFY((!sfinae_is_callable<V, T, bool>(fma_test)));
+  VERIFY((!sfinae_is_callable<bool, V, V>(fma_test)));
 }
 
 TEST_TYPES(V, ldexp_scalbn_scalbln_modf, real_test_types) //{{{1

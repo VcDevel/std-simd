@@ -163,33 +163,40 @@ struct _Extra_argument_type
 // }}}
 // _GLIBCXX_SIMD_MATH_CALL3_ {{{
 #define _GLIBCXX_SIMD_MATH_CALL3_(__name, arg2_, arg3_)                        \
-  template <                                                                   \
-    typename _Tp, typename _Abi, typename...,                                  \
-    typename _Arg2 = _Extra_argument_type<arg2_, _Tp, _Abi>,                  \
-    typename _Arg3 = _Extra_argument_type<arg3_, _Tp, _Abi>,                  \
-    typename _R = _Math_return_type_t<                                        \
-      decltype(__name(declval<double>(), _Arg2::declval(), _Arg3::declval())), \
-      _Tp, _Abi>>                                                              \
-  enable_if_t<is_floating_point_v<_Tp>, _R> __name(simd<_Tp, _Abi> __x,        \
-						   typename _Arg2::type __y,   \
-						   typename _Arg3::type __z)   \
+  template <typename _Tp, typename _Abi, typename...,                          \
+	    typename _Arg2 = _Extra_argument_type<arg2_, _Tp, _Abi>,           \
+	    typename _Arg3 = _Extra_argument_type<arg3_, _Tp, _Abi>,           \
+	    typename _R = _Math_return_type_t<                                 \
+	      decltype(std::__name(declval<double>(), _Arg2::declval(),        \
+				   _Arg3::declval())),                         \
+	      _Tp, _Abi>>                                                      \
+  enable_if_t<is_floating_point_v<_Tp>, _R> __name(                            \
+    const simd<_Tp, _Abi>& __x, const typename _Arg2::type& __y,               \
+    const typename _Arg3::type& __z)                                           \
   {                                                                            \
     return {__private_init,                                                    \
-	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::_S_data(__y),      \
-					 _Arg3::_S_data(__z))};                 \
+	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::_S_data(__y),     \
+					 _Arg3::_S_data(__z))};                \
   }                                                                            \
-  template <typename _Tp, typename _Up, typename _V, typename...,              \
-	    typename _TT = __remove_cvref_t<_Tp>,                              \
-	    typename _UU = __remove_cvref_t<_Up>,                              \
-	    typename _VV = __remove_cvref_t<_V>,                               \
-	    typename _Simd = conditional_t<is_simd_v<_UU>, _UU, _VV>>          \
-  _GLIBCXX_SIMD_INTRINSIC decltype(                                            \
-    __name(_Simd(declval<_Tp>()), _Simd(declval<_Up>()),                       \
-	   _Simd(declval<_V>()))) __name(_Tp&& __xx, _Up&& __yy, _V&& __zz)    \
+  template <                                                                   \
+    typename _T0, typename _T1, typename _T2, typename...,                     \
+    typename _U0 = __remove_cvref_t<_T0>,                                      \
+    typename _U1 = __remove_cvref_t<_T1>,                                      \
+    typename _U2 = __remove_cvref_t<_T2>,                                      \
+    typename _Simd = conditional_t<is_simd_v<_U1>, _U1, _U2>,                  \
+    typename = enable_if_t<conjunction_v<                                      \
+      is_simd<_Simd>, is_convertible<_T0&&, _Simd>,                            \
+      is_convertible<_T1&&, _Simd>, is_convertible<_T2&&, _Simd>,              \
+      negation<conjunction<                                                    \
+	is_simd<_U0>, is_floating_point<__value_type_or_identity_t<_U0>>>>>>>  \
+  _GLIBCXX_SIMD_INTRINSIC decltype(__name(declval<const _Simd&>(),             \
+					  declval<const _Simd&>(),             \
+					  declval<const _Simd&>()))            \
+    __name(_T0&& __xx, _T1&& __yy, _T2&& __zz)                                 \
   {                                                                            \
-    return __name(_Simd(static_cast<_Tp&&>(__xx)),                             \
-		  _Simd(static_cast<_Up&&>(__yy)),                             \
-		  _Simd(static_cast<_V&&>(__zz)));                             \
+    return __name(_Simd(static_cast<_T0&&>(__xx)),                             \
+		  _Simd(static_cast<_T1&&>(__yy)),                             \
+		  _Simd(static_cast<_T2&&>(__zz)));                            \
   }
 
 // }}}
