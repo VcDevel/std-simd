@@ -3537,6 +3537,141 @@ template <typename _Tp, typename _Ap>
 
 // }}}
 
+namespace _P0918 {
+// shuffle<size_t...> {{{
+template <size_t... _Indices, typename _Tp, typename _Abi>
+  requires ((_Indices < simd_size_v<_Tp, _Abi>) && ...)
+  _GLIBCXX_SIMD_INTRINSIC __deduced_simd<_Tp, sizeof...(_Indices)>
+  shuffle(const simd<_Tp, _Abi>& __x)
+  {
+    constexpr size_t _IdxArray[] = {_Indices...};
+    using _Ret = __deduced_simd<_Tp, sizeof...(_Indices)>;
+    return _Ret([&__x](auto __i) constexpr { return __x[_IdxArray[__i]]; });
+  }
+
+template <size_t... _Indices, typename _Tp, typename _Abi>
+  requires ((_Indices < simd_size_v<_Tp, _Abi>) && ...)
+  _GLIBCXX_SIMD_INTRINSIC __deduced_simd_mask<_Tp, sizeof...(_Indices)>
+  shuffle(const simd_mask<_Tp, _Abi>& __x)
+  {
+    constexpr size_t _IdxArray[] = {_Indices...};
+    using _Ret = __deduced_simd_mask<_Tp, sizeof...(_Indices)>;
+    return _Ret(
+      __private_init, [&__x](auto __i) constexpr {
+	return __x[_IdxArray[__i]];
+      });
+  }
+
+// }}}
+// still to be proposed:
+// shuffle patterns (strided, indexed, shifted, rotated) {{{
+template <int _Stride, int _Offset = 0>
+  struct strided
+  {
+    template <int _InputSize>
+      struct eval
+      {
+	static constexpr int size
+	  = __div_roundup(_InputSize - _Offset, _Stride);
+	static constexpr int src_index(int __dst_index)
+	{ return _Offset + __dst_index * _Stride; }
+      };
+  };
+
+template <int... _Indices>
+  struct indexed
+  {
+    template <int _InputSize>
+      struct eval
+      {
+	static constexpr int _S_idx_array[] = {_Indices...};
+	static constexpr int size = sizeof...(_Indices);
+	static constexpr int
+	src_index(int __dst_index)
+	{
+	  int __i = _S_idx_array[__dst_index];
+	  while (__i < 0)
+	    __i += _InputSize;
+	  while (__i >= _InputSize)
+	    __i -= _InputSize;
+	  return __i;
+	}
+      };
+  };
+
+template <int _Offset>
+  struct shifted
+  {
+    template <int _InputSize>
+      struct eval
+      {
+	static constexpr int size = _InputSize;
+	static constexpr int
+	src_index(int __dst_index)
+	{
+	  const int __i = __dst_index - _Offset;
+	  return __i < 0 || __i >= _InputSize ? -1 : __i;
+	}
+      };
+  };
+
+template <int _Offset>
+  struct rotated
+  {
+    template <int _InputSize>
+      struct eval
+      {
+	static constexpr int size = _InputSize;
+	static constexpr int
+	src_index(int __dst_index)
+	{
+	  int __i = __dst_index - _Offset;
+	  while (__i < 0)
+	    __i += _InputSize;
+	  while (__i >= _InputSize)
+	    __i -= _InputSize;
+	  return __i;
+	}
+      };
+  };
+
+// }}}
+// shuffle<Pattern> {{{
+template <typename _Pattern, typename _Tp, typename _Abi>
+  constexpr __deduced_simd<
+    _Tp, _Pattern::template eval<simd_size_v<_Tp, _Abi>>::size>
+  shuffle(const simd<_Tp, _Abi>& __x)
+  {
+    using _TV = simd<_Tp, _Abi>;
+    using _Eval = _Pattern::template eval<_TV::size()>;
+    using _Ret = __deduced_simd<_Tp, _Eval::size>;
+    return _Ret([&__x](auto __i) constexpr {
+      int __j = _Eval::src_index(__i);
+      return __j < 0 ? _Tp() : __x[__j];
+    });
+  }
+
+template <typename _Pattern, typename _Tp, typename _Abi>
+  constexpr __deduced_simd_mask<
+    _Tp, _Pattern::template eval<simd_size_v<_Tp, _Abi>>::size>
+  shuffle(const simd_mask<_Tp, _Abi>& __x)
+  {
+    using __eval = _Pattern::template eval<simd_size_v<_Tp, _Abi>>;
+    using _Ret = __deduced_simd_mask<_Tp, __eval::size>;
+    return _Ret(
+      __private_init, [&__x](auto __i) constexpr {
+	int __j = __eval::src_index(__i);
+	return __j < 0 ? false : __x[__j];
+      });
+  }
+
+// }}}
+} // namespace _P0918
+
+namespace __proposed {
+using namespace _P0918;
+} // namespace __proposed
+
 template <size_t... _Sizes, typename _Tp, typename _Ap,
 	  typename = enable_if_t<((_Sizes + ...) == simd<_Tp, _Ap>::size())>>
   inline tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...>
