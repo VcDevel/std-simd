@@ -3616,44 +3616,6 @@ clamp(const simd<_Tp, _Ap>& __v, const simd<_Tp, _Ap>& __lo,
 
 // }}}
 
-namespace _P0918 {
-// shuffle {{{1
-template <int _Stride, int _Offset = 0> struct strided
-{
-  static constexpr int _S_stride = _Stride;
-  static constexpr int _S_offset = _Offset;
-  template <typename _Tp, typename _Ap>
-  using __shuffle_return_type = simd<
-    _Tp, simd_abi::deduce_t<
-	   _Tp, __div_roundup(simd_size_v<_Tp, _Ap> - _Offset, _Stride), _Ap>>;
-  // alternative, always use fixed_size:
-  // fixed_size_simd<_Tp, __div_roundup(simd_size_v<_Tp, _Ap> - _Offset,
-  // _Stride)>;
-  template <typename _Tp> static constexpr auto _S_src_index(_Tp __dst_index)
-  {
-    return _Offset + __dst_index * _Stride;
-  }
-};
-
-// SFINAE for the return type ensures _P is a type that provides the alias
-// template member
-// __shuffle_return_type and the static member function _S_src_index
-template <typename _P, typename _Tp, typename _Ap,
-	  typename _R = typename _P::template __shuffle_return_type<_Tp, _Ap>,
-	  typename = decltype(_P::_S_src_index(_SizeConstant<0>()))>
-_GLIBCXX_SIMD_INTRINSIC _R
-  shuffle(const simd<_Tp, _Ap>& __x)
-{
-  return _R([&__x](auto __i) constexpr { return __x[_P::_S_src_index(__i)]; });
-}
-
-// }}}1
-} // namespace _P0918
-
-namespace __proposed {
-using namespace _P0918;
-} // namespace __proposed
-
 template <size_t... _Sizes, typename _Tp, typename _Ap,
 	  typename = enable_if_t<((_Sizes + ...) == simd<_Tp, _Ap>::size())>>
 inline tuple<simd<_Tp, simd_abi::deduce_t<_Tp, _Sizes>>...>
