@@ -35,28 +35,29 @@
 
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 template <typename _Tp, typename _V>
-using __samesize = fixed_size_simd<_Tp, _V::size()>;
-// __math_return_type {{{
+using _Samesize = fixed_size_simd<_Tp, _V::size()>;
+
+// _Math_return_type {{{
 template <typename _DoubleR, typename _Tp, typename _Abi>
-struct __math_return_type;
+struct _Math_return_type;
 template <typename _DoubleR, typename _Tp, typename _Abi>
-using __math_return_type_t =
-  typename __math_return_type<_DoubleR, _Tp, _Abi>::type;
+using _Math_return_type_t =
+  typename _Math_return_type<_DoubleR, _Tp, _Abi>::type;
 
 template <typename _Tp, typename _Abi>
-struct __math_return_type<double, _Tp, _Abi>
+struct _Math_return_type<double, _Tp, _Abi>
 {
   using type = simd<_Tp, _Abi>;
 };
 
 template <typename _Tp, typename _Abi>
-struct __math_return_type<bool, _Tp, _Abi>
+struct _Math_return_type<bool, _Tp, _Abi>
 {
   using type = simd_mask<_Tp, _Abi>;
 };
 
 template <typename _DoubleR, typename _Tp, typename _Abi>
-struct __math_return_type
+struct _Math_return_type
 {
   using type = fixed_size_simd<_DoubleR, simd_size_v<_Tp, _Abi>>;
 };
@@ -65,7 +66,7 @@ struct __math_return_type
 // _GLIBCXX_SIMD_MATH_CALL_ {{{
 #define _GLIBCXX_SIMD_MATH_CALL_(__name)                                       \
   template <typename _Tp, typename _Abi, typename...,                          \
-	    typename _R = __math_return_type_t<                                \
+	    typename _R = _Math_return_type_t<                                 \
 	      decltype(std::__name(declval<double>())), _Tp, _Abi>>            \
   enable_if_t<is_floating_point_v<_Tp>, _R> __name(simd<_Tp, _Abi> __x)        \
   {                                                                            \
@@ -73,58 +74,58 @@ struct __math_return_type
   }
 
 // }}}
-//__extra_argument_type{{{
+//_Extra_argument_type{{{
 template <typename _Up, typename _Tp, typename _Abi>
-struct __extra_argument_type;
+struct _Extra_argument_type;
 
 template <typename _Tp, typename _Abi>
-struct __extra_argument_type<_Tp*, _Tp, _Abi>
+struct _Extra_argument_type<_Tp*, _Tp, _Abi>
 {
   using type = simd<_Tp, _Abi>*;
   static constexpr double* declval();
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto _S_data(type __x)
   {
-    return &std::experimental::__data(*__x);
+    return &__data(*__x);
   }
   static constexpr bool __needs_temporary_scalar = true;
 };
 
 template <typename _Up, typename _Tp, typename _Abi>
-struct __extra_argument_type<_Up*, _Tp, _Abi>
+struct _Extra_argument_type<_Up*, _Tp, _Abi>
 {
   static_assert(is_integral_v<_Up>);
   using type = fixed_size_simd<_Up, simd_size_v<_Tp, _Abi>>*;
   static constexpr _Up* declval();
-  _GLIBCXX_SIMD_INTRINSIC static constexpr auto __data(type __x)
+  _GLIBCXX_SIMD_INTRINSIC static constexpr auto _S_data(type __x)
   {
-    return &std::experimental::__data(*__x);
+    return &__data(*__x);
   }
   static constexpr bool __needs_temporary_scalar = true;
 };
 
 template <typename _Tp, typename _Abi>
-struct __extra_argument_type<_Tp, _Tp, _Abi>
+struct _Extra_argument_type<_Tp, _Tp, _Abi>
 {
   using type = simd<_Tp, _Abi>;
   static constexpr double declval();
   _GLIBCXX_SIMD_INTRINSIC static constexpr decltype(auto)
-  __data(const type& __x)
+  _S_data(const type& __x)
   {
-    return std::experimental::__data(__x);
+    return __data(__x);
   }
   static constexpr bool __needs_temporary_scalar = false;
 };
 
 template <typename _Up, typename _Tp, typename _Abi>
-struct __extra_argument_type
+struct _Extra_argument_type
 {
   static_assert(is_integral_v<_Up>);
   using type = fixed_size_simd<_Up, simd_size_v<_Tp, _Abi>>;
   static constexpr _Up declval();
   _GLIBCXX_SIMD_INTRINSIC static constexpr decltype(auto)
-  __data(const type& __x)
+  _S_data(const type& __x)
   {
-    return std::experimental::__data(__x);
+    return __data(__x);
   }
   static constexpr bool __needs_temporary_scalar = false;
 };
@@ -134,17 +135,17 @@ struct __extra_argument_type
 #define _GLIBCXX_SIMD_MATH_CALL2_(__name, arg2_)                               \
   template <                                                                   \
     typename _Tp, typename _Abi, typename...,                                  \
-    typename _Arg2 = __extra_argument_type<arg2_, _Tp, _Abi>,                  \
-    typename _R = __math_return_type_t<                                        \
+    typename _Arg2 = _Extra_argument_type<arg2_, _Tp, _Abi>,                   \
+    typename _R = _Math_return_type_t<                                         \
       decltype(std::__name(declval<double>(), _Arg2::declval())), _Tp, _Abi>>  \
   enable_if_t<is_floating_point_v<_Tp>, _R> __name(                            \
     const simd<_Tp, _Abi>& __x, const typename _Arg2::type& __y)               \
   {                                                                            \
     return {__private_init,                                                    \
-	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::__data(__y))};    \
+	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::_S_data(__y))};   \
   }                                                                            \
   template <typename _Up, typename _Tp, typename _Abi>                         \
-  _GLIBCXX_SIMD_INTRINSIC __math_return_type_t<                                \
+  _GLIBCXX_SIMD_INTRINSIC _Math_return_type_t<                                 \
     decltype(std::__name(                                                      \
       declval<double>(),                                                       \
       declval<enable_if_t<                                                     \
@@ -164,9 +165,9 @@ struct __extra_argument_type
 #define _GLIBCXX_SIMD_MATH_CALL3_(__name, arg2_, arg3_)                        \
   template <                                                                   \
     typename _Tp, typename _Abi, typename...,                                  \
-    typename _Arg2 = __extra_argument_type<arg2_, _Tp, _Abi>,                  \
-    typename _Arg3 = __extra_argument_type<arg3_, _Tp, _Abi>,                  \
-    typename _R = __math_return_type_t<                                        \
+    typename _Arg2 = _Extra_argument_type<arg2_, _Tp, _Abi>,                  \
+    typename _Arg3 = _Extra_argument_type<arg3_, _Tp, _Abi>,                  \
+    typename _R = _Math_return_type_t<                                        \
       decltype(__name(declval<double>(), _Arg2::declval(), _Arg3::declval())), \
       _Tp, _Abi>>                                                              \
   enable_if_t<is_floating_point_v<_Tp>, _R> __name(simd<_Tp, _Abi> __x,        \
@@ -174,8 +175,8 @@ struct __extra_argument_type
 						   typename _Arg3::type __z)   \
   {                                                                            \
     return {__private_init,                                                    \
-	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::__data(__y),      \
-					 _Arg3::__data(__z))};                 \
+	    _Abi::_SimdImpl::_S_##__name(__data(__x), _Arg2::_S_data(__y),      \
+					 _Arg3::_S_data(__z))};                 \
   }                                                                            \
   template <typename _Tp, typename _Up, typename _V, typename...,              \
 	    typename _TT = __remove_cvref_t<_Tp>,                              \
@@ -285,7 +286,7 @@ __zero_low_bits(simd<_Tp, _Abi> __x)
  * rounding instead of truncation: `y = round(x / ½π) * 2`. If precision allows,
  * `2/π * x` is better (faster).
  */
-template <typename _Tp, typename _Abi> struct __folded
+template <typename _Tp, typename _Abi> struct _Folded
 {
   simd<_Tp, _Abi> _M_x;
   rebind_simd_t<int, simd<_Tp, _Abi>> _M_quadrant;
@@ -306,13 +307,13 @@ inline constexpr double __pi_2 = 0x1.921fb54442d18p0;       // π/2
 } // namespace __math_double
 
 template <typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE __folded<float, _Abi>
+_GLIBCXX_SIMD_ALWAYS_INLINE _Folded<float, _Abi>
 __fold_input(const simd<float, _Abi>& __x)
 {
   using _V = simd<float, _Abi>;
   using _IV = rebind_simd_t<int, _V>;
   using namespace __math_float;
-  __folded<float, _Abi> __r;
+  _Folded<float, _Abi> __r;
   __r._M_x = abs(__x);
 #if 0
   // zero most mantissa bits:
@@ -350,14 +351,14 @@ __fold_input(const simd<float, _Abi>& __x)
 }
 
 template <typename _Abi>
-_GLIBCXX_SIMD_ALWAYS_INLINE __folded<double, _Abi>
+_GLIBCXX_SIMD_ALWAYS_INLINE _Folded<double, _Abi>
 __fold_input(const simd<double, _Abi>& __x)
 {
   using _V = simd<double, _Abi>;
   using _IV = rebind_simd_t<int, _V>;
   using namespace __math_double;
 
-  __folded<double, _Abi> __r;
+  _Folded<double, _Abi> __r;
   __r._M_x = abs(__x);
   if (_GLIBCXX_SIMD_IS_UNLIKELY(all_of(__r._M_x < __pi_over_4)))
     {
@@ -645,7 +646,7 @@ __getmant_avx512(_SimdWrapper<_Tp, _Np> __x)
  */
 template <typename _Tp, typename _Abi>
 enable_if_t<is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
-frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
+frexp(const simd<_Tp, _Abi>& __x, _Samesize<int, simd<_Tp, _Abi>>* __exp)
 {
   if constexpr (simd_size_v<_Tp, _Abi> == 1)
     {
@@ -700,7 +701,7 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
       if (_GLIBCXX_SIMD_IS_LIKELY(all_of(isnormal(__x))))
 	{
 	  *__exp
-	    = simd_cast<__samesize<int, _V>>(__exponent_bits - __exp_adjust);
+	    = simd_cast<_Samesize<int, _V>>(__exponent_bits - __exp_adjust);
 	  return __mant;
 	}
 
@@ -733,7 +734,7 @@ frexp(const simd<_Tp, _Abi>& __x, __samesize<int, simd<_Tp, _Abi>>* __exp)
 	  | (__bit_cast<_IV>(static_simd_cast<_MaskType>(__exponent_bits == 0)
 			     & static_simd_cast<_MaskType>(__x != 0))
 	     & _IV(__exp_adjust + __exp_offset));
-      *__exp = simd_cast<__samesize<int, _V>>(__e - __offset);
+      *__exp = simd_cast<_Samesize<int, _V>>(__e - __offset);
       return __mant;
     }
 }
@@ -1329,14 +1330,14 @@ _GLIBCXX_SIMD_MATH_CALL_(isfinite)
 // isnan and isinf require special treatment because old glibc may declare
 // `int isinf(double)`.
 template <typename _Tp, typename _Abi, typename...,
-	  typename _R = __math_return_type_t<bool, _Tp, _Abi>>
+	  typename _R = _Math_return_type_t<bool, _Tp, _Abi>>
 enable_if_t<is_floating_point_v<_Tp>, _R>
   isinf(simd<_Tp, _Abi> __x)
 {
   return {__private_init, _Abi::_SimdImpl::_S_isinf(__data(__x))};
 }
 template <typename _Tp, typename _Abi, typename...,
-	  typename _R = __math_return_type_t<bool, _Tp, _Abi>>
+	  typename _R = _Math_return_type_t<bool, _Tp, _Abi>>
 enable_if_t<is_floating_point_v<_Tp>, _R>
   isnan(simd<_Tp, _Abi> __x)
 {
