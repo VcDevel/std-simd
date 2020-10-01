@@ -34,83 +34,85 @@
 _GLIBCXX_SIMD_BEGIN_NAMESPACE
 
 // _SimdImplPpc {{{
-template <typename _Abi> struct _SimdImplPpc : _SimdImplBuiltin<_Abi>
-{
-  using _Base = _SimdImplBuiltin<_Abi>;
-
-  // Byte and halfword shift instructions on PPC only consider the low 3 or 4
-  // bits of the RHS. Consequently, shifting by sizeof(_Tp)*CHAR_BIT (or more)
-  // is UB without extra measures. To match scalar behavior, byte and halfword
-  // shifts need an extra fixup step.
-
-  // _S_bit_shift_left {{{
-  template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
-  _S_bit_shift_left(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
+template <typename _Abi>
+  struct _SimdImplPpc : _SimdImplBuiltin<_Abi>
   {
-    __x = _Base::_S_bit_shift_left(__x, __y);
-    if constexpr (sizeof(_Tp) < sizeof(int))
-      __x._M_data = (__y._M_data < sizeof(_Tp) * __CHAR_BIT__) & __x._M_data;
-    return __x;
-  }
+    using _Base = _SimdImplBuiltin<_Abi>;
 
-  template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
-  _S_bit_shift_left(_SimdWrapper<_Tp, _Np> __x, int __y)
-  {
-    __x = _Base::_S_bit_shift_left(__x, __y);
-    if constexpr (sizeof(_Tp) < sizeof(int))
+    // Byte and halfword shift instructions on PPC only consider the low 3 or 4
+    // bits of the RHS. Consequently, shifting by sizeof(_Tp)*CHAR_BIT (or more)
+    // is UB without extra measures. To match scalar behavior, byte and halfword
+    // shifts need an extra fixup step.
+
+    // _S_bit_shift_left {{{
+    template <typename _Tp, size_t _Np>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+      _S_bit_shift_left(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
       {
-	if (__y >= sizeof(_Tp) * __CHAR_BIT__)
-	  return {};
+	__x = _Base::_S_bit_shift_left(__x, __y);
+	if constexpr (sizeof(_Tp) < sizeof(int))
+	  __x._M_data
+	    = (__y._M_data < sizeof(_Tp) * __CHAR_BIT__) & __x._M_data;
+	return __x;
       }
-    return __x;
-  }
 
-  // }}}
-  // _S_bit_shift_right {{{
-  template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
-  _S_bit_shift_right(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
-  {
-    if constexpr (sizeof(_Tp) < sizeof(int))
+    template <typename _Tp, size_t _Np>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+      _S_bit_shift_left(_SimdWrapper<_Tp, _Np> __x, int __y)
       {
-	constexpr int __nbits = sizeof(_Tp) * __CHAR_BIT__;
-	if constexpr (is_unsigned_v<_Tp>)
-	  return (__y._M_data < __nbits)
-		 & _Base::_S_bit_shift_right(__x, __y)._M_data;
-	else
+	__x = _Base::_S_bit_shift_left(__x, __y);
+	if constexpr (sizeof(_Tp) < sizeof(int))
 	  {
-	    _Base::_S_masked_assign(_SimdWrapper<_Tp, _Np>(__y._M_data
-							   >= __nbits),
-				    __y, __nbits - 1);
-	    return _Base::_S_bit_shift_right(__x, __y);
-	  }
-      }
-    else
-      return _Base::_S_bit_shift_right(__x, __y);
-  }
-
-  template <typename _Tp, size_t _Np>
-  _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
-  _S_bit_shift_right(_SimdWrapper<_Tp, _Np> __x, int __y)
-  {
-    if constexpr (sizeof(_Tp) < sizeof(int))
-      {
-	constexpr int __nbits = sizeof(_Tp) * __CHAR_BIT__;
-	if (__y >= __nbits)
-	  {
-	    if constexpr (is_unsigned_v<_Tp>)
+	    if (__y >= sizeof(_Tp) * __CHAR_BIT__)
 	      return {};
-	    else
-	      return _Base::_S_bit_shift_right(__x, __nbits - 1);
 	  }
+	return __x;
       }
-    return _Base::_S_bit_shift_right(__x, __y);
-  }
 
-  // }}}
-};
+    // }}}
+    // _S_bit_shift_right {{{
+    template <typename _Tp, size_t _Np>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+      _S_bit_shift_right(_SimdWrapper<_Tp, _Np> __x, _SimdWrapper<_Tp, _Np> __y)
+      {
+	if constexpr (sizeof(_Tp) < sizeof(int))
+	  {
+	    constexpr int __nbits = sizeof(_Tp) * __CHAR_BIT__;
+	    if constexpr (is_unsigned_v<_Tp>)
+	      return (__y._M_data < __nbits)
+		     & _Base::_S_bit_shift_right(__x, __y)._M_data;
+	    else
+	      {
+		_Base::_S_masked_assign(_SimdWrapper<_Tp, _Np>(__y._M_data
+							       >= __nbits),
+					__y, __nbits - 1);
+		return _Base::_S_bit_shift_right(__x, __y);
+	      }
+	  }
+	else
+	  return _Base::_S_bit_shift_right(__x, __y);
+      }
+
+    template <typename _Tp, size_t _Np>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdWrapper<_Tp, _Np>
+      _S_bit_shift_right(_SimdWrapper<_Tp, _Np> __x, int __y)
+      {
+	if constexpr (sizeof(_Tp) < sizeof(int))
+	  {
+	    constexpr int __nbits = sizeof(_Tp) * __CHAR_BIT__;
+	    if (__y >= __nbits)
+	      {
+		if constexpr (is_unsigned_v<_Tp>)
+		  return {};
+		else
+		  return _Base::_S_bit_shift_right(__x, __nbits - 1);
+	      }
+	  }
+	return _Base::_S_bit_shift_right(__x, __y);
+      }
+
+    // }}}
+  };
 
 // }}}
 
