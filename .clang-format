@@ -27,7 +27,7 @@
 ---
 Language: Cpp
 AccessModifierOffset: -2
-AlwaysBreakAfterReturnType: TopLevel
+AlwaysBreakAfterReturnType: All
 BinPackArguments: true
 BinPackParameters: true
 BraceWrapping:
@@ -47,7 +47,7 @@ BreakBeforeBinaryOperators: All
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: true
 ColumnLimit: 80
-ConstructorInitializerIndentWidth: 2
+ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 2
 ForEachMacros: [
 'FOR_ALL_BB_FN',
@@ -147,12 +147,20 @@ UseTab: ForContinuationAndIndentation
 AlignEscapedNewlines: Right
 AlignTrailingComments: true
 AllowShortFunctionsOnASingleLine: All
-AlwaysBreakTemplateDeclarations: MultiLine
+AlwaysBreakTemplateDeclarations: Yes
 KeepEmptyLinesAtTheStartOfBlocks: false
 Standard: Cpp11
 StatementMacros: ['_GLIBCXX_SIMD_FIXED_OP', '_GLIBCXX_SIMD_APPLY_ON_TUPLE_']
 MacroBlockBegin: '^_GLIBCXX_BEGIN_[A-Z0-9_]+$'
 MacroBlockEnd:   '^_GLIBCXX_END_[A-Z0-9_]+$'
-IndentWrappedFunctionNames: true
+AttributeMacros: [
+'_GLIBCXX_SIMD_CONSTEXPR',
+'_GLIBCXX_SIMD_NEVER_INLINE',
+'_GLIBCXX_SIMD_NORMAL_MATH',
+'_GLIBCXX_CONST',
+'_GLIBCXX_SIMD_INTRINSIC',
+'_GLIBCXX_SIMD_ALWAYS_INLINE'
+]
+IndentWrappedFunctionNames: false
 
 # vim: ft=yaml
