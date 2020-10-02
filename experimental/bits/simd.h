@@ -492,6 +492,14 @@ constexpr inline bool __have_avx512bw_vl = __have_avx512bw && __have_avx512vl;
 constexpr inline bool __have_neon = _GLIBCXX_SIMD_HAVE_NEON;
 constexpr inline bool __have_neon_a32 = _GLIBCXX_SIMD_HAVE_NEON_A32;
 constexpr inline bool __have_neon_a64 = _GLIBCXX_SIMD_HAVE_NEON_A64;
+constexpr inline bool __support_neon_float =
+#if defined __GCC_IEC_559
+  __GCC_IEC_559 == 0;
+#elif defined __FAST_MATH__
+  true;
+#else
+  false;
+#endif
 
 #ifdef __POWER9_VECTOR__
 constexpr inline bool __have_power9vec = true;
@@ -2621,17 +2629,7 @@ template <typename _Tp>
 		      // Only allow fp if the user allows non-ICE559 fp (e.g.
 		      // via -ffast-math). ARMv7 NEON fp is not conforming to
 		      // IEC559.
-		      && (
-#ifdef __clang__
-#ifdef __FAST_MATH__
-			true
-#else
-			false
-#endif
-#else
-			__GCC_IEC_559 == 0
-#endif
-			|| !is_floating_point_v<_Tp>) )
+		      && (__support_neon_float || !is_floating_point_v<_Tp>))
 	  return 16;
       }
 
@@ -2653,7 +2651,10 @@ template <typename _Tp>
 // FIXME: not sure, probably needs to be scalar (or dependent on the hard-float
 // ABI?)
 template <typename _Tp>
-  using compatible = conditional_t<(sizeof(_Tp) < 8), _VecBuiltin<16>, scalar>;
+  using compatible
+    = conditional_t<(sizeof(_Tp) < 8
+		     && (__support_neon_float || !is_floating_point_v<_Tp>)),
+		    _VecBuiltin<16>, scalar>;
 #else
 template <typename>
   using compatible = scalar;
