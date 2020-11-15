@@ -2153,7 +2153,12 @@ template <typename _Abi>
 	  else if constexpr(__have_neon)
 	    asm("" : "+w"(__x));
 	  else if constexpr (__have_power_vmx)
-	    asm("" : "+v"(__x));
+	    {
+	      if constexpr (is_same_v<__vector_type_t<float, 2>, _TV>)
+		asm("" : "+fgr"(__x[0]), "+fgr"(__x[1]));
+	      else
+		asm("" : "+v"(__x));
+	    }
 	  else
 	    asm("" : "+g"(__x));
 	  return __x - __y;
