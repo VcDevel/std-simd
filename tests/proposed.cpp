@@ -1,4 +1,4 @@
-/*{{{
+/*{
 Copyright © 2010-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
                       Matthias Kretz <m.kretz@gsi.de>
 
@@ -24,7 +24,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-}}}*/
+}*/
 
 //#define UNITTEST_ONLY_XTEST 1
 #include "unittest.h"
@@ -41,28 +41,28 @@ using std::experimental::__proposed::resizing_simd_cast;
 #endif
 
 TEST_TYPES(V, resizing_simd_cast, all_test_types)
-{
-  using T = typename V::value_type;
-  using M = typename V::mask_type;
-  stdx::__execute_n_times<stdx::simd_abi::max_fixed_size<T>>([](auto ii) {
-    CONSTEXPR_ V seq([](int i) { return i; });
-    CONSTEXPR_ M kseq = V([](int i) { return i & 1; }) == 1;
-    constexpr int N = ii + 1;
-    using V0 = stdx::__deduced_simd<T, N>;
-    using V1 = stdx::fixed_size_simd<T, N>;
-    using M0 = typename V0::mask_type;
-    using M1 = typename V1::mask_type;
-    const auto v0 = resizing_simd_cast<V0>(seq);
-    const auto v1 = resizing_simd_cast<V1>(seq);
-    const auto m0 = resizing_simd_cast<M0>(kseq);
-    const auto m1 = resizing_simd_cast<M1>(kseq);
-    COMPARE(typeid(v0), typeid(V0));
-    COMPARE(typeid(v1), typeid(V1));
-    COMPARE(typeid(m0), typeid(M0));
-    COMPARE(typeid(m1), typeid(M1));
-    COMPARE(v0, V0([](int i) { return i < int(V::size()) ? i : 0; }));
-    COMPARE(v1, V1([](int i) { return i < int(V::size()) ? i : 0; }));
-    COMPARE(m0, V0([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
-    COMPARE(m1, V1([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
-  });
-}
+  {
+    using T = typename V::value_type;
+    using M = typename V::mask_type;
+    stdx::__execute_n_times<stdx::simd_abi::max_fixed_size<T>>([](auto ii) {
+      CONSTEXPR_ V seq([](int i) { return i; });
+      CONSTEXPR_ M kseq = V([](int i) { return i & 1; }) == 1;
+      constexpr int N = ii + 1;
+      using V0 = stdx::__deduced_simd<T, N>;
+      using V1 = stdx::fixed_size_simd<T, N>;
+      using M0 = typename V0::mask_type;
+      using M1 = typename V1::mask_type;
+      const auto v0 = resizing_simd_cast<V0>(seq);
+      const auto v1 = resizing_simd_cast<V1>(seq);
+      const auto m0 = resizing_simd_cast<M0>(kseq);
+      const auto m1 = resizing_simd_cast<M1>(kseq);
+      COMPARE(typeid(v0), typeid(V0));
+      COMPARE(typeid(v1), typeid(V1));
+      COMPARE(typeid(m0), typeid(M0));
+      COMPARE(typeid(m1), typeid(M1));
+      COMPARE(v0, V0([](int i) { return i < int(V::size()) ? i : 0; }));
+      COMPARE(v1, V1([](int i) { return i < int(V::size()) ? i : 0; }));
+      COMPARE(m0, V0([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
+      COMPARE(m1, V1([](int i) { return i < int(V::size()) ? i & 1 : 0; }) == 1);
+    });
+  }

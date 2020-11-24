@@ -1,4 +1,4 @@
-/*{{{
+/*{
 Copyright © 2009-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
                       Matthias Kretz <m.kretz@gsi.de>
 
@@ -24,7 +24,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-}}}*/
+}*/
 
 //#define UNITTEST_ONLY_XTEST 1
 #include "unittest.h"
@@ -33,560 +33,559 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template <class... Ts> using base_template = std::experimental::simd_mask<Ts...>;
 #include "testtypes.h"
 
-// simd_mask generator functions {{{1
+// simd_mask generator functions
 template <class M>
-M
-make_mask(const std::initializer_list<bool>& init)
-{
-  std::size_t i = 0;
-  M r = {};
-  for (;;)
+  M
+  make_mask(const std::initializer_list<bool>& init)
+  {
+    std::size_t i = 0;
+    M r = {};
+    for (;;)
+      {
+	for (bool x : init)
+	  {
+	    r[i] = x;
+	    if (++i == M::size())
+	      {
+		return r;
+	      }
+	  }
+      }
+  }
+
+template <class M>
+  M
+  make_alternating_mask()
+  {
+    return make_mask<M>({false, true});
+  }
+
+TEST_TYPES(M, broadcast, all_test_types)
+  {
+    static_assert(std::is_convertible<typename M::reference, bool>::value,
+		  "A smart_reference<simd_mask> must be convertible to bool.");
+    static_assert(
+      std::is_same<bool, decltype(std::declval<const typename M::reference&>()
+				  == true)>::value,
+      "A smart_reference<simd_mask> must be comparable against bool.");
+    static_assert(
+      vir::test::sfinae_is_callable<typename M::reference&&, bool>(
+	[](auto&& a, auto&& b) -> decltype(std::declval<decltype(a)>()
+					   == std::declval<decltype(b)>()) {
+	  return {};
+	}),
+      "A smart_reference<simd_mask> must be comparable against bool.");
+    VERIFY(std::experimental::is_simd_mask_v<M>);
+
     {
-      for (bool x : init)
+      M x;     // uninitialized
+      x = M{}; // default broadcasts 0
+      COMPARE(x, M(false));
+      COMPARE(x, M());
+      COMPARE(x, M{});
+      x = M(); // default broadcasts 0
+      COMPARE(x, M(false));
+      COMPARE(x, M());
+      COMPARE(x, M{});
+      x = x;
+      for (std::size_t i = 0; i < M::size(); ++i)
 	{
-	  r[i] = x;
-	  if (++i == M::size())
-	    {
-	      return r;
-	    }
+	  COMPARE(x[i], false);
 	}
     }
-}
 
-template <class M>
-M
-make_alternating_mask()
-{
-  return make_mask<M>({false, true});
-}
-
-TEST_TYPES(M, broadcast, all_test_types) //{{{1
-{
-  static_assert(std::is_convertible<typename M::reference, bool>::value,
-		"A smart_reference<simd_mask> must be convertible to bool.");
-  static_assert(
-    std::is_same<bool, decltype(std::declval<const typename M::reference&>()
-				== true)>::value,
-    "A smart_reference<simd_mask> must be comparable against bool.");
-  static_assert(
-    vir::test::sfinae_is_callable<typename M::reference&&, bool>(
-      [](auto&& a, auto&& b) -> decltype(std::declval<decltype(a)>()
-					 == std::declval<decltype(b)>()) {
-	return {};
-      }),
-    "A smart_reference<simd_mask> must be comparable against bool.");
-  VERIFY(std::experimental::is_simd_mask_v<M>);
-
-  {
-    M x;     // uninitialized
-    x = M{}; // default broadcasts 0
-    COMPARE(x, M(false));
-    COMPARE(x, M());
-    COMPARE(x, M{});
-    x = M(); // default broadcasts 0
-    COMPARE(x, M(false));
-    COMPARE(x, M());
-    COMPARE(x, M{});
-    x = x;
-    for (std::size_t i = 0; i < M::size(); ++i)
-      {
-	COMPARE(x[i], false);
-      }
-  }
-
-  M x(true);
-  M y(false);
-  for (std::size_t i = 0; i < M::size(); ++i)
-    {
-      COMPARE(x[i], true);
-      COMPARE(y[i], false);
-    }
-  y = M(true);
-  COMPARE(x, y);
-}
-
-TEST_TYPES(M, operators, all_test_types) //{{{1
-{
-  { // compares{{{2
-    M x(true), y(false);
-    VERIFY(all_of(x == x));
-    VERIFY(all_of(x != y));
-    VERIFY(all_of(y != x));
-    VERIFY(!all_of(x != x));
-    VERIFY(!all_of(x == y));
-    VERIFY(!all_of(y == x));
-  }
-  { // subscripting{{{2
     M x(true);
+    M y(false);
     for (std::size_t i = 0; i < M::size(); ++i)
       {
-	COMPARE(x[i], true) << "\nx: " << x << ", i: " << i;
-	x[i] = !x[i];
+	COMPARE(x[i], true);
+	COMPARE(y[i], false);
       }
-    COMPARE(x, M{false});
-    for (std::size_t i = 0; i < M::size(); ++i)
-      {
-	COMPARE(x[i], false) << "\nx: " << x << ", i: " << i;
-	x[i] = !x[i];
-      }
-    COMPARE(x, M{true});
+    y = M(true);
+    COMPARE(x, y);
   }
-  { // negation{{{2
-    M x(false);
-    M y = !x;
-    COMPARE(y, M{true});
-    COMPARE(!y, x);
-  }
-}
 
-// implicit_conversions {{{1
+TEST_TYPES(M, operators, all_test_types)
+  {
+    { // compares
+      M x(true), y(false);
+      VERIFY(all_of(x == x));
+      VERIFY(all_of(x != y));
+      VERIFY(all_of(y != x));
+      VERIFY(!all_of(x != x));
+      VERIFY(!all_of(x == y));
+      VERIFY(!all_of(y == x));
+    }
+    { // subscripting
+      M x(true);
+      for (std::size_t i = 0; i < M::size(); ++i)
+	{
+	  COMPARE(x[i], true) << "\nx: " << x << ", i: " << i;
+	  x[i] = !x[i];
+	}
+      COMPARE(x, M{false});
+      for (std::size_t i = 0; i < M::size(); ++i)
+	{
+	  COMPARE(x[i], false) << "\nx: " << x << ", i: " << i;
+	  x[i] = !x[i];
+	}
+      COMPARE(x, M{true});
+    }
+    { // negation
+      M x(false);
+      M y = !x;
+      COMPARE(y, M{true});
+      COMPARE(!y, x);
+    }
+  }
+
+// implicit_conversions
 template <class M, class M2>
-constexpr bool assign_should_work
-  = std::is_same<M, M2>::value
-    || (std::is_same<typename M::abi_type,
-		     std::experimental::simd_abi::fixed_size<M::size()>>::value
-	&& std::is_same<typename M::abi_type, typename M2::abi_type>::value);
+  constexpr bool assign_should_work
+    = std::is_same<M, M2>::value
+	|| (std::is_same<typename M::abi_type,
+			 std::experimental::simd_abi::fixed_size<M::size()>>::value
+	      && std::is_same<typename M::abi_type, typename M2::abi_type>::value);
+
 template <class M, class M2>
-constexpr bool assign_should_not_work = !assign_should_work<M, M2>;
+  constexpr bool assign_should_not_work = !assign_should_work<M, M2>;
 
 template <class L, class R>
-std::enable_if_t<assign_should_work<L, R>>
-implicit_conversions_test()
-{
-  L x = R(true);
-  COMPARE(x, L(true));
-  x = R(false);
-  COMPARE(x, L(false));
-  R y(false);
-  y[0] = true;
-  x = y;
-  L ref(false);
-  ref[0] = true;
-  COMPARE(x, ref);
-}
+  std::enable_if_t<assign_should_work<L, R>>
+  implicit_conversions_test()
+  {
+    L x = R(true);
+    COMPARE(x, L(true));
+    x = R(false);
+    COMPARE(x, L(false));
+    R y(false);
+    y[0] = true;
+    x = y;
+    L ref(false);
+    ref[0] = true;
+    COMPARE(x, ref);
+  }
 
 template <class L, class R>
-std::enable_if_t<assign_should_not_work<L, R>>
-implicit_conversions_test()
-{
-  VERIFY((is_substitution_failure<L&, R, assignment>) );
-}
+  std::enable_if_t<assign_should_not_work<L, R>>
+  implicit_conversions_test()
+  {
+    VERIFY((is_substitution_failure<L&, R, assignment>) );
+  }
 
 TEST_TYPES(M, implicit_conversions, all_test_types)
-{
-  using std::experimental::fixed_size_simd_mask;
-  using std::experimental::native_simd_mask;
-  using std::experimental::simd_mask;
+  {
+    using std::experimental::fixed_size_simd_mask;
+    using std::experimental::native_simd_mask;
+    using std::experimental::simd_mask;
 
-  implicit_conversions_test<M, simd_mask<ldouble>>();
-  implicit_conversions_test<M, simd_mask<double>>();
-  implicit_conversions_test<M, simd_mask<float>>();
-  implicit_conversions_test<M, simd_mask<ullong>>();
-  implicit_conversions_test<M, simd_mask<llong>>();
-  implicit_conversions_test<M, simd_mask<ulong>>();
-  implicit_conversions_test<M, simd_mask<long>>();
-  implicit_conversions_test<M, simd_mask<uint>>();
-  implicit_conversions_test<M, simd_mask<int>>();
-  implicit_conversions_test<M, simd_mask<ushort>>();
-  implicit_conversions_test<M, simd_mask<short>>();
-  implicit_conversions_test<M, simd_mask<uchar>>();
-  implicit_conversions_test<M, simd_mask<schar>>();
-  implicit_conversions_test<M, native_simd_mask<ldouble>>();
-  implicit_conversions_test<M, native_simd_mask<double>>();
-  implicit_conversions_test<M, native_simd_mask<float>>();
-  implicit_conversions_test<M, native_simd_mask<ullong>>();
-  implicit_conversions_test<M, native_simd_mask<llong>>();
-  implicit_conversions_test<M, native_simd_mask<ulong>>();
-  implicit_conversions_test<M, native_simd_mask<long>>();
-  implicit_conversions_test<M, native_simd_mask<uint>>();
-  implicit_conversions_test<M, native_simd_mask<int>>();
-  implicit_conversions_test<M, native_simd_mask<ushort>>();
-  implicit_conversions_test<M, native_simd_mask<short>>();
-  implicit_conversions_test<M, native_simd_mask<uchar>>();
-  implicit_conversions_test<M, native_simd_mask<schar>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<ldouble, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<double, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<float, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<ullong, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<llong, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<ulong, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<long, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<uint, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<int, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<ushort, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<short, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<uchar, M::size()>>();
-  implicit_conversions_test<M, fixed_size_simd_mask<schar, M::size()>>();
-}
+    implicit_conversions_test<M, simd_mask<ldouble>>();
+    implicit_conversions_test<M, simd_mask<double>>();
+    implicit_conversions_test<M, simd_mask<float>>();
+    implicit_conversions_test<M, simd_mask<ullong>>();
+    implicit_conversions_test<M, simd_mask<llong>>();
+    implicit_conversions_test<M, simd_mask<ulong>>();
+    implicit_conversions_test<M, simd_mask<long>>();
+    implicit_conversions_test<M, simd_mask<uint>>();
+    implicit_conversions_test<M, simd_mask<int>>();
+    implicit_conversions_test<M, simd_mask<ushort>>();
+    implicit_conversions_test<M, simd_mask<short>>();
+    implicit_conversions_test<M, simd_mask<uchar>>();
+    implicit_conversions_test<M, simd_mask<schar>>();
+    implicit_conversions_test<M, native_simd_mask<ldouble>>();
+    implicit_conversions_test<M, native_simd_mask<double>>();
+    implicit_conversions_test<M, native_simd_mask<float>>();
+    implicit_conversions_test<M, native_simd_mask<ullong>>();
+    implicit_conversions_test<M, native_simd_mask<llong>>();
+    implicit_conversions_test<M, native_simd_mask<ulong>>();
+    implicit_conversions_test<M, native_simd_mask<long>>();
+    implicit_conversions_test<M, native_simd_mask<uint>>();
+    implicit_conversions_test<M, native_simd_mask<int>>();
+    implicit_conversions_test<M, native_simd_mask<ushort>>();
+    implicit_conversions_test<M, native_simd_mask<short>>();
+    implicit_conversions_test<M, native_simd_mask<uchar>>();
+    implicit_conversions_test<M, native_simd_mask<schar>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<ldouble, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<double, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<float, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<ullong, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<llong, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<ulong, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<long, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<uint, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<int, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<ushort, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<short, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<uchar, M::size()>>();
+    implicit_conversions_test<M, fixed_size_simd_mask<schar, M::size()>>();
+  }
 
-TEST_TYPES(M, load_store, all_test_types) //{{{1
-{
-  // loads {{{2
-  constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<M>;
+TEST_TYPES(M, load_store, all_test_types)
+  {
+    // loads
+    constexpr size_t alignment = 2 * std::experimental::memory_alignment_v<M>;
 #pragma GCC diagnostic ignored "-Wattributes"
-  alignas(alignment) bool mem[3 * M::size()];
-  std::memset(mem, 0, sizeof(mem));
-  for (std::size_t i = 1; i < sizeof(mem) / sizeof(*mem); i += 2)
-    {
-      COMPARE(mem[i - 1], false);
-      mem[i] = true;
-    }
-  using std::experimental::element_aligned;
-  using std::experimental::vector_aligned;
-  constexpr size_t stride_alignment
-    = M::size() & 1
-	? 1
-	: M::size() & 2
-	    ? 2
-	    : M::size() & 4
-		? 4
-		: M::size() & 8
-		    ? 8
-		    : M::size() & 16
-			? 16
-			: M::size() & 32
-			    ? 32
-			    : M::size() & 64
-				? 64
-				: M::size() & 128 ? 128
-						  : M::size() & 256 ? 256 : 512;
-  using stride_aligned_t = std::conditional_t<
-    M::size() == stride_alignment, decltype(vector_aligned),
-    std::experimental::overaligned_tag<stride_alignment * sizeof(bool)>>;
-  constexpr stride_aligned_t stride_aligned = {};
-  constexpr auto overaligned = std::experimental::overaligned<alignment>;
+    alignas(alignment) bool mem[3 * M::size()];
+    std::memset(mem, 0, sizeof(mem));
+    for (std::size_t i = 1; i < sizeof(mem) / sizeof(*mem); i += 2)
+      {
+	COMPARE(mem[i - 1], false);
+	mem[i] = true;
+      }
+    using std::experimental::element_aligned;
+    using std::experimental::vector_aligned;
+    constexpr size_t stride_alignment
+      = M::size() & 1
+	  ? 1
+	  : M::size() & 2
+	  ? 2
+	  : M::size() & 4
+	  ? 4
+	  : M::size() & 8
+	  ? 8
+	  : M::size() & 16
+	  ? 16
+	  : M::size() & 32
+	  ? 32
+	  : M::size() & 64
+	  ? 64
+	  : M::size() & 128 ? 128
+			    : M::size() & 256 ? 256 : 512;
+    using stride_aligned_t = std::conditional_t<
+      M::size() == stride_alignment, decltype(vector_aligned),
+      std::experimental::overaligned_tag<stride_alignment * sizeof(bool)>>;
+    constexpr stride_aligned_t stride_aligned = {};
+    constexpr auto overaligned = std::experimental::overaligned<alignment>;
 
-  const M alternating_mask = make_alternating_mask<M>();
+    const M alternating_mask = make_alternating_mask<M>();
 
-  M x(&mem[M::size()], stride_aligned);
-  COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : alternating_mask)
-    << x.__to_bitset()
-    << ", alternating_mask: " << alternating_mask.__to_bitset();
-  x = {&mem[1], element_aligned};
-  COMPARE(x, !alternating_mask);
-  x = M{mem, overaligned};
-  COMPARE(x, alternating_mask);
+    M x(&mem[M::size()], stride_aligned);
+    COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : alternating_mask)
+      << x.__to_bitset()
+      << ", alternating_mask: " << alternating_mask.__to_bitset();
+    x = {&mem[1], element_aligned};
+    COMPARE(x, !alternating_mask);
+    x = M{mem, overaligned};
+    COMPARE(x, alternating_mask);
 
-  x.copy_from(&mem[M::size()], stride_aligned);
-  COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : alternating_mask);
-  x.copy_from(&mem[1], element_aligned);
-  COMPARE(x, !alternating_mask);
-  x.copy_from(mem, vector_aligned);
-  COMPARE(x, alternating_mask);
+    x.copy_from(&mem[M::size()], stride_aligned);
+    COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : alternating_mask);
+    x.copy_from(&mem[1], element_aligned);
+    COMPARE(x, !alternating_mask);
+    x.copy_from(mem, vector_aligned);
+    COMPARE(x, alternating_mask);
 
-  x = !alternating_mask;
-  where(alternating_mask, x).copy_from(&mem[M::size()], stride_aligned);
-  COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : M{true});
-  x = M(true);                                                    // 1111
-  where(alternating_mask, x).copy_from(&mem[1], element_aligned); // load .0.0
-  COMPARE(x, !alternating_mask);                                  // 1010
-  where(alternating_mask, x).copy_from(mem, overaligned);         // load .1.1
-  COMPARE(x, M{true});                                            // 1111
+    x = !alternating_mask;
+    where(alternating_mask, x).copy_from(&mem[M::size()], stride_aligned);
+    COMPARE(x, M::size() % 2 == 1 ? !alternating_mask : M{true});
+    x = M(true);                                                    // 1111
+    where(alternating_mask, x).copy_from(&mem[1], element_aligned); // load .0.0
+    COMPARE(x, !alternating_mask);                                  // 1010
+    where(alternating_mask, x).copy_from(mem, overaligned);         // load .1.1
+    COMPARE(x, M{true});                                            // 1111
 
-  // stores {{{2
-  memset(mem, 0, sizeof(mem));
-  x = M(true);
-  x.copy_to(&mem[M::size()], stride_aligned);
-  std::size_t i = 0;
-  for (; i < M::size(); ++i)
-    {
-      COMPARE(mem[i], false);
-    }
-  for (; i < 2 * M::size(); ++i)
-    {
-      COMPARE(mem[i], true)
-	.on_failure("i: ", i, ", x: ", x, ", mem: ", vir::test::asBytes(mem));
-    }
-  for (; i < 3 * M::size(); ++i)
-    {
-      COMPARE(mem[i], false);
-    }
-  memset(mem, 0, sizeof(mem));
-  x.copy_to(&mem[1], element_aligned);
-  COMPARE(mem[0], false);
-  for (i = 1; i <= M::size(); ++i)
-    {
-      COMPARE(mem[i], true);
-    }
-  for (; i < 3 * M::size(); ++i)
-    {
-      COMPARE(mem[i], false);
-    }
-  memset(mem, 0, sizeof(mem));
-  alternating_mask.copy_to(mem, overaligned);
-  for (i = 0; i < M::size(); ++i)
-    {
-      COMPARE(mem[i], (i & 1) == 1);
-    }
-  for (; i < 3 * M::size(); ++i)
-    {
-      COMPARE(mem[i], false);
-    }
-  x.copy_to(mem, vector_aligned);
-  where(alternating_mask, !x).copy_to(mem, overaligned);
-  for (i = 0; i < M::size(); ++i)
-    {
-      COMPARE(mem[i], i % 2 == 0);
-    }
-  for (; i < 3 * M::size(); ++i)
-    {
-      COMPARE(mem[i], false);
-    }
-}
+    // stores
+    memset(mem, 0, sizeof(mem));
+    x = M(true);
+    x.copy_to(&mem[M::size()], stride_aligned);
+    std::size_t i = 0;
+    for (; i < M::size(); ++i)
+      {
+	COMPARE(mem[i], false);
+      }
+    for (; i < 2 * M::size(); ++i)
+      {
+	COMPARE(mem[i], true)
+	  .on_failure("i: ", i, ", x: ", x, ", mem: ", vir::test::asBytes(mem));
+      }
+    for (; i < 3 * M::size(); ++i)
+      {
+	COMPARE(mem[i], false);
+      }
+    memset(mem, 0, sizeof(mem));
+    x.copy_to(&mem[1], element_aligned);
+    COMPARE(mem[0], false);
+    for (i = 1; i <= M::size(); ++i)
+      {
+	COMPARE(mem[i], true);
+      }
+    for (; i < 3 * M::size(); ++i)
+      {
+	COMPARE(mem[i], false);
+      }
+    memset(mem, 0, sizeof(mem));
+    alternating_mask.copy_to(mem, overaligned);
+    for (i = 0; i < M::size(); ++i)
+      {
+	COMPARE(mem[i], (i & 1) == 1);
+      }
+    for (; i < 3 * M::size(); ++i)
+      {
+	COMPARE(mem[i], false);
+      }
+    x.copy_to(mem, vector_aligned);
+    where(alternating_mask, !x).copy_to(mem, overaligned);
+    for (i = 0; i < M::size(); ++i)
+      {
+	COMPARE(mem[i], i % 2 == 0);
+      }
+    for (; i < 3 * M::size(); ++i)
+      {
+	COMPARE(mem[i], false);
+      }
+  }
 
-// operator_conversions helpers {{{1
+// operator_conversions helpers
 template <typename M0, typename M1>
-constexpr bool
-bit_and_is_illformed()
-{
-  return is_substitution_failure<M0, M1, std::bit_and<>>;
-}
+  constexpr bool
+  bit_and_is_illformed()
+  {
+    return is_substitution_failure<M0, M1, std::bit_and<>>;
+  }
 
 template <typename M0, typename M1>
-void
-test_binary_op_cvt()
-{
-  COMPARE((bit_and_is_illformed<M0, M1>()), !(std::is_same_v<M0, M1>) );
-}
+  void
+  test_binary_op_cvt()
+  {
+    COMPARE((bit_and_is_illformed<M0, M1>()), !(std::is_same_v<M0, M1>) );
+  }
 
-TEST_TYPES(M, operator_conversions, current_native_mask_test_types) //{{{1
-{
-  // binary ops without conversions work
-  COMPARE(typeid(M() & M()), typeid(M));
+TEST_TYPES(M, operator_conversions, current_native_mask_test_types)
+  {
+    // binary ops without conversions work
+    COMPARE(typeid(M() & M()), typeid(M));
 
-  // nothing else works: no implicit conv. or ambiguous
-  using std::experimental::fixed_size_simd_mask;
-  using std::experimental::native_simd_mask;
-  using std::experimental::simd_mask;
-  test_binary_op_cvt<M, bool>();
+    // nothing else works: no implicit conv. or ambiguous
+    using std::experimental::fixed_size_simd_mask;
+    using std::experimental::native_simd_mask;
+    using std::experimental::simd_mask;
+    test_binary_op_cvt<M, bool>();
 
-  test_binary_op_cvt<M, simd_mask<ldouble>>();
-  test_binary_op_cvt<M, simd_mask<double>>();
-  test_binary_op_cvt<M, simd_mask<float>>();
-  test_binary_op_cvt<M, simd_mask<ullong>>();
-  test_binary_op_cvt<M, simd_mask<llong>>();
-  test_binary_op_cvt<M, simd_mask<ulong>>();
-  test_binary_op_cvt<M, simd_mask<long>>();
-  test_binary_op_cvt<M, simd_mask<uint>>();
-  test_binary_op_cvt<M, simd_mask<int>>();
-  test_binary_op_cvt<M, simd_mask<ushort>>();
-  test_binary_op_cvt<M, simd_mask<short>>();
-  test_binary_op_cvt<M, simd_mask<uchar>>();
-  test_binary_op_cvt<M, simd_mask<schar>>();
-  test_binary_op_cvt<M, simd_mask<wchar>>();
-  test_binary_op_cvt<M, simd_mask<char16>>();
-  test_binary_op_cvt<M, simd_mask<char32>>();
+    test_binary_op_cvt<M, simd_mask<ldouble>>();
+    test_binary_op_cvt<M, simd_mask<double>>();
+    test_binary_op_cvt<M, simd_mask<float>>();
+    test_binary_op_cvt<M, simd_mask<ullong>>();
+    test_binary_op_cvt<M, simd_mask<llong>>();
+    test_binary_op_cvt<M, simd_mask<ulong>>();
+    test_binary_op_cvt<M, simd_mask<long>>();
+    test_binary_op_cvt<M, simd_mask<uint>>();
+    test_binary_op_cvt<M, simd_mask<int>>();
+    test_binary_op_cvt<M, simd_mask<ushort>>();
+    test_binary_op_cvt<M, simd_mask<short>>();
+    test_binary_op_cvt<M, simd_mask<uchar>>();
+    test_binary_op_cvt<M, simd_mask<schar>>();
+    test_binary_op_cvt<M, simd_mask<wchar>>();
+    test_binary_op_cvt<M, simd_mask<char16>>();
+    test_binary_op_cvt<M, simd_mask<char32>>();
 
-  test_binary_op_cvt<M, native_simd_mask<ldouble>>();
-  test_binary_op_cvt<M, native_simd_mask<double>>();
-  test_binary_op_cvt<M, native_simd_mask<float>>();
-  test_binary_op_cvt<M, native_simd_mask<ullong>>();
-  test_binary_op_cvt<M, native_simd_mask<llong>>();
-  test_binary_op_cvt<M, native_simd_mask<ulong>>();
-  test_binary_op_cvt<M, native_simd_mask<long>>();
-  test_binary_op_cvt<M, native_simd_mask<uint>>();
-  test_binary_op_cvt<M, native_simd_mask<int>>();
-  test_binary_op_cvt<M, native_simd_mask<ushort>>();
-  test_binary_op_cvt<M, native_simd_mask<short>>();
-  test_binary_op_cvt<M, native_simd_mask<uchar>>();
-  test_binary_op_cvt<M, native_simd_mask<schar>>();
-  test_binary_op_cvt<M, native_simd_mask<wchar>>();
-  test_binary_op_cvt<M, native_simd_mask<char16>>();
-  test_binary_op_cvt<M, native_simd_mask<char32>>();
+    test_binary_op_cvt<M, native_simd_mask<ldouble>>();
+    test_binary_op_cvt<M, native_simd_mask<double>>();
+    test_binary_op_cvt<M, native_simd_mask<float>>();
+    test_binary_op_cvt<M, native_simd_mask<ullong>>();
+    test_binary_op_cvt<M, native_simd_mask<llong>>();
+    test_binary_op_cvt<M, native_simd_mask<ulong>>();
+    test_binary_op_cvt<M, native_simd_mask<long>>();
+    test_binary_op_cvt<M, native_simd_mask<uint>>();
+    test_binary_op_cvt<M, native_simd_mask<int>>();
+    test_binary_op_cvt<M, native_simd_mask<ushort>>();
+    test_binary_op_cvt<M, native_simd_mask<short>>();
+    test_binary_op_cvt<M, native_simd_mask<uchar>>();
+    test_binary_op_cvt<M, native_simd_mask<schar>>();
+    test_binary_op_cvt<M, native_simd_mask<wchar>>();
+    test_binary_op_cvt<M, native_simd_mask<char16>>();
+    test_binary_op_cvt<M, native_simd_mask<char32>>();
 
-  test_binary_op_cvt<M, fixed_size_simd_mask<ldouble, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<double, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<float, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<ullong, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<llong, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<ulong, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<long, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<uint, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<int, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<ushort, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<short, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<uchar, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<schar, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<wchar, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<char16, 2>>();
-  test_binary_op_cvt<M, fixed_size_simd_mask<char32, 2>>();
-}
+    test_binary_op_cvt<M, fixed_size_simd_mask<ldouble, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<double, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<float, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<ullong, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<llong, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<ulong, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<long, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<uint, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<int, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<ushort, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<short, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<uchar, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<schar, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<wchar, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<char16, 2>>();
+    test_binary_op_cvt<M, fixed_size_simd_mask<char32, 2>>();
+  }
 
-TEST_TYPES(M, reductions, all_test_types) //{{{1
-{
-  const M alternating_mask = make_alternating_mask<M>();
-  COMPARE(alternating_mask[0], false); // assumption below
-  auto&& gen = make_mask<M>;
+TEST_TYPES(M, reductions, all_test_types)
+  {
+    const M alternating_mask = make_alternating_mask<M>();
+    COMPARE(alternating_mask[0], false); // assumption below
+    auto&& gen = make_mask<M>;
 
-  // all_of
-  VERIFY(all_of(M{true}));
-  VERIFY(!all_of(alternating_mask));
-  VERIFY(!all_of(M{false}));
-  using std::experimental::all_of;
-  VERIFY(all_of(true));
-  VERIFY(!all_of(false));
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
+    // all_of
+    VERIFY(all_of(M{true}));
+    VERIFY(!all_of(alternating_mask));
+    VERIFY(!all_of(M{false}));
+    using std::experimental::all_of;
+    VERIFY(all_of(true));
+    VERIFY(!all_of(false));
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::all_of(x)) { return {}; }));
 
-  // any_of
-  VERIFY(any_of(M{true}));
-  COMPARE(any_of(alternating_mask), M::size() > 1);
-  VERIFY(!any_of(M{false}));
-  using std::experimental::any_of;
-  VERIFY(any_of(true));
-  VERIFY(!any_of(false));
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
+    // any_of
+    VERIFY(any_of(M{true}));
+    COMPARE(any_of(alternating_mask), M::size() > 1);
+    VERIFY(!any_of(M{false}));
+    using std::experimental::any_of;
+    VERIFY(any_of(true));
+    VERIFY(!any_of(false));
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::any_of(x)) { return {}; }));
 
-  // none_of
-  VERIFY(!none_of(M{true}));
-  COMPARE(none_of(alternating_mask), M::size() == 1);
-  VERIFY(none_of(M{false}));
-  using std::experimental::none_of;
-  VERIFY(!none_of(true));
-  VERIFY(none_of(false));
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
+    // none_of
+    VERIFY(!none_of(M{true}));
+    COMPARE(none_of(alternating_mask), M::size() == 1);
+    VERIFY(none_of(M{false}));
+    using std::experimental::none_of;
+    VERIFY(!none_of(true));
+    VERIFY(none_of(false));
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::none_of(x)) { return {}; }));
 
-  // some_of
-  VERIFY(!some_of(M{true}));
-  VERIFY(!some_of(M{false}));
-  if (M::size() > 1)
+    // some_of
+    VERIFY(!some_of(M{true}));
+    VERIFY(!some_of(M{false}));
+    if (M::size() > 1)
+      {
+	VERIFY(some_of(gen({true, false})));
+	VERIFY(some_of(gen({false, true})));
+	if (M::size() > 3)
+	  {
+	    VERIFY(some_of(gen({0, 0, 0, 1})));
+	  }
+      }
+    using std::experimental::some_of;
+    VERIFY(!some_of(true));
+    VERIFY(!some_of(false));
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
+
+    // popcount
+    COMPARE(popcount(M{true}), int(M::size()));
+    COMPARE(popcount(alternating_mask), int(M::size()) / 2);
+    COMPARE(popcount(M{false}), 0);
+    COMPARE(popcount(gen({0, 0, 1})), int(M::size()) / 3);
+    COMPARE(popcount(gen({0, 0, 0, 1})), int(M::size()) / 4);
+    COMPARE(popcount(gen({0, 0, 0, 0, 1})), int(M::size()) / 5);
+    COMPARE(std::experimental::popcount(true), 1);
+    COMPARE(std::experimental::popcount(false), 0);
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
+
+    // find_first_set
     {
-      VERIFY(some_of(gen({true, false})));
-      VERIFY(some_of(gen({false, true})));
-      if (M::size() > 3)
+      M x(false);
+      for (int i = int(M::size() / 2 - 1); i >= 0; --i)
 	{
-	  VERIFY(some_of(gen({0, 0, 0, 1})));
+	  x[i] = true;
+	  COMPARE(find_first_set(x), i) << x;
+	}
+      x = M(false);
+      for (int i = int(M::size() - 1); i >= 0; --i)
+	{
+	  x[i] = true;
+	  COMPARE(find_first_set(x), i) << x;
 	}
     }
-  using std::experimental::some_of;
-  VERIFY(!some_of(true));
-  VERIFY(!some_of(false));
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::some_of(x)) { return {}; }));
-
-  // popcount
-  COMPARE(popcount(M{true}), int(M::size()));
-  COMPARE(popcount(alternating_mask), int(M::size()) / 2);
-  COMPARE(popcount(M{false}), 0);
-  COMPARE(popcount(gen({0, 0, 1})), int(M::size()) / 3);
-  COMPARE(popcount(gen({0, 0, 0, 1})), int(M::size()) / 4);
-  COMPARE(popcount(gen({0, 0, 0, 0, 1})), int(M::size()) / 5);
-  COMPARE(std::experimental::popcount(true), 1);
-  COMPARE(std::experimental::popcount(false), 0);
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::popcount(x)) { return {}; }));
-
-  // find_first_set
-  {
-    M x(false);
-    for (int i = int(M::size() / 2 - 1); i >= 0; --i)
+    COMPARE(find_first_set(M{true}), 0);
+    if (M::size() > 1)
       {
-	x[i] = true;
-	COMPARE(find_first_set(x), i) << x;
+	COMPARE(find_first_set(gen({0, 1})), 1);
       }
-    x = M(false);
-    for (int i = int(M::size() - 1); i >= 0; --i)
+    if (M::size() > 2)
       {
-	x[i] = true;
-	COMPARE(find_first_set(x), i) << x;
+	COMPARE(find_first_set(gen({0, 0, 1})), 2);
       }
+    COMPARE(std::experimental::find_first_set(true), 0);
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::find_first_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::find_first_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::find_first_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::find_first_set(x)) {
+	  return {};
+	}));
+
+    // find_last_set
+    {
+      M x(false);
+      for (int i = 0; i < int(M::size()); ++i)
+	{
+	  x[i] = true;
+	  COMPARE(find_last_set(x), i) << x;
+	}
+    }
+    COMPARE(find_last_set(M{true}), int(M::size()) - 1);
+    if (M::size() > 1)
+      {
+	COMPARE(find_last_set(gen({1, 0})),
+		int(M::size()) - 2 + int(M::size() & 1));
+      }
+    if (M::size() > 3 && (M::size() & 3) == 0)
+      {
+	COMPARE(find_last_set(gen({1, 0, 0, 0})),
+		int(M::size()) - 4 - int(M::size() & 3));
+      }
+    COMPARE(std::experimental::find_last_set(true), 0);
+    VERIFY(sfinae_is_callable<bool>(
+	[](auto x) -> decltype(std::experimental::find_last_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<int>(
+	[](auto x) -> decltype(std::experimental::find_last_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<float>(
+	[](auto x) -> decltype(std::experimental::find_last_set(x)) {
+	  return {};
+	}));
+    VERIFY(!sfinae_is_callable<char>(
+	[](auto x) -> decltype(std::experimental::find_last_set(x)) {
+	  return {};
+	}));
   }
-  COMPARE(find_first_set(M{true}), 0);
-  if (M::size() > 1)
-    {
-      COMPARE(find_first_set(gen({0, 1})), 1);
-    }
-  if (M::size() > 2)
-    {
-      COMPARE(find_first_set(gen({0, 0, 1})), 2);
-    }
-  COMPARE(std::experimental::find_first_set(true), 0);
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::find_first_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::find_first_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::find_first_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::find_first_set(x)) {
-      return {};
-    }));
-
-  // find_last_set
-  {
-    M x(false);
-    for (int i = 0; i < int(M::size()); ++i)
-      {
-	x[i] = true;
-	COMPARE(find_last_set(x), i) << x;
-      }
-  }
-  COMPARE(find_last_set(M{true}), int(M::size()) - 1);
-  if (M::size() > 1)
-    {
-      COMPARE(find_last_set(gen({1, 0})),
-	      int(M::size()) - 2 + int(M::size() & 1));
-    }
-  if (M::size() > 3 && (M::size() & 3) == 0)
-    {
-      COMPARE(find_last_set(gen({1, 0, 0, 0})),
-	      int(M::size()) - 4 - int(M::size() & 3));
-    }
-  COMPARE(std::experimental::find_last_set(true), 0);
-  VERIFY(sfinae_is_callable<bool>(
-    [](auto x) -> decltype(std::experimental::find_last_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<int>(
-    [](auto x) -> decltype(std::experimental::find_last_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<float>(
-    [](auto x) -> decltype(std::experimental::find_last_set(x)) {
-      return {};
-    }));
-  VERIFY(!sfinae_is_callable<char>(
-    [](auto x) -> decltype(std::experimental::find_last_set(x)) {
-      return {};
-    }));
-}
-
-// vim: foldmethod=marker

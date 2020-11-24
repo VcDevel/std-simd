@@ -1,4 +1,4 @@
-/*{{{
+/*{
 Copyright © 2017-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
                       Matthias Kretz <m.kretz@gsi.de>
 
@@ -24,7 +24,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-}}}*/
+}*/
 
 //#define UNITTEST_ONLY_XTEST 1
 #define _GLIBCXX_SIMD_EXPERIMENTAL 1
@@ -35,27 +35,27 @@ template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 #include "testtypes.h"
 
 TEST_TYPES(V, where_apply, all_test_types)
-{
-  using T = typename V::value_type;
+  {
+    using T = typename V::value_type;
 
-  for (int split = 0; split <= int(V::size()); ++split)
-    {
-      V a([](T i) { return i; });
-      where(a > split, a)
-	.apply([](auto&& masked) { masked = 1; })
-	.apply_inv([](auto&& masked) { masked = 2; });
-      COMPARE(a, V([split](int i) { return i > split ? T(1) : T(2); }));
+    for (int split = 0; split <= int(V::size()); ++split)
+      {
+	V a([](T i) { return i; });
+	where(a > split, a)
+	  .apply([](auto&& masked) { masked = 1; })
+	  .apply_inv([](auto&& masked) { masked = 2; });
+	COMPARE(a, V([split](int i) { return i > split ? T(1) : T(2); }));
 
-      V b = 0;
-      where(a == 1, a, b)
-	.apply([](auto&& a_, auto&& b_) { a_ = b_; })
-	.apply_inv([](auto&& a_, auto&& b_) { b_ = a_; });
-      COMPARE(a, V([split](int i) { return i > split ? T(0) : T(2); }));
-      COMPARE(b, V([split](int i) { return i > split ? T(0) : T(2); }));
-    }
-}
+	V b = 0;
+	where(a == 1, a, b)
+	  .apply([](auto&& a_, auto&& b_) { a_ = b_; })
+	  .apply_inv([](auto&& a_, auto&& b_) { b_ = a_; });
+	COMPARE(a, V([split](int i) { return i > split ? T(0) : T(2); }));
+	COMPARE(b, V([split](int i) { return i > split ? T(0) : T(2); }));
+      }
+  }
 
 TEST_TYPES(V, generators, all_test_types)
-{
-  COMPARE(V::seq(), make_vec<V>({0, 1}, 2));
-}
+  {
+    COMPARE(V::seq(), make_vec<V>({0, 1}, 2));
+  }

@@ -1,4 +1,4 @@
-/*{{{
+/*{
 Copyright © 2017-2019 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
                  Matthias Kretz <m.kretz@gsi.de>
 
@@ -24,7 +24,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-}}}*/
+}*/
 
 //#define UNITTEST_ONLY_XTEST 1
 #include <vir/test.h>
@@ -36,27 +36,27 @@ template <class... Ts> using base_template = std::experimental::simd<Ts...>;
 #include "testtypes.h"
 
 TEST_TYPES(V, conversions, all_test_types)
-{
-  using M = typename V::mask_type;
-  constexpr size_t N = V::size();
-  using B = std::bitset<N>;
-  M k(true);
-  B allone(0xffffffffffffffffLLU);
-  COMPARE(k.__to_bitset(), allone);
+  {
+    using M = typename V::mask_type;
+    constexpr size_t N = V::size();
+    using B = std::bitset<N>;
+    M k(true);
+    B allone(0xffffffffffffffffLLU);
+    COMPARE(k.__to_bitset(), allone);
 
-  k = make_mask<M>({true, false, false});
-  COMPARE(k.__to_bitset(), B(0x9249249249249249LLU)) << k;
-  k = make_mask<M>({false, true, false});
-  COMPARE(k.__to_bitset(), B(0x2492492492492492LLU)) << k;
-  k = make_mask<M>({false, false, true});
-  COMPARE(k.__to_bitset(), B(0x4924924924924924LLU)) << k;
+    k = make_mask<M>({true, false, false});
+    COMPARE(k.__to_bitset(), B(0x9249249249249249LLU)) << k;
+    k = make_mask<M>({false, true, false});
+    COMPARE(k.__to_bitset(), B(0x2492492492492492LLU)) << k;
+    k = make_mask<M>({false, false, true});
+    COMPARE(k.__to_bitset(), B(0x4924924924924924LLU)) << k;
 
-  k = make_mask<M>({true, false, false, false});
-  COMPARE(k.__to_bitset(), B(0x1111111111111111LLU)) << k;
-  k = make_mask<M>({false, true, false, false});
-  COMPARE(k.__to_bitset(), B(0x2222222222222222LLU)) << k;
-  k = make_mask<M>({false, false, true, false});
-  COMPARE(k.__to_bitset(), B(0x4444444444444444LLU)) << k;
-  k = make_mask<M>({false, false, false, true});
-  COMPARE(k.__to_bitset(), B(0x8888888888888888LLU)) << k;
-}
+    k = make_mask<M>({true, false, false, false});
+    COMPARE(k.__to_bitset(), B(0x1111111111111111LLU)) << k;
+    k = make_mask<M>({false, true, false, false});
+    COMPARE(k.__to_bitset(), B(0x2222222222222222LLU)) << k;
+    k = make_mask<M>({false, false, true, false});
+    COMPARE(k.__to_bitset(), B(0x4444444444444444LLU)) << k;
+    k = make_mask<M>({false, false, false, true});
+    COMPARE(k.__to_bitset(), B(0x8888888888888888LLU)) << k;
+  }
