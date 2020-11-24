@@ -78,9 +78,10 @@ exit 1
 
   install -v -p -d "$includedir/experimental/bits"
   install -v -p experimental/bits/simd*.h "$includedir/experimental/bits/"
+  install -v -p experimental/bits/numeric_traits.h "$includedir/experimental/bits/"
   install -v -p experimental/simd "$includedir/experimental/"
 else
-  for i in experimental/bits/simd*.h experimental/simd; do
+  for i in experimental/bits/simd*.h experimental/bits/numeric_traits.h experimental/simd; do
     dst="$includedir/$i"
     if test -e "$dst"; then
       echo "Removing $dst"
