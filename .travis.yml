@@ -7,10 +7,10 @@ addons:
     sources:
       - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
-      - libboost-all-dev
       - g++-10
 env:
-  - CC=gcc-10 CXX=g++-10 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2 CXXFLAGS=-DTRAVIS
+  - CC=gcc-10 CXX=g++-10 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2 CXXFLAGS=-DTRAVIS subset=avx
+  - CC=gcc-10 CXX=g++-10 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2 CXXFLAGS=-DTRAVIS subset=avx512
 
 script:
   - ctest -VV -S scripts/test.cmake
