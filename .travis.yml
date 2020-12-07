@@ -8,9 +8,9 @@ addons:
       - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
       - libboost-all-dev
-      - g++-9
+      - g++-10
 env:
-  - CC=gcc-9 CXX=g++-9 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2
+  - CC=gcc-10 CXX=g++-10 dashboard_model=Experimental build_type=Release NUMBER_OF_PROCESSORS=2 CXXFLAGS=-DTRAVIS
 
 script:
   - ctest -VV -S scripts/test.cmake

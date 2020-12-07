@@ -49,6 +49,13 @@ namespace stdx = std::experimental;
 namespace simd_abi = std::experimental::simd_abi;
 
 // all_native_abis {{{1
+#ifdef TRAVIS
+using all_native_abis
+  = vir::Typelist<simd_abi::scalar,
+		  simd_abi::_VecBuiltin<16>,
+		  simd_abi::_VecBltnBtmsk<64>
+		 >;
+#else // TRAVIS
 using all_native_abis
   = vir::Typelist<simd_abi::scalar, simd_abi::_VecBuiltin<8>,
 		  simd_abi::_VecBuiltin<16>, simd_abi::_VecBuiltin<24>,
@@ -60,6 +67,7 @@ using all_native_abis
 		  simd_abi::_Avx512<32>, simd_abi::_Avx512<64>
 #endif
 		  >;
+#endif // TRAVIS
 
 // (all_)arithmetic_types {{{1
 using all_arithmetic_types
