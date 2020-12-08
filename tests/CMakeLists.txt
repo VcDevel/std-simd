@@ -445,7 +445,7 @@ function(vc_add_test name) #{{{
       if(_NO_TESTABIS)
          set(abi_split " ")
       elseif(TRAVIS)
-         set(abi_split 0)
+         set(abi_split 0 3)
       else()
          set(abi_split 0 1 2 3 4 5 6 7 8)
       endif()
