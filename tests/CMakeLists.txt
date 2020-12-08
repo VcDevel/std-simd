@@ -228,6 +228,9 @@ add_custom_target(build_tests ALL VERBATIM)
 
 if(NOT "$ENV{TRAVIS_OS_NAME}" STREQUAL "")
    set(CMAKE_CXX_FLAGS_RELEASE "-O1 -DNDEBUG") # try to not time out, -O0 is faster
+   set(TRAVIS TRUE)
+else()
+   set(TRAVIS FALSE)
 endif()
 
 add_definitions(-DCOMPILE_FOR_UNIT_TESTS -D_GLIBCXX_SIMD_NO_OPTIMIZATION_WARNINGS)
@@ -441,6 +444,8 @@ function(vc_add_test name) #{{{
       endif()
       if(_NO_TESTABIS)
          set(abi_split " ")
+      elseif(TRAVIS)
+         set(abi_split 0)
       else()
          set(abi_split 0 1 2 3 4 5 6 7 8)
       endif()
