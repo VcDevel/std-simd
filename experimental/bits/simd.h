@@ -83,8 +83,8 @@ using __m512i [[__gnu__::__vector_size__(64)]] = long long;
 
 // __next_power_of_2{{{
 /**
- * \internal
- * Returns the next power of 2 larger than or equal to \p __x.
+ * @internal
+ * Returns the next power of 2 larger than or equal to @p __x.
  */
 constexpr size_t
 __next_power_of_2(size_t __x)
@@ -663,7 +663,7 @@ public:
 
 // }}}
 // __may_alias{{{
-/**\internal
+/**@internal
  * Helper __may_alias<_Tp> that turns _Tp into the type to be used for an
  * aliasing pointer. This adds the __may_alias attribute to _Tp (with compilers
  * that support it).
@@ -685,7 +685,7 @@ struct _UnsupportedBase
 // }}}
 // _InvalidTraits {{{
 /**
- * \internal
+ * @internal
  * Defines the implementation of __a given <_Tp, _Abi>.
  *
  * Implementations must ensure that only valid <_Tp, _Abi> instantiations are
@@ -720,7 +720,7 @@ template <typename _Tp, typename _Abi, typename = void_t<>>
 // }}}
 // __private_init, __bitset_init{{{
 /**
- * \internal
+ * @internal
  * Tag used for private init constructor of simd and simd_mask
  */
 inline constexpr struct _PrivateInit {} __private_init = {};
@@ -2738,9 +2738,9 @@ template <typename _Tp, size_t _Np, typename = void>
 
 namespace simd_abi {
 /**
- * \tparam _Tp   The requested `value_type` for the elements.
- * \tparam _Np    The requested number of elements.
- * \tparam _Abis This parameter is ignored, since this implementation cannot
+ * @tparam _Tp   The requested `value_type` for the elements.
+ * @tparam _Np    The requested number of elements.
+ * @tparam _Abis This parameter is ignored, since this implementation cannot
  * make any use of it. Either __a good native ABI is matched and used as `type`
  * alias, or the `fixed_size<_Np>` ABI is used, which internally is built from
  * the best matching native ABIs.

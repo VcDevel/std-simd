@@ -264,8 +264,8 @@ template <int _Bits, typename _Tp, typename _Abi>
 // }}}
 // __fold_input {{{
 
-/**\internal
- * Fold \p x into [-¼π, ¼π] and remember the quadrant it came from:
+/**@internal
+ * Fold @p x into [-¼π, ¼π] and remember the quadrant it came from:
  * quadrant 0: [-¼π,  ¼π]
  * quadrant 1: [ ¼π,  ¾π]
  * quadrant 2: [ ¾π, 1¼π]
@@ -631,10 +631,10 @@ template <typename _Tp, size_t _Np>
 #endif // _GLIBCXX_SIMD_X86INTRIN
 
 /**
- * splits \p __v into exponent and mantissa, the sign is kept with the mantissa
+ * splits @p __v into exponent and mantissa, the sign is kept with the mantissa
  *
  * The return value will be in the range [0.5, 1.0[
- * The \p __e value will be an integer defining the power-of-two exponent
+ * The @p __e value will be an integer defining the power-of-two exponent
  */
 template <typename _Tp, typename _Abi>
   enable_if_t<is_floating_point_v<_Tp>, simd<_Tp, _Abi>>
