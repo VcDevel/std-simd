@@ -1,7 +1,9 @@
 #!/bin/zsh
 stdsimdrepo="${0%/scripts/*}/tests"
-for filepath in ../../../../testsuite/experimental/simd/tests/*.h; do
-  name="${${filepath##*/}%.h}"
+gccrepo=$1
+
+for filepath in $gccrepo/libstdc++-v3/testsuite/experimental/simd/tests/*.cc; do
+  name="${${filepath##*/}%.cc}"
   case "$name" in
     abs|fpclassify|frexp|hypot3_fma|ldexp_scalbn_scalbln_modf|logarithm|math_1arg|math_2arg|remqo|sincos|trigonometric|trunc_ceil_floor)
       vimdiff "$filepath" "$stdsimdrepo/math.cpp"
@@ -20,7 +22,7 @@ for filepath in ../../../../testsuite/experimental/simd/tests/*.h; do
       ;;
   esac
 done
-bits=../../../../testsuite/experimental/simd/tests/bits
+bits=$gccrepo/libstdc++-v3/testsuite/experimental/simd/tests/bits
 for i in conversions make_simd test_values; do
   vimdiff $bits/$i.h $stdsimdrepo/$i.h
 done
