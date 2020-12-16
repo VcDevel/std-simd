@@ -886,51 +886,67 @@ template <typename _Abi> simd<long long, _Abi> llabs(const simd<long long, _Abi>
 
 #define _GLIBCXX_SIMD_CVTING2(_NAME)                                           \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const simd<_Tp, _Abi>& __x, const __id<simd<_Tp, _Abi>>& __y)          \
-  { return _NAME(__x, __y); }                                                  \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const simd<_Tp, _Abi>& __x, const __type_identity_t<simd<_Tp, _Abi>>& __y) \
+  {                                                                            \
+    return _NAME(__x, __y);                                                    \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const __id<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y)          \
-  { return _NAME(__x, __y); }
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const __type_identity_t<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y) \
+  {                                                                            \
+    return _NAME(__x, __y);                                                    \
+  }
 
 #define _GLIBCXX_SIMD_CVTING3(_NAME)                                           \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const __id<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y,          \
-	const simd<_Tp, _Abi>& __z)                                            \
-  { return _NAME(__x, __y, __z); }                                             \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const __type_identity_t<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y, \
+    const simd<_Tp, _Abi>& __z)                                                \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const simd<_Tp, _Abi>& __x, const __id<simd<_Tp, _Abi>>& __y,          \
-	const simd<_Tp, _Abi>& __z)                                            \
-  { return _NAME(__x, __y, __z); }                                             \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const simd<_Tp, _Abi>& __x, const __type_identity_t<simd<_Tp, _Abi>>& __y, \
+    const simd<_Tp, _Abi>& __z)                                                \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const simd<_Tp, _Abi>& __x, const simd<_Tp, _Abi>& __y,                \
-	const __id<simd<_Tp, _Abi>>& __z)                                      \
-  { return _NAME(__x, __y, __z); }                                             \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const simd<_Tp, _Abi>& __x, const simd<_Tp, _Abi>& __y,                    \
+    const __type_identity_t<simd<_Tp, _Abi>>& __z)                             \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const simd<_Tp, _Abi>& __x, const __id<simd<_Tp, _Abi>>& __y,          \
-	const __id<simd<_Tp, _Abi>>& __z)                                      \
-  { return _NAME(__x, __y, __z); }                                             \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const simd<_Tp, _Abi>& __x, const __type_identity_t<simd<_Tp, _Abi>>& __y, \
+    const __type_identity_t<simd<_Tp, _Abi>>& __z)                             \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const __id<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y,          \
-	const __id<simd<_Tp, _Abi>>& __z)                                      \
-  { return _NAME(__x, __y, __z); }                                             \
-									       \
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const __type_identity_t<simd<_Tp, _Abi>>& __x, const simd<_Tp, _Abi>& __y, \
+    const __type_identity_t<simd<_Tp, _Abi>>& __z)                             \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }                                                                            \
+                                                                               \
 template <typename _Tp, typename _Abi>                                         \
-  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi>                                      \
-  _NAME(const __id<simd<_Tp, _Abi>>& __x, const __id<simd<_Tp, _Abi>>& __y,    \
-	const simd<_Tp, _Abi>& __z)                                            \
-  { return _NAME(__x, __y, __z); }
+  _GLIBCXX_SIMD_INTRINSIC simd<_Tp, _Abi> _NAME(                               \
+    const __type_identity_t<simd<_Tp, _Abi>>& __x,                             \
+    const __type_identity_t<simd<_Tp, _Abi>>& __y, const simd<_Tp, _Abi>& __z) \
+  {                                                                            \
+    return _NAME(__x, __y, __z);                                               \
+  }
 
 template <typename _R, typename _ToApply, typename _Tp, typename... _Tps>
   _GLIBCXX_SIMD_INTRINSIC _R

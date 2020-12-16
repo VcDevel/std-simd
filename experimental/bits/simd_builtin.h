@@ -1297,7 +1297,7 @@ struct _CommonImplBuiltin
 
 	  if constexpr ((_Bytes & (_Bytes - 1)) != 0)
 	    {
-	      constexpr size_t _MoreBytes = __next_power_of_2(_Bytes);
+	      constexpr size_t _MoreBytes = std::__bit_ceil(_Bytes);
 	      alignas(decltype(__v)) char __tmp[_MoreBytes];
 	      __builtin_memcpy(__tmp, &__v, _MoreBytes);
 	      __builtin_memcpy(__addr, __tmp, _Bytes);
@@ -2453,7 +2453,7 @@ template <typename _Abi>
     template <typename _Tp, typename _K, size_t _Np>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_assign(_SimdWrapper<_K, _Np> __k, _SimdWrapper<_Tp, _Np>& __lhs,
-		       __id<_SimdWrapper<_Tp, _Np>> __rhs)
+		       __type_identity_t<_SimdWrapper<_Tp, _Np>> __rhs)
       {
 	if (__k._M_is_constprop_none_of())
 	  return;
@@ -2466,7 +2466,7 @@ template <typename _Abi>
     template <typename _Tp, typename _K, size_t _Np>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_assign(_SimdWrapper<_K, _Np> __k, _SimdWrapper<_Tp, _Np>& __lhs,
-		       __id<_Tp> __rhs)
+		       __type_identity_t<_Tp> __rhs)
       {
 	if (__k._M_is_constprop_none_of())
 	  return;
@@ -2495,7 +2495,8 @@ template <typename _Abi>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_cassign(const _SimdWrapper<_K, _Np> __k,
 			_SimdWrapper<_Tp, _Np>& __lhs,
-			const __id<_SimdWrapper<_Tp, _Np>> __rhs, _Op __op)
+			const __type_identity_t<_SimdWrapper<_Tp, _Np>> __rhs,
+			_Op __op)
       {
 	if (__k._M_is_constprop_none_of())
 	  return;
@@ -2509,8 +2510,8 @@ template <typename _Abi>
     template <typename _Op, typename _Tp, typename _K, size_t _Np>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_cassign(const _SimdWrapper<_K, _Np> __k,
-			_SimdWrapper<_Tp, _Np>& __lhs, const __id<_Tp> __rhs,
-			_Op __op)
+			_SimdWrapper<_Tp, _Np>& __lhs,
+			const __type_identity_t<_Tp> __rhs, _Op __op)
       { _S_masked_cassign(__k, __lhs, __vector_broadcast<_Np>(__rhs), __op); }
 
     // _S_masked_unary {{{2
@@ -2863,7 +2864,7 @@ template <typename _Abi>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_assign(_SimdWrapper<_Tp, _Np> __k,
 		       _SimdWrapper<_Tp, _Np>& __lhs,
-		       __id<_SimdWrapper<_Tp, _Np>> __rhs)
+		       __type_identity_t<_SimdWrapper<_Tp, _Np>> __rhs)
       { __lhs = _CommonImpl::_S_blend(__k, __lhs, __rhs); }
 
     template <typename _Tp, size_t _Np>
@@ -2947,7 +2948,7 @@ template <typename _Abi>
       _GLIBCXX_SIMD_INTRINSIC static int
       _S_find_first_set(simd_mask<_Tp, _Abi> __k)
       {
-	return _BitOps::_S_firstbit(
+	return std::__countr_zero(
 	  _SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
       }
 
@@ -2957,8 +2958,8 @@ template <typename _Abi>
       _GLIBCXX_SIMD_INTRINSIC static int
       _S_find_last_set(simd_mask<_Tp, _Abi> __k)
       {
-	return _BitOps::_S_lastbit(
-	  _SuperImpl::_S_to_bits(__data(__k))._M_to_bits());
+	return std::__bit_width(
+	  _SuperImpl::_S_to_bits(__data(__k))._M_to_bits()) - 1;
       }
 
     // }}}
@@ -2969,4 +2970,4 @@ _GLIBCXX_SIMD_END_NAMESPACE
 #endif // __cplusplus >= 201703L
 #endif // _GLIBCXX_EXPERIMENTAL_SIMD_ABIS_H_
 
-// vim: foldmethod=marker sw=2 noet ts=8 sts=2 tw=80
+// vim: foldmethod=marker foldmarker={{{,}}} sw=2 noet ts=8 sts=2 tw=80

@@ -32,6 +32,7 @@
 
 #include "simd_detail.h"
 #include "numeric_traits.h"
+#include <bit>
 #include <bitset>
 #ifdef _GLIBCXX_DEBUG_UB
 #include <cstdio> // for stderr
@@ -81,19 +82,6 @@ using __m512d [[__gnu__::__vector_size__(64)]] = double;
 using __m512i [[__gnu__::__vector_size__(64)]] = long long;
 #endif
 
-// __next_power_of_2{{{
-/**
- * @internal
- * Returns the next power of 2 larger than or equal to @p __x.
- */
-constexpr size_t
-__next_power_of_2(size_t __x)
-{
-  return (__x & (__x - 1)) == 0 ? __x
-				: __next_power_of_2((__x | (__x >> 1)) + 1);
-}
-
-// }}}
 namespace simd_abi {
 // simd_abi forward declarations {{{
 // implementation details:
@@ -186,7 +174,7 @@ struct vector_aligned_tag
 {
   template <typename _Tp, typename _Up = typename _Tp::value_type>
     static constexpr size_t _S_alignment
-      = __next_power_of_2(sizeof(_Up) * _Tp::size());
+      = std::__bit_ceil(sizeof(_Up) * _Tp::size());
 
   template <typename _Tp, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _Up*
@@ -299,15 +287,6 @@ using _ULLong = unsigned long long;
 using _LLong = long long;
 
 //}}}
-// __identity/__id{{{
-template <typename _Tp>
-  struct __identity
-  { using type = _Tp; };
-
-template <typename _Tp>
-   using __id = typename __identity<_Tp>::type;
-
-// }}}
 // __first_of_pack{{{
 template <typename _T0, typename...>
   struct __first_of_pack
@@ -729,8 +708,8 @@ inline constexpr struct _BitsetInit {} __bitset_init = {};
 
 // }}}
 // __is_narrowing_conversion<_From, _To>{{{
-template <typename _From, typename _To, bool = is_arithmetic<_From>::value,
-	  bool = is_arithmetic<_To>::value>
+template <typename _From, typename _To, bool = is_arithmetic_v<_From>,
+	  bool = is_arithmetic_v<_To>>
   struct __is_narrowing_conversion;
 
 // ignore "signed/unsigned mismatch" in the following trait.
@@ -738,13 +717,13 @@ template <typename _From, typename _To, bool = is_arithmetic<_From>::value,
 template <typename _From, typename _To>
   struct __is_narrowing_conversion<_From, _To, true, true>
   : public __bool_constant<(
-      __digits<_From>::value > __digits<_To>::value
-      || __finite_max<_From>::value > __finite_max<_To>::value
-      || __finite_min<_From>::value < __finite_min<_To>::value
-      || (is_signed<_From>::value && is_unsigned<_To>::value))> {};
+      __digits_v<_From> > __digits_v<_To>
+      || __finite_max_v<_From> > __finite_max_v<_To>
+      || __finite_min_v<_From> < __finite_min_v<_To>
+      || (is_signed_v<_From> && is_unsigned_v<_To>))> {};
 
 template <typename _Tp>
-  struct __is_narrowing_conversion<bool, _Tp, true, true>
+  struct __is_narrowing_conversion<_Tp, bool, true, true>
   : public true_type {};
 
 template <>
@@ -871,29 +850,6 @@ template <typename _Tp>
 // _BitOps {{{
 struct _BitOps
 {
-  // _S_popcount {{{
-  static constexpr _UInt
-  _S_popcount(_UInt __x)
-  { return __builtin_popcount(__x); }
-
-  static constexpr _ULong
-  _S_popcount(_ULong __x)
-  { return __builtin_popcountl(__x); }
-
-  static constexpr _ULLong
-  _S_popcount(_ULLong __x)
-  { return __builtin_popcountll(__x); }
-
-  // }}}
-  // _S_ctz/_S_clz {{{
-  static constexpr _UInt _S_ctz(_UInt __x) { return __builtin_ctz(__x); }
-  static constexpr _ULong _S_ctz(_ULong __x) { return __builtin_ctzl(__x); }
-  static constexpr _ULLong _S_ctz(_ULLong __x) { return __builtin_ctzll(__x); }
-  static constexpr _UInt _S_clz(_UInt __x) { return __builtin_clz(__x); }
-  static constexpr _ULong _S_clz(_ULong __x) { return __builtin_clzl(__x); }
-  static constexpr _ULLong _S_clz(_ULLong __x) { return __builtin_clzll(__x); }
-
-  // }}}
   // _S_bit_iteration {{{
   template <typename _Tp, typename _Fp>
     static void
@@ -905,71 +861,14 @@ struct _BitOps
 	__k = __mask;
       else
 	__k = __mask.to_ullong();
-      switch (_S_popcount(__k))
+      while(__k)
 	{
-	default:
-	  do {
-	    __f(_S_ctz(__k));
-	    __k &= (__k - 1);
-	  } while (__k);
-	  break;
-	/*case 3:
-	    __f(_S_ctz(__k));
-	    __k &= (__k - 1);
-	    [[fallthrough]];*/
-	case 2:
-	  __f(_S_ctz(__k));
-	  [[fallthrough]];
-	case 1:
-	  __f(_S_popcount(~decltype(__k)()) - 1 - _S_clz(__k));
-	  [[fallthrough]];
-	case 0:
-	  break;
+	  __f(std::__countr_zero(__k));
+	  __k &= (__k - 1);
 	}
     }
 
   //}}}
-  // _S_firstbit{{{
-  template <typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_CONST static auto
-    _S_firstbit(_Tp __bits)
-    {
-      static_assert(is_integral_v<_Tp>,
-		    "_S_firstbit requires an integral argument");
-      if constexpr (sizeof(_Tp) <= sizeof(int))
-	return __builtin_ctz(__bits);
-      else if constexpr (alignof(_ULLong) == 8)
-	return __builtin_ctzll(__bits);
-      else
-	{
-	  _UInt __lo = __bits;
-	  return __lo == 0 ? 32 + __builtin_ctz(__bits >> 32)
-			   : __builtin_ctz(__lo);
-	}
-    }
-
-  // }}}
-  // _S_lastbit{{{
-  template <typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_CONST static auto
-    _S_lastbit(_Tp __bits)
-    {
-      static_assert(is_integral_v<_Tp>,
-		    "_S_lastbit requires an integral argument");
-      if constexpr (sizeof(_Tp) <= sizeof(int))
-	return 31 - __builtin_clz(__bits);
-      else if constexpr (alignof(_ULLong) == 8)
-	return 63 - __builtin_clzll(__bits);
-      else
-	{
-	  _UInt __lo = __bits;
-	  _UInt __hi = __bits >> 32u;
-	  return __hi == 0 ? 31 - __builtin_clz(__lo)
-			   : 63 - __builtin_clz(__hi);
-	}
-    }
-
-  // }}}
 };
 
 //}}}
@@ -1059,7 +958,7 @@ template <size_t _Np, bool _Sanitized>
 
     using _Tp = conditional_t<_Np == 1, bool,
 			      make_unsigned_t<__int_with_sizeof_t<std::min(
-				sizeof(_ULLong), __next_power_of_2(_NBytes))>>>;
+				sizeof(_ULLong), std::__bit_ceil(_NBytes))>>>;
 
     static constexpr int _S_array_size = __div_roundup(_NBytes, sizeof(_Tp));
 
@@ -1430,7 +1329,7 @@ template <typename _Tp, size_t _Np>
   struct __vector_type_n<_Tp, _Np,
 			 enable_if_t<__is_vectorizable_v<_Tp> && _Np >= 2>>
   {
-    static constexpr size_t _S_Np2 = __next_power_of_2(_Np * sizeof(_Tp));
+    static constexpr size_t _S_Np2 = std::__bit_ceil(_Np * sizeof(_Tp));
 
     static constexpr size_t _S_Bytes =
 #ifdef __i386__
@@ -2247,7 +2146,7 @@ template <size_t _Size>
 		  "This trait may only be used for non-power-of-2 sizes. "
 		  "Power-of-2 sizes must be specialized.");
     using type =
-      typename __bool_storage_member_type<__next_power_of_2(_Size)>::type;
+      typename __bool_storage_member_type<std::__bit_ceil(_Size)>::type;
   };
 
 template <>
@@ -4113,7 +4012,7 @@ template <template <int> class _Abi, int _Bytes, typename _Tp>
   {
     static constexpr auto _S_choose()
     {
-      constexpr int _NextBytes = __next_power_of_2(_Bytes) / 2;
+      constexpr int _NextBytes = std::__bit_ceil(_Bytes) / 2;
       using _NextAbi = _Abi<_NextBytes>;
       if constexpr (_NextBytes < sizeof(_Tp) * 2) // break recursion
 	return _Abi<_Bytes>();
@@ -4878,9 +4777,10 @@ template <typename _Tp, typename _Abi>
     _GLIBCXX_SIMD_CONSTEXPR simd& operator=(simd&&) noexcept = default;
 
     // implicit broadcast constructor
-    template <typename _Up, typename = _ValuePreservingOrInt<_Up, value_type>>
+    template <typename _Up,
+	      typename = enable_if_t<!is_same_v<__remove_cvref_t<_Tp>, bool>>>
       _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR
-      simd(_Up&& __x)
+      simd(_ValuePreservingOrInt<_Up, value_type>&& __x)
       : _M_data(
 	_Impl::_S_broadcast(static_cast<value_type>(static_cast<_Up&&>(__x))))
       {}
@@ -5160,4 +5060,4 @@ _GLIBCXX_SIMD_END_NAMESPACE
 #endif // __cplusplus >= 201703L
 #endif // _GLIBCXX_EXPERIMENTAL_SIMD_H
 
-// vim: foldmethod=marker
+// vim: foldmethod=marker foldmarker={{{,}}}

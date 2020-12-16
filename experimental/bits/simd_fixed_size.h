@@ -30,7 +30,7 @@
  *  - simd objects are passed via the stack
  *  - memory layout of `simd<_Tp, _Np>` is equivalent to `array<_Tp, _Np>`
  *  - alignment of `simd<_Tp, _Np>` is `_Np * sizeof(_Tp)` if _Np is __a
- *    power-of-2 value, otherwise `__next_power_of_2(_Np * sizeof(_Tp))` (Note:
+ *    power-of-2 value, otherwise `std::__bit_ceil(_Np * sizeof(_Tp))` (Note:
  *    if the alignment were to exceed the system/compiler maximum, it is bounded
  *    to that maximum)
  *  - simd_mask objects are passed like bitset<_Np>
@@ -1214,7 +1214,7 @@ template <int _Np>
 	using _MaskMember = _SanitizedBitMask<_Np>;
 
 	static constexpr size_t _S_simd_align
-	  = __next_power_of_2(_Np * sizeof(_Tp));
+	  = std::__bit_ceil(_Np * sizeof(_Tp));
 
 	static constexpr size_t _S_mask_align = alignof(_MaskMember);
 
@@ -1776,7 +1776,7 @@ template <int _Np>
     template <typename _Tp, typename... _As>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_assign(const _MaskMember __bits, _SimdTuple<_Tp, _As...>& __lhs,
-		       const __id<_SimdTuple<_Tp, _As...>>& __rhs)
+		       const __type_identity_t<_SimdTuple<_Tp, _As...>>& __rhs)
       {
 	__for_each(
 	  __lhs, __rhs,
@@ -1791,7 +1791,7 @@ template <int _Np>
     template <typename _Tp, typename... _As>
       _GLIBCXX_SIMD_INTRINSIC static void
       _S_masked_assign(const _MaskMember __bits, _SimdTuple<_Tp, _As...>& __lhs,
-		       const __id<_Tp> __rhs)
+		       const __type_identity_t<_Tp> __rhs)
       {
 	__for_each(
 	  __lhs, [&](auto __meta, auto& __native_lhs) constexpr {
@@ -2049,14 +2049,14 @@ template <int _Np>
     template <typename _Tp>
       _GLIBCXX_SIMD_INTRINSIC static int
       _S_find_first_set(simd_mask<_Tp, _Abi> __k)
-      { return _BitOps::_S_firstbit(__data(__k).to_ullong()); }
+      { return std::__countr_zero(__data(__k).to_ullong()); }
 
     // }}}
     // _S_find_last_set {{{
     template <typename _Tp>
       _GLIBCXX_SIMD_INTRINSIC static int
       _S_find_last_set(simd_mask<_Tp, _Abi> __k)
-      { return _BitOps::_S_lastbit(__data(__k).to_ullong()); }
+      { return std::__bit_width(__data(__k).to_ullong()) - 1; }
 
     // }}}
   };

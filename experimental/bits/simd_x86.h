@@ -5143,10 +5143,7 @@ template <typename _Abi>
       _S_find_first_set(simd_mask<_Tp, _Abi> __k)
       {
 	if constexpr (__is_avx512_abi<_Abi>())
-	  if constexpr (_S_size<_Tp> <= 32)
-	    return _tzcnt_u32(__k._M_data._M_data);
-	  else
-	    return _BitOps::_S_firstbit(__k._M_data._M_data);
+	  return std::__countr_zero(__k._M_data._M_data);
 	else
 	  return _Base::_S_find_first_set(__k);
       }
@@ -5158,10 +5155,7 @@ template <typename _Abi>
       _S_find_last_set(simd_mask<_Tp, _Abi> __k)
       {
 	if constexpr (__is_avx512_abi<_Abi>())
-	  if constexpr (_S_size<_Tp> <= 32)
-	    return 31 - _lzcnt_u32(__k._M_data._M_data);
-	  else
-	    return _BitOps::_S_lastbit(__k._M_data._M_data);
+	  return std::__bit_width(__k._M_data._M_data) - 1;
 	else
 	  return _Base::_S_find_last_set(__k);
       }
