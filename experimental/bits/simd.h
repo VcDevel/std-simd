@@ -4778,7 +4778,7 @@ template <typename _Tp, typename _Abi>
 
     // implicit broadcast constructor
     template <typename _Up,
-	      typename = enable_if_t<!is_same_v<__remove_cvref_t<_Tp>, bool>>>
+	      typename = enable_if_t<!is_same_v<__remove_cvref_t<_Up>, bool>>>
       _GLIBCXX_SIMD_ALWAYS_INLINE _GLIBCXX_SIMD_CONSTEXPR
       simd(_ValuePreservingOrInt<_Up, value_type>&& __x)
       : _M_data(
