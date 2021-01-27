@@ -1237,15 +1237,15 @@ TEST_TYPES(V, reductions, all_test_types)
       COMPARE(hmin(where(z < 4, z)), T(1));
       COMPARE(hmax(where(z < 4, z)), std::min(T(V::size()), T(3)));
       const V zz = make_value_unknown(z);
-      COMPARE(hmin(z), T(1));
-      COMPARE(hmax(z), T(V::size()));
+      COMPARE(hmin(zz), T(1));
+      COMPARE(hmax(zz), T(V::size()));
       if (V::size() > 1)
 	{
-	  COMPARE(hmin(where(z > 1, z)), T(2));
-	  COMPARE(hmax(where(z > 1, z)), T(V::size()));
+	  COMPARE(hmin(where(zz > 1, zz)), T(2));
+	  COMPARE(hmax(where(zz > 1, zz)), T(V::size()));
 	}
-      COMPARE(hmin(where(z < 4, z)), T(1));
-      COMPARE(hmax(where(z < 4, z)), std::min(T(V::size()), T(3)));
+      COMPARE(hmin(where(zz < 4, zz)), T(1));
+      COMPARE(hmax(where(zz < 4, zz)), std::min(T(V::size()), T(3)));
     }
 
     test_values<V>({}, {1000}, [](V x) {
