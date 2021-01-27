@@ -1203,6 +1203,8 @@ TEST_TYPES(V, reductions, all_test_types)
     }
 
     {
+      COMPARE(hmin(V(1)), T(1));
+      COMPARE(hmax(V(1)), T(1));
       const V z([](T i) { return i + 1; });
       COMPARE(std::experimental::reduce(z,
 					[](auto a, auto b) {
@@ -1225,6 +1227,25 @@ TEST_TYPES(V, reductions, all_test_types)
 					}),
 	      T(V::size() == 1 ? 117 : 2))
 	<< "z: " << z;
+      COMPARE(hmin(z), T(1));
+      COMPARE(hmax(z), T(V::size()));
+      if (V::size() > 1)
+	{
+	  COMPARE(hmin(where(z > 1, z)), T(2));
+	  COMPARE(hmax(where(z > 1, z)), T(V::size()));
+	}
+      COMPARE(hmin(where(z < 4, z)), T(1));
+      COMPARE(hmax(where(z < 4, z)), std::min(T(V::size()), T(3)));
+      const V zz = make_value_unknown(z);
+      COMPARE(hmin(z), T(1));
+      COMPARE(hmax(z), T(V::size()));
+      if (V::size() > 1)
+	{
+	  COMPARE(hmin(where(z > 1, z)), T(2));
+	  COMPARE(hmax(where(z > 1, z)), T(V::size()));
+	}
+      COMPARE(hmin(where(z < 4, z)), T(1));
+      COMPARE(hmax(where(z < 4, z)), std::min(T(V::size()), T(3)));
     }
 
     test_values<V>({}, {1000}, [](V x) {
