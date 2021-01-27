@@ -923,6 +923,7 @@ template <typename _Abi> struct _MaskImplX86;
 template <typename _Abi> struct _SimdImplNeon;
 template <typename _Abi> struct _MaskImplNeon;
 template <typename _Abi> struct _SimdImplPpc;
+template <typename _Abi> struct _MaskImplPpc;
 
 // simd_abi::_VecBuiltin {{{
 template <int _UsedBytes>
@@ -962,10 +963,11 @@ template <int _UsedBytes>
     using _CommonImpl = _CommonImplBuiltin;
 #ifdef __ALTIVEC__
     using _SimdImpl = _SimdImplPpc<_VecBuiltin<_UsedBytes>>;
+    using _MaskImpl = _MaskImplPpc<_VecBuiltin<_UsedBytes>>;
 #else
     using _SimdImpl = _SimdImplBuiltin<_VecBuiltin<_UsedBytes>>;
-#endif
     using _MaskImpl = _MaskImplBuiltin<_VecBuiltin<_UsedBytes>>;
+#endif
 #endif
 
     // }}}
@@ -2923,7 +2925,7 @@ template <typename _Abi>
       _GLIBCXX_SIMD_INTRINSIC static bool
       _S_some_of(simd_mask<_Tp, _Abi> __k)
       {
-	const int __n_true = _S_popcount(__k);
+	const int __n_true = _SuperImpl::_S_popcount(__k);
 	return __n_true > 0 && __n_true < int(_S_size<_Tp>);
       }
 
