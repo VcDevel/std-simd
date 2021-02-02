@@ -2284,7 +2284,8 @@ template <typename _Abi>
       const auto __absn = __vector_bitcast<_Ip>(_SuperImpl::_S_abs(__x));
       const auto __maxn
 	= __vector_bitcast<_Ip>(__vector_broadcast<_Np>(__finite_max_v<_Tp>));
-      return __absn <= __maxn;
+      return _MaskImpl::template _S_convert<_Tp>(
+	_MaskImpl::_S_to_bits(__as_wrapper<_Np>(__absn <= __maxn)));
   #endif
     }
 
@@ -2342,11 +2343,13 @@ template <typename _Abi>
       const auto __minn
 	= __vector_bitcast<_Ip>(__vector_broadcast<_Np>(__norm_min_v<_Tp>));
   #if __FINITE_MATH_ONLY__
-      return __absn >= __minn;
+      return  _MaskImpl::template _S_convert<_Tp>(
+        _MaskImpl::_S_to_bits(__as_wrapper<_Np>(__absn >= __minn)));
   #else
       const auto __maxn
 	= __vector_bitcast<_Ip>(__vector_broadcast<_Np>(__finite_max_v<_Tp>));
-      return __minn <= __absn && __absn <= __maxn;
+      return _MaskImpl::template _S_convert<_Tp>(_MaskImpl::_S_to_bits(
+        __as_wrapper<_Np>(__minn <= __absn && __absn <= __maxn)));
   #endif
     }
 
@@ -2837,7 +2840,7 @@ template <typename _Abi>
 
     // smart_reference access {{{2
     template <typename _Tp, size_t _Np>
-      static constexpr void _S_set(_SimdWrapper<_Tp, _Np>& __k, int __i,
+      static constexpr void _S_set(_SimdWrapper<_Tp, _Np>& __k, size_t __i,
 				   bool __x) noexcept
       {
 	if constexpr (is_same_v<_Tp, bool>)
