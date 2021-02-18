@@ -32,6 +32,7 @@
 
 #include "simd_detail.h"
 #include "numeric_traits.h"
+#include <array>
 #include <bit>
 #include <bitset>
 #ifdef _GLIBCXX_DEBUG_UB
@@ -4966,6 +4967,15 @@ template <typename _Tp, typename _Abi>
 	  _Impl::_S_load(_Flags::template _S_apply<simd>(__mem), _S_type_tag))
       {}
 
+    // gather constructor
+    template <typename _Up, typename _Flags>
+      _GLIBCXX_SIMD_ALWAYS_INLINE
+      simd(const _Up* __mem, const __int_for_sizeof_t<_Up>* __idx, _Flags)
+      : _M_data(
+        _Impl::_S_gather(_Flags::template _S_apply<simd>(__mem),
+			   __idx, _S_type_tag))
+      {}
+
     // loads [simd.load]
     template <typename _Up, typename _Flags>
       _GLIBCXX_SIMD_ALWAYS_INLINE void
@@ -4982,6 +4992,47 @@ template <typename _Tp, typename _Abi>
       {
 	_Impl::_S_store(_M_data, _Flags::template _S_apply<simd>(__mem),
 			_S_type_tag);
+      }
+
+    // gather [simd.gather]
+    template <typename _Up, typename _Flags>
+      _GLIBCXX_SIMD_ALWAYS_INLINE void
+      gather(const _Vectorizable<_Up>* __mem,
+	     const std::array<int, size()>& __idx, _Flags)
+      {
+	_M_data = static_cast<decltype(_M_data)>(
+	  _Impl::_S_gather(_Flags::template _S_apply<simd>(__mem), __idx.data(),
+			   _S_type_tag));
+      }
+
+    template <typename _Up, typename _Flags>
+      _GLIBCXX_SIMD_ALWAYS_INLINE void
+      gather(const _Vectorizable<_Up>* __mem,
+	     const __int_for_sizeof_t<_Up>* __idx, _Flags)
+      {
+	_M_data = static_cast<decltype(_M_data)>(
+	  _Impl::_S_gather(_Flags::template _S_apply<simd>(__mem), __idx,
+			   _S_type_tag));
+      }
+
+    // scatter [simd.scatter]
+    template <typename _Up, typename _Flags>
+      _GLIBCXX_SIMD_ALWAYS_INLINE void
+      scatter(_Vectorizable<_Up>* __mem, std::array<int, size()>& __idx,
+	      _Flags) const
+      {
+	_Impl::_S_scatter(_M_data, _Flags::template _S_apply<simd>(__mem),
+			  __idx.data(), _S_type_tag);
+      }
+
+    // scatter [simd.scatter]
+    template <typename _Up, typename _Flags>
+      _GLIBCXX_SIMD_ALWAYS_INLINE void
+      scatter(_Vectorizable<_Up>* __mem, const __int_for_sizeof_t<_Up>* __idx,
+	      _Flags) const
+      {
+	_Impl::_S_scatter(_M_data, _Flags::template _S_apply<simd>(__mem),
+			  __idx, _S_type_tag);
       }
 
     // scalar access

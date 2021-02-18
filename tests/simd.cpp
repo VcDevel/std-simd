@@ -1273,3 +1273,48 @@ TEST_TYPES(V, algorithms, all_test_types)
     COMPARE(min(a, b), V{0});
     COMPARE(max(a, b), V{1});
   }
+
+
+TEST_TYPES(V, gather, all_test_types)
+{
+  using namespace std::experimental::parallelism_v2;
+  using T = typename V::value_type;
+
+  // generate simd value data
+  std::vector<T> vec_data(V::size(), 0);
+  __execute_n_times<V::size()>(
+    [&](size_t __i) { vec_data[__i] = static_cast<T>(__i); });
+  // generate index
+  using index_type = __int_for_sizeof_t<T>;
+  std::vector<index_type> index(V::size(), 0);
+  __execute_n_times<V::size()>(
+    [&](auto __i) { index[__i] = ((__i + 3) % V::size()); });
+
+  V x(vec_data.data(), index.data(), vector_aligned);
+  V y([&](auto __i) { return vec_data[index[__i]]; });
+
+  COMPARE(x, y);
+}
+
+TEST_TYPES(V, scatter, all_test_types)
+{
+  using namespace std::experimental::parallelism_v2;
+  using T = typename V::value_type;
+
+  // generate simd value data
+  std::vector<T> vec_data(V::size(), 0);
+  __execute_n_times<V::size()>(
+    [&](size_t __i) { vec_data[__i] = static_cast<T>(__i); });
+  // generate index
+  using index_type = __int_for_sizeof_t<T>;
+  std::vector<index_type> index(V::size(), 0);
+  __execute_n_times<V::size()>(
+    [&](auto __i) { index[__i] = ((__i + 3) % V::size()); });
+
+  V x(vec_data.data(), index.data(), vector_aligned);
+
+  std::vector<T> vec_out(V::size(), 0);
+  x.scatter(&vec_out[0], index.data(), vector_aligned);
+  V y(vec_out.data(), vector_aligned);
+  COMPARE(vec_data, vec_out) << x << " => "  << y;
+}
