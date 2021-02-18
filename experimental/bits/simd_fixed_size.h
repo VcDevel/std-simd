@@ -395,6 +395,15 @@ template <typename _Tp, typename _Abi0, typename... _Abis>
 	  return second.template _M_simd_at<_Np - 1>();
       }
 
+    template <size_t _Offset>
+      _GLIBCXX_SIMD_INTRINSIC constexpr auto _M_tuple_at() const
+      {
+	if constexpr (_Offset == 0)
+	  return first;
+	else
+	  return second.template _M_tuple_at<_Offset - simd_size_v<_Tp, _Abi0>>();
+      }
+
     template <size_t _Offset = 0, typename _Fp>
       _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple
       _S_generate(_Fp&& __gen, _SizeConstant<_Offset> = {})
@@ -1329,6 +1338,56 @@ template <int _Np>
 	    },
 	    _TypeTag<_Tp>());
 	});
+      }
+
+    // _S_gather {{{2
+    template <typename _Tp, typename _Up>
+      static inline _SimdMember<_Tp>
+      _S_gather(const _Up* __mem, const __int_for_sizeof_t<_Up>* __idx,
+		_TypeTag<_Tp>) noexcept
+      {
+	return _SimdMember<_Tp>::_S_generate([&](auto __meta) {
+	  return __meta._S_gather(__mem, &__idx[__meta._S_offset],
+				  _TypeTag<_Tp>());
+	});
+      }
+
+    // _S_gather {{{2
+    template <typename _Tp, typename _Up>
+      static inline _SimdMember<_Tp>
+      _S_gather(const _Up* __mem, const _SimdMember<_Tp>& __idx,
+		_TypeTag<_Tp>) noexcept
+      {
+	return _SimdMember<_Tp>::_S_generate([&](auto __meta) {
+	  return __meta._S_gather(
+	    __mem, __idx.template _M_tuple_at<__meta._S_offset>(),
+	    _TypeTag<_Tp>());
+	});
+      }
+
+    // _S_scatter {{{2
+    template <typename _Tp, typename _Up>
+      static inline void
+      _S_scatter(const _SimdMember<_Tp>& __v, _Up* __mem,
+		 const __int_for_sizeof_t<_Up>* __idx, _TypeTag<_Tp>) noexcept
+      {
+	__for_each(__v, [&](auto __meta, auto __native) {
+	  __meta._S_scatter(__native, __mem, &__idx[__meta._S_offset],
+			    _TypeTag<_Tp>());
+	});
+      }
+
+    // _S_scatter {{{2
+    template <typename _Tp, typename _Up>
+      static inline void
+      _S_scatter(const _SimdMember<_Tp>& __v, _Up* __mem,
+		 const _SimdMember<_Tp>& __idx, _TypeTag<_Tp>) noexcept
+      {
+	__for_each(__v, __idx,
+		   [&](auto __meta, auto __v_tuple, auto __idx_tuple) {
+		     __meta._S_scatter(__v_tuple, __mem, __idx_tuple,
+				       _TypeTag<_Tp>());
+		   });
       }
 
     // _S_load {{{2

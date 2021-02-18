@@ -150,6 +150,42 @@ struct _SimdImplScalar
 							      _TypeTag<_Tp>)
     { return __gen(_SizeConstant<0>()); }
 
+  // _S_gather {{{2
+  template <typename _Tp, typename _Up>
+    _GLIBCXX_SIMD_INTRINSIC static _Tp
+    _S_gather(const _Up* __mem, const __int_for_sizeof_t<_Up>* __idx,
+	      _TypeTag<_Tp>) noexcept
+    {
+      return static_cast<_Tp>(__mem[__idx[0]]);
+    }
+
+  // _S_gather
+  template <typename _Tp, typename _Up>
+    _GLIBCXX_SIMD_INTRINSIC static _Tp
+    _S_gather(const _Up* __mem, const _Tp& __idx, _TypeTag<_Tp>) noexcept
+    {
+      return static_cast<_Tp>(__mem[__idx]);
+    } // }}}
+
+  // _S_scatter {{{2
+  template <typename _Tp, typename _Up>
+    _GLIBCXX_SIMD_INTRINSIC static void
+    _S_scatter(const _Tp& __v, _Up* __mem,
+	       [[maybe_unused]] const __int_for_sizeof_t<_Up>* __idx,
+	       _TypeTag<_Tp>) noexcept
+    {
+      __mem[__idx[0]] = static_cast<_Up>(__v);
+    }
+
+  // _S_scatter
+  template <typename _Tp, typename _Up>
+    _GLIBCXX_SIMD_INTRINSIC static void
+    _S_scatter(_Tp& __v, _Up* __mem, [[maybe_unused]] const _Tp& __idx,
+	       _TypeTag<_Tp>) noexcept
+    {
+      __mem[__idx] = static_cast<_Up>(__v);
+    } // }}}
+
   // _S_load {{{2
   template <typename _Tp, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static _Tp _S_load(const _Up* __mem,
