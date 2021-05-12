@@ -1398,12 +1398,19 @@ template <typename _Tp, typename = void_t<>>
   struct __is_vector_type : false_type {};
 
 template <typename _Tp>
-  struct __is_vector_type<
-    _Tp, void_t<typename __vector_type<
-	   remove_reference_t<decltype(declval<_Tp>()[0])>, sizeof(_Tp)>::type>>
-    : is_same<_Tp, typename __vector_type<
-		     remove_reference_t<decltype(declval<_Tp>()[0])>,
-		     sizeof(_Tp)>::type> {};
+struct __is_vector_type<
+  _Tp,
+  enable_if_t<std::disjunction_v<
+    std::is_same<_Tp,
+		 typename __vector_type<typename std::remove_reference<decltype(
+					  std::declval<_Tp>()[0])>::type,
+					sizeof(_Tp)>::type>,
+    std::is_same<
+      _Tp, typename __intrinsic_type<typename std::remove_reference<decltype(
+				       std::declval<_Tp>()[0])>::type,
+				     sizeof(_Tp)>::type>>>> : true_type
+{
+};
 
 template <typename _Tp>
   inline constexpr bool __is_vector_type_v = __is_vector_type<_Tp>::value;
