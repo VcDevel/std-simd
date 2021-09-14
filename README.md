@@ -2,12 +2,14 @@
 portable, zero-overhead C++ types for explicitly data-parallel programming
 
 This package implements ISO/IEC TS 19570:2018 Section 9 "Data-Parallel Types".
-It is targetting inclusion into libstdc++. By default, the `install.sh` script
-places the `std::experimental::simd` headers into the directory where the
-standard library of your C++ compiler (identified via `$CXX`) resides.
+Development here has stopped after it has been included in [GCC/libstdc++](https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=libstdc%2B%2B-v3/include/experimental/simd;hb=HEAD) since version 11.
+The implementation derived from https://github.com/VcDevel/Vc.
 
-The implementation derives from https://github.com/VcDevel/Vc.
-It is only tested and supported with GCC 9, even though it may (partially) work
+By default, the `install.sh` script places the `std::experimental::simd`
+headers into the directory where the standard library of your C++ compiler
+(identified via `$CXX`) resides.
+
+It is only tested and supported with GCC 11, even though it may (partially) work
 with older GCC versions.
 
 ## Target support
@@ -107,3 +109,5 @@ https://en.cppreference.com/w/cpp/experimental/simd
 
 The `simd` headers, tests, and benchmarks are released under the terms of the
 [3-clause BSD license](http://opensource.org/licenses/BSD-3-Clause).
+
+Note that the code in libstdc++ is distributed under GPL3 with runtime library exception.
