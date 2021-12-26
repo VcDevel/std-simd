@@ -185,6 +185,53 @@ struct vector_aligned_tag
     }
 };
 
+namespace __proposed
+{
+namespace {
+	enum _AlignmentType{
+		_Unaligned,
+		_Vector,
+		_Element
+	};
+
+	template<_AlignmentType at>
+	struct _alignment_tag_selector{
+		static_assert(at!=_Unaligned,"Unaligned reads are undefined behavior.");
+	};
+	template<>
+	struct _alignment_tag_selector<_Element>{
+		using type=element_aligned_tag;
+	};
+	template<>
+	struct _alignment_tag_selector<_Vector>{
+		using type=vector_aligned_tag;
+	};
+}
+
+template<size_t _Np>
+struct aligned_tag
+{
+	template <typename _Tp, typename _Up = typename _Tp::value_type>
+	static constexpr size_t _S_alignment = _Np;
+
+	template <typename _Tp, typename _Up>
+	_GLIBCXX_SIMD_INTRINSIC static constexpr _Up*
+	_S_apply(_Up* __ptr){
+		constexpr size_t _expected_vector_alignment=vector_aligned_tag::_S_alignment<_Tp,_Up>;
+		constexpr size_t _expected_element_alignment=element_aligned_tag::_S_alignment<_Tp,_Up>;
+		constexpr _AlignmentType _computed_at=
+			((_Np % _expected_vector_alignment)==0) ? _Vector :
+			((_Np % _expected_element_alignment)==0) ? _Element : _Unaligned;
+		using _result_tag=typename _alignment_tag_selector<_computed_at>::type;
+		return _result_tag::template _S_apply<_Tp,_Up>(__ptr);
+	}
+};
+
+template<size_t _Np>
+  inline constexpr aligned_tag<_Np> aligned = {};
+
+}
+
 template <size_t _Np> struct overaligned_tag
 {
   template <typename _Tp, typename _Up = typename _Tp::value_type>
@@ -193,7 +240,7 @@ template <size_t _Np> struct overaligned_tag
   template <typename _Tp, typename _Up>
     _GLIBCXX_SIMD_INTRINSIC static constexpr _Up*
     _S_apply(_Up* __ptr)
-    { return static_cast<_Up*>(__builtin_assume_aligned(__ptr, _Np)); }
+	{ return __proposed::aligned_tag<_Np>::_S_apply(__ptr); }
 };
 
 inline constexpr element_aligned_tag element_aligned = {};
@@ -202,6 +249,8 @@ inline constexpr vector_aligned_tag vector_aligned = {};
 
 template <size_t _Np>
   inline constexpr overaligned_tag<_Np> overaligned = {};
+
+
 
 // }}}
 template <size_t _X>
