@@ -64,6 +64,17 @@
 #else
 #define _GLIBCXX_SIMD_HAVE_NEON_A64 0
 #endif
+#if defined __ARM_NEON && (__ARM_ARCH >= 8 || defined __aarch64__)
+#define _GLIBCXX_SIMD_HAVE_SVE2_A32 1
+#else
+#define _GLIBCXX_SIMD_HAVE_SVE2_A32 0
+#endif
+#if defined __ARM_SVE2 && defined __aarch64__
+#define _GLIBCXX_SIMD_HAVE_SVE2_A64 1
+#else
+#define _GLIBCXX_SIMD_HAVE_SVE2_A64 0
+#endif
+
 //}}}
 // x86{{{
 #ifdef __MMX__
