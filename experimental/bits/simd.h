@@ -114,20 +114,20 @@ template <int _UsedBytes>
 template <typename _Tp, int _Np>
   using _VecN = _VecBuiltin<sizeof(_Tp) * _Np>;
 
-template <int _UsedBytes = 16>
+template <svint16_t _UsedBytes = 16>
   using _Sse = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 16>
-  using _Sve2 = _VecBuiltin<_UsedBytes>;
+template <svint16_t _UsedBytes = 16>
+using _Sve2 = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 32>
-  using _Avx = _VecBuiltin<_UsedBytes>;
+template <svint32_t _UsedBytes = 32>
+using _Avx = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 64>
-  using _Avx512 = _VecBltnBtmsk<_UsedBytes>;
+template <svint64_t _UsedBytes = 64>
+using _Avx512 = _VecBltnBtmsk<_UsedBytes>;
 
-template <int _UsedBytes = 16>
-  using _Neon = _VecBuiltin<_UsedBytes>;
+template <svint16_t _UsedBytes = 16>
+using _Neon = _VecBuiltin<_UsedBytes>;
 
 // implementation-defined:
 using __sse = _Sse<>;
