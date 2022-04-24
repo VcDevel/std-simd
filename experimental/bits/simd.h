@@ -48,6 +48,10 @@
 #include <arm_neon.h>
 #endif
 
+#ifdef __ARM_FEATURE_SVE
+#include <arm_sve.h>
+#endif /* __ARM_FEATURE_SVE */
+
 /* There are several closely related types, with the following naming
  * convention:
  * _Tp: vectorizable (arithmetic) type (or any type)
@@ -110,17 +114,20 @@ template <int _UsedBytes>
 template <typename _Tp, int _Np>
   using _VecN = _VecBuiltin<sizeof(_Tp) * _Np>;
 
-template <int _UsedBytes = 16>
+template <svint16_t _UsedBytes = 16>
   using _Sse = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 32>
-  using _Avx = _VecBuiltin<_UsedBytes>;
+template <svint16_t _UsedBytes = 16>
+using _Sve2 = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 64>
-  using _Avx512 = _VecBltnBtmsk<_UsedBytes>;
+template <svint32_t _UsedBytes = 32>
+using _Avx = _VecBuiltin<_UsedBytes>;
 
-template <int _UsedBytes = 16>
-  using _Neon = _VecBuiltin<_UsedBytes>;
+template <svint64_t _UsedBytes = 64>
+using _Avx512 = _VecBltnBtmsk<_UsedBytes>;
+
+template <svint16_t _UsedBytes = 16>
+using _Neon = _VecBuiltin<_UsedBytes>;
 
 // implementation-defined:
 using __sse = _Sse<>;
@@ -129,6 +136,9 @@ using __avx512 = _Avx512<>;
 using __neon = _Neon<>;
 using __neon128 = _Neon<16>;
 using __neon64 = _Neon<8>;
+using __sve2 = _Sve2<>;
+using __sve2_8 = _Sve2<8>;
+using __sve2_16 = _Sve2<16>;
 
 // standard:
 template <typename _Tp, size_t _Np, typename...>
@@ -492,6 +502,8 @@ constexpr inline bool __have_avx512bw_vl = __have_avx512bw && __have_avx512vl;
 constexpr inline bool __have_neon = _GLIBCXX_SIMD_HAVE_NEON;
 constexpr inline bool __have_neon_a32 = _GLIBCXX_SIMD_HAVE_NEON_A32;
 constexpr inline bool __have_neon_a64 = _GLIBCXX_SIMD_HAVE_NEON_A64;
+constexpr inline bool __have_sve2_a32 = _GLIBCXX_SIMD_HAVE_SVE2_A32;
+constexpr inline bool __have_sve2_a64 = _GLIBCXX_SIMD_HAVE_SVE2_A64;
 constexpr inline bool __support_neon_float =
 #if defined __GCC_IEC_559
   __GCC_IEC_559 == 0;
@@ -2253,6 +2265,16 @@ template <>
   { using type = float32x4_t; };
 
 #if _GLIBCXX_SIMD_HAVE_NEON_A64
+template <>
+  struct __intrinsic_type<double, 8, void>
+  { using type = float64x1_t; };
+
+template <>
+  struct __intrinsic_type<double, 16, void>
+  { using type = float64x2_t; };
+#endif
+
+#if _GLIBCXX_SIMD_HAVE_SVE2_A64
 template <>
   struct __intrinsic_type<double, 8, void>
   { using type = float64x1_t; };
