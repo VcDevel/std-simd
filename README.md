@@ -1,15 +1,19 @@
 # `std::experimental::simd`
 portable, zero-overhead C++ types for explicitly data-parallel programming
 
+**Development here is going to move on to std::simd for C++26. For the TS 
+implementation reach for 
+[GCC/libstdc++](https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=libstdc%2B%2B-v3/include/experimental/simd;hb=HEAD).**
+`std::experimental::simd` is shipping with GCC since version 11.
+
 This package implements ISO/IEC TS 19570:2018 Section 9 "Data-Parallel Types".
-Development here has stopped after it has been included in [GCC/libstdc++](https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=libstdc%2B%2B-v3/include/experimental/simd;hb=HEAD) since version 11.
 The implementation derived from https://github.com/VcDevel/Vc.
 
 By default, the `install.sh` script places the `std::experimental::simd`
 headers into the directory where the standard library of your C++ compiler
 (identified via `$CXX`) resides.
 
-It is only tested and supported with GCC 11, even though it may (partially) work
+It is only tested and supported with GCC trunk, even though it may work
 with older GCC versions.
 
 ## Target support
@@ -18,7 +22,7 @@ with older GCC versions.
   support from SSE-only up to AVX512 on Xeon Phi or Xeon CPUs.
 * aarch64, arm, and ppc64le was tested and verified to work. No significant 
   performance evaluation was done.
-* In any case, a fallback to correct execution via builtin arthmetic types is
+* In any case, a fallback to correct execution via builtin arithmetic types is
   available for all targets.
 
 ## Installation Instructions
